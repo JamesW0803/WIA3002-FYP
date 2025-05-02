@@ -9,7 +9,7 @@ import {
   EyeOff,
   ChevronDown,
 } from "lucide-react";
-import Logo from "../assets/logo.svg";
+import Logo from "../../assets/logo.svg";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);

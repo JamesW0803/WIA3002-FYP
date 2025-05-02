@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import EmailSentPage from "./pages/EmailSentPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import ResetPasswordSuccessPage from "./pages/ResetPasswordSuccessPage";
-import SignUpPage from "./pages/SignUpPage";
+import LoginPage from "./pages/general/LoginPage";
+import ForgotPasswordPage from "./pages/general/ForgotPasswordPage";
+import EmailSentPage from "./pages/general/EmailSentPage";
+import ResetPasswordPage from "./pages/general/ResetPasswordPage";
+import ResetPasswordSuccessPage from "./pages/general/ResetPasswordSuccessPage";
+import SignUpPage from "./pages/general/SignUpPage";
 
 function App() {
   return (

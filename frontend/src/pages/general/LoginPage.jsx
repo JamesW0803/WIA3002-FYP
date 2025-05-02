@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Logo from "../assets/logo.svg";
+import Logo from "../../assets/logo.svg";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
