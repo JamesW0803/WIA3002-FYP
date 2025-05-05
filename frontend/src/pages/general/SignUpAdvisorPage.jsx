@@ -1,31 +1,58 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  User,
-  Mail,
-  Phone,
-  Lock,
-  Eye,
-  EyeOff,
-  ChevronDown,
-} from "lucide-react";
+import { User, Mail, Phone, Lock, Eye, EyeOff } from "lucide-react";
 import Logo from "../../assets/logo.svg";
+import SignUpModal from "./SignUpModal";
 
-export default function SignUpPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const navigate = useNavigate();
+export default function SignUpAdvisorPage() {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     contact: "",
     password: "",
     confirmPassword: "",
-    department: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSignUp = async () => {
+    const payload = {
+      name: formData.username,
+      email: formData.email,
+      password: formData.password,
+      role: "admin",
+      access_level: "basic",
+    };
+
+    try {
+      const response = await fetch("http://localhost:5000/api/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Advisor registered:", result);
+        setIsSuccess(true);
+        setShowModal(true);
+      } else {
+        console.error("Error:", result.message);
+        setIsSuccess(false);
+        setShowModal(true);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setIsSuccess(false);
+      setShowModal(true);
+    }
   };
 
   return (
@@ -91,7 +118,7 @@ export default function SignUpPage() {
             placeholder="Password"
             value={formData.password}
             onChange={handleChange}
-            className="w-full outline-none text-[#1E3A8A] bg-transparent"
+            className="w-full outline-none text-[#1E3A8A] bg-transparent [&::-ms-reveal]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
           />
           <button
             type="button"
@@ -117,7 +144,7 @@ export default function SignUpPage() {
             placeholder="Confirm password"
             value={formData.confirmPassword}
             onChange={handleChange}
-            className="w-full outline-none text-[#1E3A8A] bg-transparent"
+            className="w-full outline-none text-[#1E3A8A] bg-transparent [&::-ms-reveal]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
           />
           <button
             type="button"
@@ -132,48 +159,12 @@ export default function SignUpPage() {
           </button>
         </div>
 
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Department
-        </label>
-        <div className="relative mb-4">
-          <select
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-            className="w-full appearance-none border border-[#1E3A8A] px-4 py-2 rounded-md text-[#1E3A8A] bg-white"
-            placeholder="Choose your department"
-          >
-            <option value="" disabled hidden>
-              Choose your department
-            </option>
-            <option value="Artificial Intelligence">
-              Artificial Intelligence
-            </option>
-            <option value="Software Engineering">Software Engineering</option>
-            <option value="Information Systems">Information Systems</option>
-            <option value="Computer System and Network">
-              Computer System and Network
-            </option>
-            <option value="Multimedia">Multimedia</option>
-            <option value="Data Science">Data Science</option>
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
-        </div>
-
-        <div className="flex items-center my-4">
-          <hr className="flex-grow border-gray-300" />
-          <span className="mx-2 text-sm text-gray-500">Sign Up as</span>
-          <hr className="flex-grow border-gray-300" />
-        </div>
-
-        <div className="flex justify-between gap-4">
-          <button className="w-full bg-[#1E3A8A] text-white font-medium py-2 rounded-md hover:bg-white hover:text-[#1E3A8A] border border-[#1E3A8A] transition">
-            Advisor
-          </button>
-          <button className="w-full bg-[#1E3A8A] text-white font-medium py-2 rounded-md hover:bg-white hover:text-[#1E3A8A] border border-[#1E3A8A] transition">
-            Student
-          </button>
-        </div>
+        <button
+          className="w-full mt-4 bg-[#1E3A8A] text-white font-medium py-2 rounded-md hover:bg-white hover:text-[#1E3A8A] border border-[#1E3A8A] transition"
+          onClick={handleSignUp}
+        >
+          Sign Up as Advisor
+        </button>
 
         <div className="text-[#1F2937] mt-4 text-center text-sm">
           Have an account?{" "}
@@ -185,6 +176,14 @@ export default function SignUpPage() {
           </span>
         </div>
       </div>
+      <SignUpModal
+        show={showModal}
+        success={isSuccess}
+        role="advisor"
+        onClose={() => navigate("/")}
+        onRetry={() => setShowModal(false)}
+      />
+      ;
     </div>
   );
 }

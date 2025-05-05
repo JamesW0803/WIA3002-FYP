@@ -5,6 +5,7 @@ import Logo from "../../assets/logo.svg";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
   return (
@@ -69,12 +70,42 @@ export default function LoginPage() {
           Don’t have an account?{" "}
           <span
             className="text-[#1E3A8A] font-semibold hover:underline cursor-pointer"
-            onClick={() => navigate("/sign-up")}
+            onClick={() => setShowModal(true)}
           >
             Sign Up
           </span>
         </div>
       </div>
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-20">
+          <div className="bg-white rounded-md p-6 w-full max-w-sm shadow-lg border">
+            <h2 className="text-lg font-semibold text-[#1E3A8A] mb-4 text-center">
+              Sign Up As
+            </h2>
+            <div className="space-y-3">
+              <button
+                className="w-full py-2 bg-[#1E3A8A] text-white rounded-md font-medium border border-[#1E3A8A] hover:bg-white hover:text-[#1E3A8A] transition"
+                onClick={() => navigate("/sign-up-advisor")}
+              >
+                Advisor
+              </button>
+              <button
+                className="w-full py-2 bg-[#1E3A8A] text-white rounded-md font-medium border border-[#1E3A8A] hover:bg-white hover:text-[#1E3A8A] transition"
+                onClick={() => navigate("/sign-up-student")}
+              >
+                Student
+              </button>
+              <button
+                className="w-full mt-2 text-sm text-gray-500 hover:underline"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
