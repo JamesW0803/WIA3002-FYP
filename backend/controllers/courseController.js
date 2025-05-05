@@ -1,4 +1,4 @@
-const Course = require('../models/course');
+const Course = require('../models/Course');
 
 
 const getAllCourses = async (req, res) => {
@@ -15,7 +15,10 @@ const addCourse = async (req, res) => {
     try {
       // Create a new Course object from the request body
       const newCourse = new Course({
-        course_name: req.body.course_name
+        course_name: req.body.course_name,
+        course_code: req.body.course_code,
+        description: req.body.description,
+        credit_hours: req.body.credit_hours,
       });
   
       // Save the new course to MongoDB
