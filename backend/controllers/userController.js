@@ -1,5 +1,5 @@
-const Student = require("../models/student");
-const Admin = require("../models/admin");
+const Student = require("../models/Student");
+const Admin = require("../models/Admin");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 

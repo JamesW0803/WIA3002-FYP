@@ -12,9 +12,12 @@ const port = process.env.PORT;
 
 const userRoutes = require("./routes/userRoutes");
 const courseRoutes = require("./routes/courseRoutes");
+const studentRoutes = require("./routes/studentRoutes");
 
 app.use("/api/user", userRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/student", studentRoutes);
+
 
 // Connect to MongoDB
 database.connectToMongoDB();

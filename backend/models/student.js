@@ -1,11 +1,12 @@
-const mongoose = require('mongoose');
-const User = require('./user')  // Base model
+const mongoose = require("mongoose");
+const User = require("./User"); // Base model
+require("./ProgrammePlan"); // Import the Programme_Plan model
 
 const studentSchema = new mongoose.Schema({
-  faculty : {
+  faculty: {
     type: String,
     required: true,
-    default: "Faculty of Computer Science and Information Technology", 
+    default: "Faculty of Computer Science and Information Technology",
   },
   department: {
     type: String,
@@ -15,13 +16,14 @@ const studentSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  course_plans: [{ 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'course_plan' 
-  }],
-  
+  programme_plans: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Programme_Plan",
+    },
+  ],
 });
 
-const Student = User.discriminator('student', studentSchema);
+const Student = User.discriminator("student", studentSchema);
 
 module.exports = Student;
