@@ -7,10 +7,10 @@ app.use(express.json());
 
 const port = process.env.PORT;
 
-const studentRoutes = require("./routes/studentRoutes");
+const userRoutes = require("./routes/userRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 
-app.use("/api/students", studentRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/courses", courseRoutes);
 
 // Connect to MongoDB
