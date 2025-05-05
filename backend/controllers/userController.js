@@ -1,5 +1,5 @@
-const Student = require('../models/student');
-const Admin = require('../models/admin');
+const Student = require('../models/Student');
+const Admin = require('../models/Admin');
 
 const createUser = async (req, res) => {
     let newUser = null;
@@ -7,6 +7,7 @@ const createUser = async (req, res) => {
         if(req.body.role == 'student'){
             newUser = new Student({
                 name: req.body.name,
+                password: req.body.password,
                 email: req.body.email,
                 faculty: req.body.faculty,    
                 department: req.body.department,
