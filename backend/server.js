@@ -14,11 +14,13 @@ const userRoutes = require("./routes/userRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const passwordResetRoutes = require("./routes/passwordResetRoutes");
+const curriculumRoutes = require("./routes/curriculumRoutes");
 
 app.use("/api/user", userRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api", passwordResetRoutes);
+app.use("/api/curriculums", curriculumRoutes);
 
 // Connect to MongoDB
 database.connectToMongoDB();
