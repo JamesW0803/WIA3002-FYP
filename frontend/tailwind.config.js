@@ -6,6 +6,9 @@ module.exports = {
       fontFamily: {
         sans: ["Montserrat", "sans-serif"],
       },
+      colors: {
+        primary: "#1E3A8A",
+      },
     },
   },
   plugins: [],

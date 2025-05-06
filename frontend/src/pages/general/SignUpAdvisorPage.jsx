@@ -23,6 +23,20 @@ export default function SignUpAdvisorPage() {
   };
 
   const handleSignUp = async () => {
+    const { username, email, contact, password, confirmPassword } = formData;
+
+    if (!username || !email || !contact || !password || !confirmPassword) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert("Passwords do not match.");
+      return;
+    }
+
+    //Implement checking email and phone format here
+
     const payload = {
       name: formData.username,
       email: formData.email,
