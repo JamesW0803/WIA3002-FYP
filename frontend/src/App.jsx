@@ -6,6 +6,8 @@ import ResetPasswordPage from "./pages/general/ResetPasswordPage";
 import ResetPasswordSuccessPage from "./pages/general/ResetPasswordSuccessPage";
 import SignUpAdvisorPage from "./pages/general/SignUpAdvisorPage";
 import SignUpStudentPage from "./pages/general/SignUpStudentPage";
+import SignUpModal from "./pages/general/SignUpModal";
+import StudentDashboard from "./pages/student/StudentDashboard";
 
 function App() {
   return (
@@ -14,10 +16,11 @@ function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/email-sent" element={<EmailSentPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/reset-success" element={<ResetPasswordSuccessPage />} />
         <Route path="/sign-up-student" element={<SignUpStudentPage />} />
         <Route path="/sign-up-advisor" element={<SignUpAdvisorPage />} />
+        <Route path="/student-dashboard" element={<StudentDashboard />} />
       </Routes>
     </Router>
   );
