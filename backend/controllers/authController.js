@@ -3,8 +3,9 @@ const Admin = require("../models/Admin");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
+const generateToken = require("../utils/generateToken");
 
-const createUser = async (req, res) => {
+const register = async (req, res) => {
   let newUser = null;
   try {
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
@@ -30,25 +31,24 @@ const createUser = async (req, res) => {
     const savedUser = await newUser.save();
     res.status(201).json(savedUser);
   } catch (err) {
-    console.error("Error creating user:", err);
     res.status(500).json({
-      message: "Error creating user",
+      message: "Error registering",
       error: err.message,
     });
   }
 };
 
-const loginUser = async (req, res) => {
+const login = async (req, res) => {
   const { identifier, password, role } = req.body;
 
   try {
     let user;
     if (identifier.includes("@")) {
       // Treat as email
-      user = await User.findOne({ email: identifier, role });
+      user = await User.findOne({ email: identifier, role});
     } else {
       // Treat as username
-      user = await User.findOne({ name: identifier, role });
+      user = await User.findOne({ name: identifier, role});
     }
 
     if (!user || user.role !== role) {
@@ -60,22 +60,21 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    const payload = {
+      user_id : user.id,
+      role: user.role,
+    }
+
+    const token = generateToken(payload, "1h");
     // Optionally return user details
-    res.status(200).json({
-      message: "Login successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
+    res.status(200).json({"bearer token" : token})
   } catch (err) {
+    console.error(err)
     res.status(500).json({ message: "Login failed", error: err.message });
   }
 };
 
 module.exports = {
-  createUser,
-  loginUser,
+  register,
+  login,
 };
