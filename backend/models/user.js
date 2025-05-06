@@ -12,9 +12,9 @@ const userBaseSchema = new mongoose.Schema(
       unique: true,
     },
     password: {
-      type: String,  
+      type: String,
       required: true,
-    }
+    },
   },
   {
     discriminatorKey: "role",

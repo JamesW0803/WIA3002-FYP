@@ -1,24 +1,28 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 require("./ProgrammePlan"); // Import the Programme_Plan model
 require("./Course"); // Import the Programme_Plan model
 
-const semesterPlanSchema = new mongoose.Schema({
-    programme_plan_id: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Programme_plan' 
+const semesterPlanSchema = new mongoose.Schema(
+  {
+    programme_plan_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Programme_Plan",
     },
-    session : {
-        type: String,
-        required: true,
+    session: {
+      type: String,
+      required: true,
     },
-    courses: [{
+    courses: [
+      {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course'
-    }],
-}, {
+        ref: "Course",
+      },
+    ],
+  },
+  {
     timestamps: true,
-    collection: 'semester_plans'
-});
+    collection: "semester_plans",
+  }
+);
 
-
-module.exports = mongoose.model('Semester_Plan', semesterPlanSchema);
+module.exports = mongoose.model("Semester_Plan", semesterPlanSchema);
