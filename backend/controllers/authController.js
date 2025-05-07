@@ -3,7 +3,9 @@ const Admin = require("../models/Admin");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
+const jwt = require("jsonwebtoken");
 const generateToken = require("../utils/generateToken");
+const sendEmail = require("../utils/sendEmail");
 
 const register = async (req, res) => {
   let newUser = null;
@@ -75,24 +77,29 @@ const login = async (req, res) => {
 };
 
 const requestPasswordReset = async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(404).json({ message: "Email not found" });
+  try{
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+  
+    if (!user) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+  
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "15m",
+    });
+  
+    const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
+    await sendEmail(email, {
+      subject: "Password Reset",
+      html: `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`,
+    });
+  
+    res.status(200).json({ message: "Reset link sent" });
+  }catch(error){
+    console.error(error)
+    res.status(500).json({ message: "Error sending reset link", error: error.message });
   }
-
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
-  });
-
-  const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
-  await sendEmail(email, {
-    subject: "Password Reset",
-    html: `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`,
-  });
-
-  res.status(200).json({ message: "Reset link sent" });
 };
 
 const resetPassword = async (req, res) => {
