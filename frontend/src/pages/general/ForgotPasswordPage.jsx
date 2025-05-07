@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import axios from "axios";
+import axiosClient from "../../api/axiosClient";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async () => {
     try {
-      await axios.post("http://localhost:5000/api/request-reset", { email });
+      await axiosClient.post("user/request-reset", { email });
       navigate("/email-sent");
     } catch (error) {
       if (error.response?.status === 404) {

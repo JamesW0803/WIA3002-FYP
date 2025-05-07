@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
-import axios from "axios";
+import axiosClient from "../../api/axiosClient";
 import { useNavigate, useParams } from "react-router-dom";
 
 export default function ResetPasswordPage() {
@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/reset-password", {
+      await axiosClient.post("user/reset-password", {
         token,
         password,
       });

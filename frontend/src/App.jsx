@@ -7,6 +7,7 @@ import ResetPasswordSuccessPage from "./pages/general/ResetPasswordSuccessPage";
 import SignUpAdvisorPage from "./pages/general/SignUpAdvisorPage";
 import SignUpStudentPage from "./pages/general/SignUpStudentPage";
 import StudentDashboard from "./pages/student/StudentDashboard";
+import AdminDashboard from "./pages/faculty/dashboard";
 import ManualCourseEntry from "./pages/student/ManualCourseEntryPage";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
 
         {/* Student Routes */}
         <Route path="/student-dashboard" element={<StudentDashboard />} />
+        <Route path="/advisor-dashboard" element={<AdminDashboard />} />
         <Route path="/manual-course-entry" element={<ManualCourseEntry />} />
       </Routes>
     </Router>
