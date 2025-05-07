@@ -1,26 +1,16 @@
 require("dotenv").config();
-
 const express = require("express");
-const app = express();
-const database = require("./config/database");
-app.use(express.json());
-
 const cors = require("cors");
-app.use(cors());
+const database = require("./config/database");
+const routes = require("./routes/routes");
 
+const app = express();
 const port = process.env.PORT;
 
-const userRoutes = require("./routes/userRoutes");
-const courseRoutes = require("./routes/courseRoutes");
-const studentRoutes = require("./routes/studentRoutes");
-const passwordResetRoutes = require("./routes/passwordResetRoutes");
-const curriculumRoutes = require("./routes/curriculumRoutes");
+app.use(express.json());
+app.use(cors());
 
-app.use("/api/user", userRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/student", studentRoutes);
-app.use("/api", passwordResetRoutes);
-app.use("/api/curriculums", curriculumRoutes);
+app.use("/api", routes);
 
 // Connect to MongoDB
 database.connectToMongoDB();

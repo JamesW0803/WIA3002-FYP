@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async () => {
     try {
-      await axios.post("http://localhost:5000/api/request-reset", { email });
+      await axios.post("http://localhost:5000/api/user/request-reset", { email });
       navigate("/email-sent");
     } catch (error) {
       if (error.response?.status === 404) {
