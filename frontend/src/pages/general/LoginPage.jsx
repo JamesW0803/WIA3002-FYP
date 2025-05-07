@@ -20,36 +20,29 @@ export default function LoginPage() {
       setErrorMessage("Please fill in both username and password.");
       return;
     }
+
     try {
       const payload = {
         identifier: username,
         password,
         role,
+      };
+
+      const response = await axiosClient.post("/user/login", payload);
+
+      if (response.status === 200) {
+        localStorage.setItem("token", response.data.token);
+        setUser(res.data.user);
+        // Navigate after successful login
+        navigate(
+          role === "student" ? "/student-dashboard" : "/advisor-dashboard"
+        );
       }
-
-      axiosClient.post("/user/login", payload).then(
-        (res) => {
-
-          // Login successfully
-          if(res.status === 200){
-            localStorage.setItem("token", res.data.token);
-            setUser(res.data.user);
-          }
-
-        }).catch(
-        (error) => {
-          console.error("Error during login:", error);
-        }
+    } catch (error) {
+      console.error("Error during login:", error);
+      setErrorMessage(
+        error.response?.data?.message || "Login failed. Please try again."
       );
-
-      // Navigate to dashboard
-      if (role === "student") {
-        navigate("/student-dashboard");
-      } else {
-        navigate("/advisor-dashboard");
-      }
-    } catch (err) {
-      setErrorMessage(err.message);
     }
   };
 

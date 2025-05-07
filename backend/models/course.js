@@ -42,10 +42,7 @@ const courseSchema = new mongoose.Schema(
         "university_language",
         "university_cocurriculum",
         "university_other",
-        "she_cluster_1",
-        "she_cluster_2",
-        "she_cluster_3",
-        "she_cluster_4",
+        "she",
       ],
       required: true,
     },
@@ -57,10 +54,6 @@ const courseSchema = new mongoose.Schema(
       },
     },
     special_semester_only: {
-      type: Boolean,
-      default: false,
-    },
-    is_mandatory_for_graduation: {
       type: Boolean,
       default: false,
     },
