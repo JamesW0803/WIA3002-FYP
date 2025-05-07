@@ -12,6 +12,7 @@ import ManualCourseEntry from "./pages/student/ManualCourseEntryPage";
 import  ProtectedRoute  from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import { AuthProvider } from  "./context/AuthContext";
+import Unauthorized from "./pages/general/Unauthorized";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="/reset-success" element={<ResetPasswordSuccessPage />} />
           <Route path="/sign-up-student" element={<SignUpStudentPage />} />
           <Route path="/sign-up-advisor" element={<SignUpAdvisorPage />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
           <Route path="/" element = {<Layout />} >
             {/* Student*/ }
