@@ -1,16 +1,17 @@
 import React from "react";
-import StudentDashboardNavbar from "../../components/StudentDashboardNavbar";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <StudentDashboardNavbar />
       <div className="p-6 max-w-6xl mx-auto">
         {/* Welcome Box */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border-l-4 border-[#1E3A8A]">
           <h2 className="text-2xl font-bold text-[#1E3A8A]">
-            Welcome back, [Student Name]!
+            Welcome back, {user.username}!
           </h2>
           <p className="text-gray-600 mt-1">
             Here's a quick overview of your academic progress.

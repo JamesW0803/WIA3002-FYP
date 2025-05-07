@@ -1,4 +1,5 @@
 import axiosClient from "../../api/axiosClient"
+import Layout from "../../components/Layout"
 
 const Dashboard = () => {
 
@@ -27,6 +28,7 @@ const Dashboard = () => {
                 Try API
             </button>
         </div>
+        
     )
 }
 
