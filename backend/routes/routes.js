@@ -2,7 +2,6 @@ const express = require("express");
 const userRoutes = require("./userRoutes");
 const courseRoutes = require("./courseRoutes");
 const studentRoutes = require("./studentRoutes");
-const passwordResetRoutes = require("./passwordResetRoutes");
 const curriculumRoutes = require("./curriculumRoutes");
 const { authenticate } = require("../middleware/authMiddleware");
 
