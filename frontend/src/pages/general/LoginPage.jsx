@@ -2,6 +2,7 @@ import { useState } from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../../assets/logo.svg";
+import axiosClient from "../../api/axiosClient"; 
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -18,17 +19,25 @@ export default function LoginPage() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/api/user/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: username, password, role }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Login failed");
+      const payload = {
+        identifier: username,
+        password,
+        role,
       }
+
+      axiosClient.post("/user/login", payload).then(
+        (res) => {
+
+          // Login successfully
+          if(res.status === 200){
+            localStorage.setItem("token", res.data.token);
+          }
+
+        }).catch(
+        (error) => {
+          console.error("Error during login:", error);
+        }
+      );
 
       // Navigate to dashboard
       if (role === "student") {

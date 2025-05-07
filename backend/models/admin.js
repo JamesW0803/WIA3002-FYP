@@ -7,11 +7,6 @@ const adminSchema = new mongoose.Schema({
     enum: ["super", "basic"],
     default: "basic",
   },
-  access_level: {
-    type: String,
-    enum: ["super", "basic"],
-    default: "basic",
-  },
 });
 
 const Admin = User.discriminator("admin", adminSchema);
