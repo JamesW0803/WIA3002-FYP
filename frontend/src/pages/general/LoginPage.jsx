@@ -32,7 +32,7 @@ export default function LoginPage() {
 
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
-        setUser(res.data.user);
+        setUser(response.data.user);
         // Navigate after successful login
         navigate(
           role === "student" ? "/student-dashboard" : "/advisor-dashboard"
