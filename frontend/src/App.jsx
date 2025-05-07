@@ -9,26 +9,51 @@ import SignUpStudentPage from "./pages/general/SignUpStudentPage";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import AdminDashboard from "./pages/faculty/dashboard";
 import ManualCourseEntry from "./pages/student/ManualCourseEntryPage";
+import  ProtectedRoute  from "./components/ProtectedRoute";
+import Layout from "./components/Layout";
+import { AuthProvider } from  "./context/AuthContext";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* General Routes */}
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/email-sent" element={<EmailSentPage />} />
-        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="/reset-success" element={<ResetPasswordSuccessPage />} />
-        <Route path="/sign-up-student" element={<SignUpStudentPage />} />
-        <Route path="/sign-up-advisor" element={<SignUpAdvisorPage />} />
-        {/* Faculty Routes */}
 
-        {/* Student Routes */}
-        <Route path="/student-dashboard" element={<StudentDashboard />} />
-        <Route path="/advisor-dashboard" element={<AdminDashboard />} />
-        <Route path="/manual-course-entry" element={<ManualCourseEntry />} />
-      </Routes>
+    <Router>
+      <AuthProvider>
+        <Routes>
+
+          {/* Visitors*/ }
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/email-sent" element={<EmailSentPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/reset-success" element={<ResetPasswordSuccessPage />} />
+          <Route path="/sign-up-student" element={<SignUpStudentPage />} />
+          <Route path="/sign-up-advisor" element={<SignUpAdvisorPage />} />
+
+          <Route path="/" element = {<Layout />} >
+            {/* Student*/ }
+            <Route 
+              path="/student-dashboard"
+              element = {
+                <ProtectedRoute allowedRoles={["student"]}><StudentDashboard /></ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/manual-course-entry"
+              element = {
+                <ProtectedRoute allowedRoles={["student"]}><ManualCourseEntry /></ProtectedRoute>
+              } 
+            />
+            
+            {/* Admin*/ }
+            <Route 
+              path="/advisor-dashboard"
+              element = {
+                <ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>
+              } 
+            />
+          </Route>
+        </Routes>
+      </AuthProvider>
     </Router>
   );
 }

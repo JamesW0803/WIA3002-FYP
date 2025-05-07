@@ -69,7 +69,7 @@ const login = async (req, res) => {
 
     const token = generateToken(payload, "1h");
     // Optionally return user details
-    res.status(200).json({token});
+    res.status(200).json({token, "user" : { username : user.name, role : user.role}});
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: "Login failed", error: err.message });

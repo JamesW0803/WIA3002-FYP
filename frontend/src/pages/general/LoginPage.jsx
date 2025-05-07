@@ -2,7 +2,8 @@ import { useState } from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../../assets/logo.svg";
-import axiosClient from "../../api/axiosClient"; 
+import axiosClient from "../../api/axiosClient";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const { user , setUser } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (role) => {
@@ -31,6 +33,7 @@ export default function LoginPage() {
           // Login successfully
           if(res.status === 200){
             localStorage.setItem("token", res.data.token);
+            setUser(res.data.user);
           }
 
         }).catch(
