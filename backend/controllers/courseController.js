@@ -10,22 +10,39 @@ const getAllCourses = async (req, res) => {
 };
 
 const addCourse = async (req, res) => {
-  console.log(req.body);
   try {
-    // Create a new Course object from the request body
+    const {
+      course_name,
+      course_code,
+      description,
+      credit_hours,
+      prerequisites,
+      department,
+      type,
+      she_cluster,
+      special_semester_only,
+      is_mandatory_for_graduation,
+    } = req.body;
+
     const newCourse = new Course({
-      course_name: req.body.course_name,
-      course_code: req.body.course_code,
-      description: req.body.description,
-      credit_hours: req.body.credit_hours,
+      course_name,
+      course_code,
+      description,
+      credit_hours,
+      prerequisites,
+      department,
+      type,
+      she_cluster,
+      special_semester_only,
+      is_mandatory_for_graduation,
     });
 
-    // Save the new course to MongoDB
     const savedCourse = await newCourse.save();
-
-    // Respond with the saved course
     res.status(201).json(savedCourse);
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ error: "Course code already exists." });
+    }
     res.status(400).json({ error: error.message });
   }
 };
