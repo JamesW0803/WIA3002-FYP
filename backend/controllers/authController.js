@@ -47,10 +47,10 @@ const login = async (req, res) => {
     let user;
     if (identifier.includes("@")) {
       // Treat as email
-      user = await User.findOne({ email: identifier, role});
+      user = await User.findOne({ email: identifier, role });
     } else {
       // Treat as username
-      user = await User.findOne({ name: identifier, role});
+      user = await User.findOne({ name: identifier, role });
     }
 
     if (!user || user.role !== role) {
@@ -63,42 +63,44 @@ const login = async (req, res) => {
     }
 
     const payload = {
-      user_id : user.id,
+      user_id: user.id,
       role: user.role,
-    }
+    };
 
     const token = generateToken(payload, "1h");
     // Optionally return user details
-    res.status(200).json({token});
+    res.status(200).json({ token });
   } catch (err) {
-    console.error(err)
+    console.error(err);
     res.status(500).json({ message: "Login failed", error: err.message });
   }
 };
 
 const requestPasswordReset = async (req, res) => {
-  try{
+  try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-  
+
     if (!user) {
       return res.status(404).json({ message: "Email not found" });
     }
-  
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "15m",
     });
-  
+
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
     await sendEmail(email, {
       subject: "Password Reset",
       html: `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`,
     });
-  
+
     res.status(200).json({ message: "Reset link sent" });
-  }catch(error){
-    console.error(error)
-    res.status(500).json({ message: "Error sending reset link", error: error.message });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Error sending reset link", error: error.message });
   }
 };
 
@@ -124,5 +126,5 @@ module.exports = {
   register,
   login,
   requestPasswordReset,
-  resetPassword
+  resetPassword,
 };
