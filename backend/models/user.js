@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const userBaseSchema = new mongoose.Schema(
   {
-    name: {
+    username: {
       type: String,
       required: true,
     },
@@ -15,6 +15,10 @@ const userBaseSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    contact: {
+      type: String,
+      required: true,
+    }
   },
   {
     discriminatorKey: "role",

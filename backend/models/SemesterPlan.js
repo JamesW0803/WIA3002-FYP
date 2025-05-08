@@ -1,16 +1,17 @@
 const mongoose = require("mongoose");
 require("./ProgrammePlan"); // Import the Programme_Plan model
 require("./Course"); // Import the Programme_Plan model
+require("./AcademicSession"); // Import the Programme_Plan model
 
 const semesterPlanSchema = new mongoose.Schema(
   {
     programme_plan_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Programme_Plan",
+      ref: "ProgrammePlan",
     },
-    session: {
-      type: String,
-      required: true,
+    academic_session_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AcademicSession",
     },
     courses: [
       {
@@ -25,4 +26,4 @@ const semesterPlanSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Semester_Plan", semesterPlanSchema);
+module.exports = mongoose.model("SemesterPlan", semesterPlanSchema);

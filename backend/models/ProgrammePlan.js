@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
-require("./SemesterPlan"); // Import the Semester_Plan model
+require("./SemesterPlan"); 
+require("./ProgrammeIntake"); 
+require("./Student");
 
 const programmePlanSchema = new mongoose.Schema(
   {
@@ -7,16 +9,22 @@ const programmePlanSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    user_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
     semester_plans: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Semester_Plan",
+        ref: "SemesterPlan",
       },
     ],
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      refPath: "ownerModel",
+    },
+    ownerModel: {
+      type: String,
+      required: true,
+      enum: ["Student", "ProgrameIntake"]
+    }
   },
   {
     timestamps: true,
@@ -24,4 +32,4 @@ const programmePlanSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Programme_Plan", programmePlanSchema);
+module.exports = mongoose.model("ProgrammePlan", programmePlanSchema);
