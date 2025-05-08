@@ -22,11 +22,11 @@ const Dashboard = () => {
     return (
         <div className="dashboard">
             <h1 className="text-2xl font-bold">Faculty Dashboard</h1>
-            <p>Welcome to the Faculty Dashboard!</p>
+            {/* <p>Welcome to the Faculty Dashboard!</p> */}
             {/* Add more content here as needed */}
-            <button onClick={() => handleSubmit()}>
+            {/* <button onClick={() => handleSubmit()}>
                 Try API
-            </button>
+            </button> */}
         </div>
         
     )

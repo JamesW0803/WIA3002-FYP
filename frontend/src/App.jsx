@@ -7,12 +7,14 @@ import ResetPasswordSuccessPage from "./pages/general/ResetPasswordSuccessPage";
 import SignUpAdvisorPage from "./pages/general/SignUpAdvisorPage";
 import SignUpStudentPage from "./pages/general/SignUpStudentPage";
 import StudentDashboard from "./pages/student/StudentDashboard";
-import AdminDashboard from "./pages/faculty/dashboard";
+import AdminDashboard from "./pages/faculty/Dashboard";
 import ManualCourseEntry from "./pages/student/ManualCourseEntryPage";
 import  ProtectedRoute  from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import { AuthProvider } from  "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
+import ManageCourses from "./pages/faculty/ManageCourses";
+import Helpdesk from "./pages/faculty/Helpdesk";
 
 function App() {
   return (
@@ -51,6 +53,18 @@ function App() {
               path="/advisor-dashboard"
               element = {
                 <ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/manage-courses"
+              element = {
+                <ProtectedRoute allowedRoles={["admin"]}><ManageCourses /></ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/advisor-helpdesk"
+              element = {
+                <ProtectedRoute allowedRoles={["admin"]}><Helpdesk /></ProtectedRoute>
               } 
             />
           </Route>

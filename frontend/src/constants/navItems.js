@@ -24,6 +24,6 @@ export const ADMIN_NAV_ITEMS = [
     },
     {
         title : "Helpdesk",
-        path : "/admin-helpdesk",
+        path : "/advisor-helpdesk",
     },
 ]
