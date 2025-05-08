@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const User = require("./User"); // Base model
 require("./ProgrammePlan"); // Import the Programme_Plan model
+require("./Programme")
 
 const studentSchema = new mongoose.Schema({
   faculty: {
@@ -13,13 +14,14 @@ const studentSchema = new mongoose.Schema({
     required: true,
   },
   programme: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Programme",
     required: true,
   },
   programme_plans: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Programme_Plan",
+      ref: "ProgrammePlan",
     },
   ],
 });
