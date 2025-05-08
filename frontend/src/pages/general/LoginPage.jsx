@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const { user , setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (role) => {
