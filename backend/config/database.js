@@ -8,6 +8,7 @@ function connectToMongoDB() {
         mongoose.connect(MONGODB_URI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
+            autoIndex: true,
         })
         console.log("Connected to MongoDB successfully!");
     } catch (error) {

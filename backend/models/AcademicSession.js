@@ -19,4 +19,6 @@ const academicSessionSchema = new mongoose.Schema(
   }
 );
 
+academicSessionSchema.index({ year: 1, semester: 1 }, { unique: true });
+
 module.exports = mongoose.model("AcademicSession", academicSessionSchema);

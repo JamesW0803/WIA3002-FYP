@@ -14,19 +14,23 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    description: {
+    type: {
       type: String,
+      enum: COURSE_TYPES,
       required: true,
     },
     credit_hours: {
       type: Number,
       required: true,
     },
+    description: {
+      type: String,
+    },
     prerequisites: [
-      {
+      { 
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course",
-      },
+      }
     ],
     faculty: {
       type: String,
@@ -34,11 +38,6 @@ const courseSchema = new mongoose.Schema(
     },
     department: {
       type: String,
-    },
-    type: {
-      type: String,
-      enum: COURSE_TYPES,
-      required: true,
     },
     offered_semester: {
       type: String,

@@ -3,15 +3,17 @@ require("./Programme");
 require("./AcademicSession");
 require("./ProgrammePlan")
 
-const programmeAcademicSessionSchema = new mongoose.Schema(
+const programmeIntake = new mongoose.Schema(
   {
     programme_id: {
       type: mongoose.Schema.Types.ObjectId, 
       ref: "Programme",
+      required: true,
     },
     academic_session_id: {
         type: mongoose.Schema.Types.ObjectId, 
         ref: "AcademicSession",
+        required: true,
     },
     programme_plan: {
       type: mongoose.Schema.Types.ObjectId, 
@@ -24,8 +26,10 @@ const programmeAcademicSessionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: "proramme_academic_sessions",
+    collection: "programme_intakes",
   }
 );
 
-module.exports = mongoose.model("ProgrammeAcademicSession", programmeAcademicSessionSchema);
+programmeIntake.index({ programme_id: 1, academic_session_id: 1 }, { unique: true });
+
+module.exports = mongoose.model("ProgrammeIntake", programmeIntake);

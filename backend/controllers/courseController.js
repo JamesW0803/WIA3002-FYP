@@ -12,29 +12,27 @@ const getAllCourses = async (req, res) => {
 const addCourse = async (req, res) => {
   try {
     const {
-      course_name,
       course_code,
-      description,
-      credit_hours,
-      prerequisites,
-      department,
+      course_name,
       type,
-      she_cluster,
-      special_semester_only,
-      is_mandatory_for_graduation,
+      credit_hours,
+      description,
+      prerequisites,
+      faculty,
+      department,
+      offered_semester
     } = req.body;
 
     const newCourse = new Course({
-      course_name,
       course_code,
-      description,
-      credit_hours,
-      prerequisites,
-      department,
+      course_name,
       type,
-      she_cluster,
-      special_semester_only,
-      is_mandatory_for_graduation,
+      credit_hours,
+      description,
+      prerequisites,
+      faculty,
+      department,
+      offered_semester
     });
 
     const savedCourse = await newCourse.save();
