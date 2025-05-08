@@ -14,18 +14,20 @@ const register = async (req, res) => {
 
     if (req.body.role === "student") {
       newUser = new Student({
-        name: req.body.name,
+        username: req.body.name,
         email: req.body.email,
         password: hashedPassword,
         faculty: req.body.faculty,
         department: req.body.department,
         programme: req.body.programme,
+        contact: req.body.contact,
       });
     } else if (req.body.role === "admin") {
       newUser = new Admin({
-        name: req.body.name,
+        username: req.body.name,
         email: req.body.email,
         password: hashedPassword,
+        contact: req.body.contact,
         access_level: req.body.access_level,
       });
     }
@@ -50,7 +52,7 @@ const login = async (req, res) => {
       user = await User.findOne({ email: identifier, role });
     } else {
       // Treat as username
-      user = await User.findOne({ name: identifier, role });
+      user = await User.findOne({ username: identifier, role });
     }
 
     if (!user || user.role !== role) {
