@@ -14,7 +14,7 @@ const programmePlanSchema = new mongoose.Schema(
     semester_plans: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Semester_Plan",
+        ref: "SemesterPlan",
       },
     ],
   },
@@ -24,4 +24,4 @@ const programmePlanSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Programme_Plan", programmePlanSchema);
+module.exports = mongoose.model("ProgrammePlan", programmePlanSchema);

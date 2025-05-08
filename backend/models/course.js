@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const { ALL_SEMESTERS } = require("../constants/semesters");
+const { COURSE_TYPES } = require("../constants/courseType");
 
 const courseSchema = new mongoose.Schema(
   {
@@ -21,42 +23,27 @@ const courseSchema = new mongoose.Schema(
       required: true,
     },
     prerequisites: [
-      // {
-      //   type: mongoose.Schema.Types.ObjectId,
-      //   ref: "Course",
-      // },
       {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
       },
-      // need further dev
     ],
+    faculty: {
+      type: String,
+      default: "Faculty of Computer Science and Engineering"
+    },
     department: {
       type: String,
     },
     type: {
       type: String,
-      enum: [
-        "faculty_core",
-        "programme_core",
-        "specialization_elective",
-        "university_language",
-        "university_cocurriculum",
-        "university_other",
-        "she",
-      ],
+      enum: COURSE_TYPES,
       required: true,
     },
-    she_cluster: {
-      type: Number,
-      enum: [1, 2, 3, 4],
-      required: function () {
-        return this.type?.startsWith("she_cluster"); //only need to provide the cluster number if the course is a SHE course
-      },
-    },
-    special_semester_only: {
-      type: Boolean,
-      default: false,
-    },
+    offered_semester: {
+      type: String,
+      enum: ALL_SEMESTERS
+    }
   },
   {
     timestamps: true,
