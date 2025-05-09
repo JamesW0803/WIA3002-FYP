@@ -21,6 +21,9 @@ const authenticate = (req, res, next) => {
 
 const checkRole = (allowedRoles) => {
   return (req, res, next) => {
+    if (req.path === "/api/programmes/getAllProgrammes") {
+      return next(); // Skip auth
+    }
     if (!req.user || !req.user.role) {
       return res.status(403).json({ message: "Forbidden" });
     }

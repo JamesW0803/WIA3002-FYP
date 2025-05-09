@@ -3,25 +3,25 @@ const mongoose = require("mongoose");
 const programmeSchema = new mongoose.Schema(
   {
     programme_name: {
-      type: String, 
+      type: String,
       required: true,
       unique: true,
     },
     programme_code: {
-      type: String, 
+      type: String,
       required: true,
       unique: true,
     },
     description: {
-      type: String, 
+      type: String,
       required: true,
     },
     faculty: {
-      type: String, 
+      type: String,
       required: true,
     },
     department: {
-      type: String, 
+      type: String,
       required: true,
     },
   },
