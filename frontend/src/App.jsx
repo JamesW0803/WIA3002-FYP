@@ -15,6 +15,7 @@ import { AuthProvider } from  "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
 import ManageCourses from "./pages/faculty/ManageCourses";
 import Helpdesk from "./pages/faculty/Helpdesk";
+import ManageProgrammes from "./pages/faculty/ManageProgrammes";
 
 function App() {
   return (
@@ -53,6 +54,12 @@ function App() {
               path="/advisor-dashboard"
               element = {
                 <ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/manage-programmes"
+              element = {
+                <ProtectedRoute allowedRoles={["admin"]}><ManageProgrammes /></ProtectedRoute>
               } 
             />
             <Route 

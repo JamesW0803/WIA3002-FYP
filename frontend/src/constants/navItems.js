@@ -19,7 +19,11 @@ export const ADMIN_NAV_ITEMS = [
         path : "/advisor-dashboard",
     },
     {
-        title : "Manage courses",
+        title : "Programmes",
+        path : "/manage-programmes",
+    },
+    {
+        title : "Courses",
         path : "/manage-courses",
     },
     {
