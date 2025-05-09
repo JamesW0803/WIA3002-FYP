@@ -11,7 +11,7 @@ const CourseListSelector = ({
     <select
       value={selectedCode}
       onChange={(e) => onChange(e.target.value)}
-      className="border rounded p-2"
+      className="border rounded p-2 w-full"
     >
       <option value="">Select Course</option>
       {courses.map((course) => (
