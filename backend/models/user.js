@@ -18,7 +18,7 @@ const userBaseSchema = new mongoose.Schema(
     contact: {
       type: String,
       required: true,
-    }
+    },
   },
   {
     discriminatorKey: "role",

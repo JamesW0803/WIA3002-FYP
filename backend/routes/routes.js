@@ -12,7 +12,8 @@ const router = express.Router();
 router.use("/user", userRoutes);
 router.use("/courses", authenticate, courseRoutes);
 router.use("/student", authenticate, studentRoutes);
-router.use("/programmes", authenticate, programmeRoutes);
+// router.use("/programmes", authenticate, programmeRoutes);
+router.use("/programmes", programmeRoutes);
 router.use("/academic-sessions", authenticate, academicSessionRoutes);
 router.use("/curriculums", curriculumRoutes);
 

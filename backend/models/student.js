@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const User = require("./User"); // Base model
 require("./ProgrammePlan"); // Import the Programme_Plan model
-require("./Programme")
+require("./Programme");
 
 const studentSchema = new mongoose.Schema({
   faculty: {
