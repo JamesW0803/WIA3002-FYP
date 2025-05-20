@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -26,7 +26,38 @@ export default function SignUpStudentPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [programmeOptions, setProgrammeOptions] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchProgrammes = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost:5000/api/programmes/getAllProgrammes"
+        );
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+
+        // Ensure data is an array before setting it
+        if (Array.isArray(data)) {
+          setProgrammeOptions(data);
+        } else if (Array.isArray(data.programmes)) {
+          // If the response is an object with a programmes property
+          setProgrammeOptions(data.programmes);
+        } else {
+          console.error("Unexpected API response format:", data);
+          setProgrammeOptions([]); // Set to empty array as fallback
+        }
+      } catch (err) {
+        console.error("Failed to fetch programmes:", err);
+        setProgrammeOptions([]); // Set to empty array on error
+      }
+    };
+
+    fetchProgrammes();
+  }, []);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -40,8 +71,11 @@ export default function SignUpStudentPage() {
       role: "student",
       faculty: "Faculty of Computer Science and Information Technology",
       department: formData.department,
-      programme: formData.programme,
+      programme: formData.programme, // Currently just a string
+      contact: formData.contact,
     };
+
+    console.log("Submitting registration with payload:", payload);
 
     try {
       const response = await fetch("http://localhost:5000/api/user", {
@@ -51,18 +85,24 @@ export default function SignUpStudentPage() {
       });
 
       const result = await response.json();
+
+      console.log("Server response status:", response.status);
+      console.log("Server response body:", result);
+
       if (response.ok) {
-        console.log("Student registered:", result);
+        console.log("Student registered successfully:", result);
         setIsSuccess(true);
-        setShowModal(true);
       } else {
-        console.error("Error:", result.message);
+        console.error(
+          "Registration failed with message:",
+          result.message || result.error
+        );
         setIsSuccess(false);
-        setShowModal(true);
       }
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error("Fetch or network error occurred:", err);
       setIsSuccess(false);
+    } finally {
       setShowModal(true);
     }
   };
@@ -211,12 +251,19 @@ export default function SignUpStudentPage() {
             placeholder="Choose your programme"
           >
             <option value="" disabled hidden>
-              Choose your programme
+              Select your programme
             </option>
-            <option value="Bachelor">Bachelor</option>
-            <option value="Master">Master</option>
-            <option value="Doctorate">Doctorate</option>
-            <option value="UM Open Channel Satu">UM Open Channel (Satu)</option>
+            {Array.isArray(programmeOptions) && programmeOptions.length > 0 ? (
+              programmeOptions.map((prog) => (
+                <option key={prog._id} value={prog._id}>
+                  {prog.programme_name}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>
+                Loading programmes...
+              </option>
+            )}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
         </div>

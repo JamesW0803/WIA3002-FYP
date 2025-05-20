@@ -1,3 +1,5 @@
+const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 const Student = require("../models/Student");
 const Admin = require("../models/Admin");
 const User = require("../models/User");
@@ -19,7 +21,9 @@ const register = async (req, res) => {
         password: hashedPassword,
         faculty: req.body.faculty,
         department: req.body.department,
-        programme: req.body.programme,
+        programme: mongoose.Types.ObjectId.createFromHexString(
+          req.body.programme
+        ),
         contact: req.body.contact,
       });
     } else if (req.body.role === "admin") {
@@ -35,6 +39,7 @@ const register = async (req, res) => {
     const savedUser = await newUser.save();
     res.status(201).json(savedUser);
   } catch (err) {
+    console.error("Validation error:", err.message); //debugging
     res.status(500).json({
       message: "Error registering",
       error: err.message,
@@ -71,7 +76,9 @@ const login = async (req, res) => {
 
     const token = generateToken(payload, "1h");
     // Optionally return user details
-    res.status(200).json({token, "user" : { username : user.username, role : user.role}});
+    res
+      .status(200)
+      .json({ token, user: { username: user.username, role: user.role } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Login failed", error: err.message });

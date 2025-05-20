@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const { user , setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (role) => {
@@ -33,6 +33,12 @@ export default function LoginPage() {
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
         setUser(response.data.user);
+
+        // Clear previous year/semester data when logging in
+        if (role === "student") {
+          localStorage.removeItem("studentYear");
+          localStorage.removeItem("studentSemester");
+        }
         // Navigate after successful login
         navigate(
           role === "student" ? "/student-dashboard" : "/advisor-dashboard"
