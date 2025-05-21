@@ -16,6 +16,7 @@ const Row = ({item, order, indexNum = -1}) => {
 }
 
 const Table = ({header, data, order, index = true }) => {
+    console.log("Table data: ", data);
     return (
         <table>
             <thead>

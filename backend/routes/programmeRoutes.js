@@ -8,11 +8,11 @@ const {
   getAllProgrammes,
 } = require("../controllers/programmeController");
 
+router.use(authenticate);
 // Public routes (no auth required)
-router.get("/getAllProgrammes", getAllProgrammes);
+router.get("/", getAllProgrammes);
 
 // Admin-only routes
-router.use(authenticate);
 router.use(checkRole(["admin"]));
 router.post("/", addProgramme);
 router.post("/intake", addProgrammeIntake);

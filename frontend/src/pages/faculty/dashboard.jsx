@@ -24,7 +24,7 @@ const Dashboard = () => {
 
     return (
         <div className="dashboard">
-            <h1 className="text-2xl font-bold">Faculty Dashboard</h1>
+            <h1 className="text-2xl font-bold">Students' Progress</h1>
             <Table
                 header={header}
                 data={students}
