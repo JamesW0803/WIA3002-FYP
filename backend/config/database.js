@@ -6,8 +6,8 @@ const MONGODB_URI = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env
 function connectToMongoDB() {
     try {
         mongoose.connect(MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
+            // useNewUrlParser: true,
+            // useUnifiedTopology: true,
             autoIndex: true,
         })
         console.log("Connected to MongoDB successfully!");

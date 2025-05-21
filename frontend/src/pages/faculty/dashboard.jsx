@@ -1,34 +1,37 @@
 import axiosClient from "../../api/axiosClient"
-import Layout from "../../components/Layout"
+import { useState, useEffect } from "react";
+import Table from "../../components/Table";
 
 const Dashboard = () => {
-
-    const handleSubmit = async () => {
-        try {
-            axiosClient.get("/courses").then(
-                (res) => {
-                  console.log("Courses fetched successfully:", res.data);
-                }).catch(
-                (error) => {
-                  console.error("Error get courses:", error);
-                }
-              );
-        } catch (error) {
-            console.error("Error fetching data:", error);
+    const [students, setStudents] = useState([]);
+    const header = ["Name", "Programme", "Current Semester", "Expected Graduation", "Progress", "Status"]
+    const order = ["username", "programme", "currentSemester", "expectedGraduation", "progress", "status"]
+    
+    useEffect(() => {
+        const fetchStudents = async () =>{
+            try {
+                const response = await axiosClient.get("/students");
+                const students = response.data;
+                setStudents(students);
+                
+            }catch(error){
+                console.error("Error fetching students.")
+            }
         }
-    }
+        fetchStudents();
+    }, [])
 
 
     return (
         <div className="dashboard">
-            <h1 className="text-2xl font-bold">Faculty Dashboard</h1>
-            <p>Welcome to the Faculty Dashboard!</p>
-            {/* Add more content here as needed */}
-            <button onClick={() => handleSubmit()}>
-                Try API
-            </button>
-        </div>
-        
+            <h1 className="text-2xl font-bold">Students' Progress</h1>
+            <Table
+                header={header}
+                data={students}
+                order={order}
+                // index={false}
+            />
+        </div> 
     )
 }
 

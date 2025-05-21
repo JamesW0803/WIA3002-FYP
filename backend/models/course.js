@@ -27,22 +27,22 @@ const courseSchema = new mongoose.Schema(
       type: String,
     },
     prerequisites: [
-      { 
+      {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course",
-      }
+      },
     ],
     faculty: {
       type: String,
-      default: "Faculty of Computer Science and Engineering"
+      default: "Faculty of Computer Science and Engineering",
     },
     department: {
       type: String,
     },
     offered_semester: {
       type: String,
-      enum: ALL_SEMESTERS
-    }
+      enum: ALL_SEMESTERS,
+    },
   },
   {
     timestamps: true,
