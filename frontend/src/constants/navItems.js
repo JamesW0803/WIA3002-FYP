@@ -7,9 +7,7 @@ export const STUDENT_NAV_ITEMS = [
     title: "Academic",
     submenu: [
       { title: "Academic Profile", path: "/academic-profile" },
-      { title: "Manual Course Entry", path: "/manual-course-entry" },
       { title: "Transcript View", path: "/transcript-view" },
-      { title: "GPA Calculator", path: "/gpa-calculator" },
     ],
   },
   {

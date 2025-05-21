@@ -11,6 +11,16 @@ import AdminDashboard from "./pages/faculty/dashboard";
 import AcademicProfile from "./pages/student/AcademicProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
+import TranscriptView from "./pages/student/TranscriptView";
+import ProgramPlanner from "./pages/student/ProgramPlanner";
+import GPAPlanner from "./pages/student/GPAPlanner";
+import SavedPlans from "./pages/student/SavedPlans";
+import ProgressTracker from "./pages/student/ProgressTracker";
+import CourseRecommendations from "./pages/student/CourseRecommendations";
+import HelpdeskPage from "./pages/student/Helpdesk";
+import FAQsPage from "./pages/student/FAQPage";
+import ContactAdvisorPage from "./pages/student/ContactAdvisorPage";
+
 import { AuthProvider } from "./context/AuthContext";
 
 function App() {
@@ -48,12 +58,47 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/transcript-view"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <TranscriptView />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/program-planner"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <AcademicProfile />
+                  <ProgramPlanner />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/gpa-planner"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <GPAPlanner />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/saved-plans"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <SavedPlans />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/progress-tracker"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <ProgressTracker />
                 </ProtectedRoute>
               }
             />
@@ -62,7 +107,7 @@ function App() {
               path="/course-recommendations"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <AcademicProfile />
+                  <CourseRecommendations />
                 </ProtectedRoute>
               }
             />
@@ -71,7 +116,25 @@ function App() {
               path="/helpdesk"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <AcademicProfile />
+                  <HelpdeskPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/faq"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <FAQsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/chat-with-advisor"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <ContactAdvisorPage />
                 </ProtectedRoute>
               }
             />

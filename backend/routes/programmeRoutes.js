@@ -9,6 +9,7 @@ const {
 } = require("../controllers/programmeController");
 
 // Public routes (no auth required)
+// router.use(authenticate);
 router.get("/getAllProgrammes", getAllProgrammes);
 
 // Admin-only routes

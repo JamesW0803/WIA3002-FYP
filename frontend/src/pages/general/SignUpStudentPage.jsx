@@ -229,12 +229,11 @@ export default function SignUpStudentPage() {
               Artificial Intelligence
             </option>
             <option value="Software Engineering">Software Engineering</option>
-            <option value="Information Systems">Information Systems</option>
+            <option value="Information System">Information Systems</option>
             <option value="Computer System and Network">
               Computer System and Network
             </option>
             <option value="Multimedia">Multimedia</option>
-            <option value="Data Science">Data Science</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
         </div>
