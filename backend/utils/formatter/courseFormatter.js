@@ -9,8 +9,6 @@ const formatCourses = (courses) => {
 }
 
 const formatCourse = (course) => {
-    console.log("course.type", course.type)
-    console.log("READABLE_COURSE_TYPES[course.type]", READABLE_COURSE_TYPES[course.type])
     return {
         course_code : course.course_code ?? "-",
         course_name : course.course_name ?? "-",
