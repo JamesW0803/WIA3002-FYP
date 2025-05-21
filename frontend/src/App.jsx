@@ -7,7 +7,7 @@ import ResetPasswordSuccessPage from "./pages/general/ResetPasswordSuccessPage";
 import SignUpAdvisorPage from "./pages/general/SignUpAdvisorPage";
 import SignUpStudentPage from "./pages/general/SignUpStudentPage";
 import StudentDashboard from "./pages/student/StudentDashboard";
-import AdminDashboard from "./pages/faculty/dashboard";
+import AdminDashboard from "./pages/faculty/Dashboard";
 import AcademicProfile from "./pages/student/AcademicProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -22,6 +22,10 @@ import FAQsPage from "./pages/student/FAQPage";
 import ContactAdvisorPage from "./pages/student/ContactAdvisorPage";
 
 import { AuthProvider } from "./context/AuthContext";
+import Unauthorized from "./pages/general/Unauthorized";
+import ManageCourses from "./pages/faculty/ManageCourses";
+import Helpdesk from "./pages/faculty/Helpdesk";
+import ManageProgrammes from "./pages/faculty/ManageProgrammes";
 
 function App() {
   return (
@@ -39,9 +43,11 @@ function App() {
           <Route path="/reset-success" element={<ResetPasswordSuccessPage />} />
           <Route path="/sign-up-student" element={<SignUpStudentPage />} />
           <Route path="/sign-up-advisor" element={<SignUpAdvisorPage />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
+          {/* Student*/}
           <Route path="/" element={<Layout />}>
-            {/* Student*/}
+
             <Route
               path="/student-dashboard"
               element={
@@ -138,16 +144,36 @@ function App() {
                 </ProtectedRoute>
               }
             />
+          </Route>
 
-            {/* Admin*/}
-            <Route
-              path="/advisor-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+          {/* Faculty*/}
+          <Route path = "/admin" element = {<Layout/>}>
+              <Route
+                path="home"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="programmes"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><ManageProgrammes /></ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="courses"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><ManageCourses /></ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="helpdesk"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><Helpdesk /></ProtectedRoute>
+                } 
+              />
           </Route>
         </Routes>
       </AuthProvider>

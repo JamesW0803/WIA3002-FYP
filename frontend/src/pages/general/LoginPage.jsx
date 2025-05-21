@@ -32,7 +32,9 @@ export default function LoginPage() {
 
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
-        setUser(response.data.user);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        const currentUser = JSON.parse(localStorage.getItem("user"));
+        setUser(currentUser);
 
         // Clear previous year/semester data when logging in
         if (role === "student") {
@@ -41,7 +43,7 @@ export default function LoginPage() {
         }
         // Navigate after successful login
         navigate(
-          role === "student" ? "/student-dashboard" : "/advisor-dashboard"
+          role === "student" ? "/student-dashboard" : "/admin/home"
         );
       }
     } catch (error) {

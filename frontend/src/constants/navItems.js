@@ -31,16 +31,20 @@ export const STUDENT_NAV_ITEMS = [
 ];
 
 export const ADMIN_NAV_ITEMS = [
-  {
-    title: "Home",
-    path: "/advisor-dashboard",
-  },
-  {
-    title: "Manage courses",
-    path: "/manage-courses",
-  },
-  {
-    title: "Helpdesk",
-    path: "/admin-helpdesk",
-  },
-];
+    {
+        title : "Home",
+        path : "/admin/home",
+    },
+    {
+        title : "Programmes",
+        path : "/admin/programmes",
+    },
+    {
+        title : "Courses",
+        path : "/admin/courses",
+    },
+    {
+        title : "Helpdesk",
+        path : "/admin/helpdesk",
+    },
+]
