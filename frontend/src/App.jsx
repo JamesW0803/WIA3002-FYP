@@ -13,9 +13,12 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import { AuthProvider } from "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
-import ManageCourses from "./pages/faculty/ManageCourses";
+import ManageCourses from "./pages/faculty/courses/ManageCourses";
 import Helpdesk from "./pages/faculty/Helpdesk";
-import ManageProgrammes from "./pages/faculty/ManageProgrammes";
+import ManageProgrammes from "./pages/faculty/programmes/ManageProgrammes";
+import CourseDetails from "./pages/faculty/courses/CourseDetails";
+import StudentDetails from "./pages/faculty/StudentDetails";
+import ProgrammeDetails from "./pages/faculty/programmes/ProgrammeDetails";
 
 function App() {
   return (
@@ -93,6 +96,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="home/:studentName"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <StudentDetails/>
+                  </ProtectedRoute>
+                }
+              />
               <Route 
                 path="programmes"
                 element = {
@@ -100,10 +111,22 @@ function App() {
                 } 
               />
               <Route 
+                path="programmes/:programme_code"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><ProgrammeDetails /></ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="courses"
                 element = {
                   <ProtectedRoute allowedRoles={["admin"]}><ManageCourses /></ProtectedRoute>
-                } 
+                }
+              />
+              <Route 
+                  path="courses/:course_code"
+                  element = {
+                    <ProtectedRoute allowedRoles={["admin"]}><CourseDetails /></ProtectedRoute>
+                  } 
               />
               <Route 
                 path="helpdesk"

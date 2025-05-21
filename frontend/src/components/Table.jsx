@@ -4,10 +4,9 @@ const Row = ({item, order, indexNum = -1}) => {
             {indexNum !== -1 && <td>{indexNum+1}</td>}
             {   
                 order.map((key) => {
+                    const data = item.find((data) => data.key === key)
                     return (
-                        <td>
-                            {item[key] || "-"}
-                        </td>
+                        <TableData data={data}  />
                     )
                 })
             }
@@ -15,8 +14,21 @@ const Row = ({item, order, indexNum = -1}) => {
     )
 }
 
-const Table = ({header, data, order, index = true }) => {
-    console.log("Table data: ", data);
+const TableData = ({ data }) => {
+    switch (data.type) {
+        case "text_display":
+            return <td key={data.key}>{data.value}</td>
+        case "clickable_text_display":
+            return <td key={data.key} onClick={data.onClick}>{data.value}</td>
+    }
+}
+
+const Table = ({
+    header, 
+    items, 
+    order, 
+    index = true 
+}) => {
     return (
         <table>
             <thead>
@@ -33,7 +45,7 @@ const Table = ({header, data, order, index = true }) => {
             </thead>
             <tbody>
                 {
-                    data.map((item, indexNum) => {
+                    items.map((item, indexNum) => {
                         if(index)
                             return <Row item={item} order={order} indexNum={indexNum}/>        
                         else
