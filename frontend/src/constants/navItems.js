@@ -35,18 +35,18 @@ export const STUDENT_NAV_ITEMS = [
 export const ADMIN_NAV_ITEMS = [
     {
         title : "Home",
-        path : "/advisor-dashboard",
+        path : "/admin/home",
     },
     {
         title : "Programmes",
-        path : "/manage-programmes",
+        path : "/admin/programmes",
     },
     {
         title : "Courses",
-        path : "/manage-courses",
+        path : "/admin/courses",
     },
     {
         title : "Helpdesk",
-        path : "/advisor-helpdesk",
+        path : "/admin/helpdesk",
     },
 ]

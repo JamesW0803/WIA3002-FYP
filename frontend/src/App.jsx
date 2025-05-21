@@ -35,8 +35,9 @@ function App() {
           <Route path="/sign-up-advisor" element={<SignUpAdvisorPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
+          {/* Student*/}
           <Route path="/" element={<Layout />}>
-            {/* Student*/}
+
             <Route
               path="/student-dashboard"
               element={
@@ -80,34 +81,36 @@ function App() {
                 </ProtectedRoute>
               }
             />
+          </Route>
 
-            {/* Admin*/}
-            <Route
-              path="/advisor-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/manage-programmes"
-              element = {
-                <ProtectedRoute allowedRoles={["admin"]}><ManageProgrammes /></ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/manage-courses"
-              element = {
-                <ProtectedRoute allowedRoles={["admin"]}><ManageCourses /></ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/advisor-helpdesk"
-              element = {
-                <ProtectedRoute allowedRoles={["admin"]}><Helpdesk /></ProtectedRoute>
-              } 
-            />
+          {/* Faculty*/}
+          <Route path = "/admin" element = {<Layout/>}>
+              <Route
+                path="home"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="programmes"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><ManageProgrammes /></ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="courses"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><ManageCourses /></ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="helpdesk"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><Helpdesk /></ProtectedRoute>
+                } 
+              />
           </Route>
         </Routes>
       </AuthProvider>
