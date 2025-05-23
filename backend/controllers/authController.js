@@ -9,9 +9,37 @@ const jwt = require("jsonwebtoken");
 const generateToken = require("../utils/generateToken");
 const sendEmail = require("../utils/sendEmail");
 
+const checkUsernameExists = async (username) => {
+  const user = await User.findOne({ username });
+  return !!user;
+};
+
+const checkEmailExists = async (email) => {
+  const user = await User.findOne({ email });
+  return !!user;
+};
+
 const register = async (req, res) => {
   let newUser = null;
   try {
+    // Check if username already exists
+    const usernameExists = await checkUsernameExists(req.body.name);
+    if (usernameExists) {
+      return res.status(400).json({
+        message: "Username already exists",
+        field: "username",
+      });
+    }
+
+    // Check if email already exists
+    const emailExists = await checkEmailExists(req.body.email);
+    if (emailExists) {
+      return res.status(400).json({
+        message: "Email already exists",
+        field: "email",
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
 
     if (req.body.role === "student") {
@@ -37,9 +65,20 @@ const register = async (req, res) => {
     }
 
     const savedUser = await newUser.save();
+
+    // Create corresponding User document
+    const user = new User({
+      username: req.body.name,
+      email: req.body.email,
+      password: hashedPassword,
+      role: req.body.role,
+      userId: savedUser._id, // Reference to either Student or Admin
+    });
+    await user.save();
+
     res.status(201).json(savedUser);
   } catch (err) {
-    console.error("Validation error:", err.message); //debugging
+    console.error("Validation error:", err.message);
     res.status(500).json({
       message: "Error registering",
       error: err.message,
@@ -136,4 +175,6 @@ module.exports = {
   login,
   requestPasswordReset,
   resetPassword,
+  checkUsernameExists,
+  checkEmailExists,
 };
