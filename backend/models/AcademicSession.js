@@ -4,13 +4,28 @@ const { ALL_SEMESTERS } = require("../constants/semesters");
 const academicSessionSchema = new mongoose.Schema(
   {
     year: {
-      type: String, 
+      type: String,
       required: true,
+      validate: {
+        validator: function (v) {
+          // Validate format like "2022/2023"
+          return (
+            /^\d{4}\/\d{4}$/.test(v) &&
+            parseInt(v.split("/")[1]) === parseInt(v.split("/")[0]) + 1
+          );
+        },
+        message: (props) =>
+          `${props.value} must be in format "YYYY/YYYY" and consecutive years (e.g., "2022/2023")`,
+      },
     },
     semester: {
-        type: String, 
-        required: true,
-        enum: ALL_SEMESTERS
+      type: String,
+      required: true,
+      enum: ALL_SEMESTERS,
+    },
+    isCurrent: {
+      type: Boolean,
+      default: false,
     },
   },
   {
