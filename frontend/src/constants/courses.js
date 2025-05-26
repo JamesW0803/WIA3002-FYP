@@ -1,4 +1,3 @@
-// frontend/src/data/courses.js
 export const COURSES_DATABASE = [
   // Year 1 Courses
   {

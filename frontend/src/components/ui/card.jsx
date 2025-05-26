@@ -1,9 +1,7 @@
-import React from "react";
-
 export const Card = ({ className = "", children, ...props }) => {
   return (
     <div
-      className={`bg-white rounded-2xl shadow-md border border-gray-200 p-4 ${className}`}
+      className={`bg-white rounded-xl shadow-sm border border-gray-200 transition-all hover:shadow-md hover:border-[#1E3A8A]/20 ${className}`}
       {...props}
     >
       {children}
@@ -13,7 +11,7 @@ export const Card = ({ className = "", children, ...props }) => {
 
 export const CardContent = ({ className = "", children, ...props }) => {
   return (
-    <div className={`p-2 ${className}`} {...props}>
+    <div className={`p-6 ${className}`} {...props}>
       {children}
     </div>
   );

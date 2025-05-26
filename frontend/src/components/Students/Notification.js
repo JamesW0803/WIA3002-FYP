@@ -1,10 +1,16 @@
 import React, { useEffect } from "react";
 
-const Notification = ({ message, type = "info", isClosing, onClose }) => {
+const Notification = ({
+  title,
+  message,
+  type = "info",
+  isClosing,
+  onClose,
+}) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
-    }, 10000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [onClose]);

@@ -13,9 +13,10 @@ export const STUDENT_NAV_ITEMS = [
   {
     title: "Planner",
     submenu: [
-      { title: "Program Planner", path: "/program-planner" },
-      { title: "GPA Planner", path: "/gpa-planner" },
-      { title: "Saved Plans", path: "/saved-plans" },
+      // { title: "Program Planner", path: "/program-planner" },
+      // { title: "GPA Planner", path: "/gpa-planner" },
+      // { title: "Saved Plans", path: "/saved-plans" },
+      { title: "Academic Planner", path: "/academic-planner" },
       { title: "Progress Tracker", path: "/progress-tracker" },
       { title: "Course Recommendations", path: "/course-recommendations" },
     ],
@@ -31,20 +32,20 @@ export const STUDENT_NAV_ITEMS = [
 ];
 
 export const ADMIN_NAV_ITEMS = [
-    {
-        title : "Home",
-        path : "/admin/home",
-    },
-    {
-        title : "Programmes",
-        path : "/admin/programmes",
-    },
-    {
-        title : "Courses",
-        path : "/admin/courses",
-    },
-    {
-        title : "Helpdesk",
-        path : "/admin/helpdesk",
-    },
-]
+  {
+    title: "Home",
+    path: "/admin/home",
+  },
+  {
+    title: "Programmes",
+    path: "/admin/programmes",
+  },
+  {
+    title: "Courses",
+    path: "/admin/courses",
+  },
+  {
+    title: "Helpdesk",
+    path: "/admin/helpdesk",
+  },
+];
