@@ -2,15 +2,63 @@ import React from "react";
 import YearCard from "./YearCard";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import { Plus } from "lucide-react";
 
 const PlanCard = ({
   plan,
   plans,
   setPlans,
   allCourses,
-  onAddYear,
-  onDeleteYear,
+  isViewMode = false,
 }) => {
+  const addYear = () => {
+    const newYearNumber = plan.years.length + 1;
+    const newYear = {
+      year: newYearNumber,
+      semesters: [
+        {
+          id: Date.now(),
+          name: `Year ${newYearNumber} - Semester 1`,
+          courses: [],
+          completed: false,
+        },
+        {
+          id: Date.now() + 1,
+          name: `Year ${newYearNumber} - Semester 2`,
+          courses: [],
+          completed: false,
+        },
+      ],
+    };
+
+    const updatedPlans = plans.map((p) =>
+      p.id === plan.id
+        ? {
+            ...p,
+            years: [...p.years, newYear],
+          }
+        : p
+    );
+    setPlans(updatedPlans);
+  };
+
+  const deleteYear = (yearToDelete) => {
+    if (plan.years.length <= 1) {
+      alert("Cannot delete the only remaining year");
+      return;
+    }
+
+    const updatedPlans = plans.map((p) =>
+      p.id === plan.id
+        ? {
+            ...p,
+            years: p.years.filter((y) => y.year !== yearToDelete),
+          }
+        : p
+    );
+    setPlans(updatedPlans);
+  };
+
   const totalCredits = plan.years.reduce(
     (total, year) =>
       total +
@@ -36,15 +84,12 @@ const PlanCard = ({
               Total Credits: {totalCredits}
             </p>
           </div>
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              onClick={onAddYear}
-              disabled={plan.years.length >= 4}
-            >
+          {!isViewMode && plan.years.length < 4 && (
+            <Button variant="outline" onClick={addYear} className="gap-2">
+              <Plus className="w-4 h-4" />
               Add Year
             </Button>
-          </div>
+          )}
         </div>
 
         <div className="space-y-8">
@@ -52,9 +97,9 @@ const PlanCard = ({
             <div key={yearData.year} className="relative">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="text-lg font-medium">Year {yearData.year}</h4>
-                {plan.years.length > 1 && (
+                {!isViewMode && plan.years.length > 1 && (
                   <button
-                    onClick={() => onDeleteYear(yearData.year)}
+                    onClick={() => deleteYear(yearData.year)}
                     className="text-red-600 hover:text-red-800 text-sm font-medium"
                   >
                     Delete Year
@@ -67,6 +112,7 @@ const PlanCard = ({
                 setPlans={setPlans}
                 plans={plans}
                 allCourses={allCourses}
+                isViewMode={isViewMode}
               />
             </div>
           ))}
