@@ -12,21 +12,19 @@ import AcademicProfile from "./pages/student/AcademicProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import TranscriptView from "./pages/student/TranscriptView";
-// import ProgramPlanner from "./pages/student/ProgramPlanner";
-// import GPAPlanner from "./pages/student/GPAPlanner";
-// import SavedPlans from "./pages/student/SavedPlans";
 import AcademicPlanner from "./pages/student/AcademicPlanner";
 import ProgressTracker from "./pages/student/ProgressTracker";
 import CourseRecommendations from "./pages/student/CourseRecommendations";
-import HelpdeskPage from "./pages/student/Helpdesk";
 import FAQsPage from "./pages/student/FAQPage";
 import ContactAdvisorPage from "./pages/student/ContactAdvisorPage";
+import StudentProfile from "./pages/student/StudentProfile";
 
 import { AuthProvider } from "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
 import ManageCourses from "./pages/faculty/ManageCourses";
 import Helpdesk from "./pages/faculty/Helpdesk";
 import ManageProgrammes from "./pages/faculty/ManageProgrammes";
+import AdminProfile from "./pages/faculty/AdminProfile";
 
 function App() {
   return (
@@ -73,33 +71,6 @@ function App() {
               }
             />
 
-            {/* <Route
-              path="/program-planner"
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <ProgramPlanner />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/gpa-planner"
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <GPAPlanner />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/saved-plans"
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <SavedPlans />
-                </ProtectedRoute>
-              }
-            /> */}
-
             <Route
               path="/academic-planner"
               element={
@@ -128,10 +99,10 @@ function App() {
             />
 
             <Route
-              path="/helpdesk"
+              path="/chat-with-advisor"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <HelpdeskPage />
+                  <ContactAdvisorPage />
                 </ProtectedRoute>
               }
             />
@@ -144,12 +115,11 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
-              path="/chat-with-advisor"
+              path="/student-profile"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <ContactAdvisorPage />
+                  <StudentProfile />
                 </ProtectedRoute>
               }
             />
@@ -186,6 +156,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <Helpdesk />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="profile"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminProfile />
                 </ProtectedRoute>
               }
             />
