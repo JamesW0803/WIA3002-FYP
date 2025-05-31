@@ -13,9 +13,6 @@ export const STUDENT_NAV_ITEMS = [
   {
     title: "Planner",
     submenu: [
-      // { title: "Program Planner", path: "/program-planner" },
-      // { title: "GPA Planner", path: "/gpa-planner" },
-      // { title: "Saved Plans", path: "/saved-plans" },
       { title: "Academic Planner", path: "/academic-planner" },
       { title: "Progress Tracker", path: "/progress-tracker" },
       { title: "Course Recommendations", path: "/course-recommendations" },
@@ -24,9 +21,8 @@ export const STUDENT_NAV_ITEMS = [
   {
     title: "Support",
     submenu: [
-      { title: "Helpdesk", path: "/helpdesk" },
-      { title: "FAQ", path: "/faq" },
       { title: "Contact Advisor", path: "/chat-with-advisor" },
+      { title: "FAQ", path: "/faq" },
     ],
   },
 ];
