@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import axiosClient from "../api/axiosClient";
 
 export const useAcademicProfile = () => {
   const [editingEntry, setEditingEntry] = useState(null);
@@ -45,21 +46,23 @@ export const useAcademicProfile = () => {
     }
   }, []);
 
-  // Load mock courses
   useEffect(() => {
-    const mockCourses = [
-      { code: "WIX1002", name: "Fundamentals of Programming", credit: 5 },
-      { code: "WIA1002", name: "Data Structure", credit: 5 },
-      { code: "GIG1012", name: "Philosophy and Current Issues", credit: 2 },
-      { code: "WIX1001", name: "Computing Mathematics I", credit: 3 },
-      { code: "WIX1003", name: "Computer System and Organization", credit: 3 },
-      { code: "WIA2010", name: "Human Computer Interaction", credit: 3 },
-      { code: "WIA1003", name: "Computer System Architecture", credit: 3 },
-      { code: "WIA1005", name: "Network Technology Foundation", credit: 4 },
-      { code: "WIA1006", name: "Machine Learning", credit: 3 },
-    ];
+    const fetchCourses = async () => {
+      try {
+        const response = await axiosClient.get("/courses");
+        const formattedCourses = response.data.map((course) => ({
+          code: course.course_code,
+          name: course.course_name,
+          credit: course.credit_hours,
+        }));
+        setAvailableCourses(formattedCourses);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+        showNotification("Failed to load courses", "error");
+      }
+    };
 
-    setAvailableCourses(mockCourses);
+    fetchCourses();
   }, []);
 
   const isCourseAlreadyAdded = (courseCode, currentId = null) => {
@@ -104,9 +107,9 @@ export const useAcademicProfile = () => {
       return;
     }
 
-    if (isCourseAlreadyAdded(editingEntry.code)) {
+    if (isCourseAlreadyAdded(editingEntry.code, editingEntry.id)) {
       showNotification(
-        "This course has already been added to your academic profile",
+        "This course has already been taken in another semester/year",
         "error"
       );
       return;

@@ -20,6 +20,9 @@ const SemesterSection = ({
   currentSemester,
   setEditingEntry,
 }) => {
+  const semesterEntries = entries.filter(
+    (entry) => entry.year === year && entry.semester === semester
+  );
   return (
     <div key={semester} className="mb-6 ml-4">
       <div className="flex justify-between items-center mb-2">
@@ -33,8 +36,8 @@ const SemesterSection = ({
         </button>
       </div>
 
-      {entries?.length > 0 ? (
-        entries.map((entry) => (
+      {semesterEntries?.length > 0 ? (
+        semesterEntries.map((entry) => (
           <CourseEntry
             key={entry.id}
             entry={entry}
@@ -63,6 +66,7 @@ const SemesterSection = ({
           isPastSemester={isPastSemester}
           currentYear={currentYear}
           currentSemester={currentSemester}
+          entries={entries}
         />
       )}
     </div>
