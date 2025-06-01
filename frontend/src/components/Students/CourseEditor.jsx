@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import CourseListSelector from "./CourseListSelector";
 import CourseStatusSelector from "./CourseStatusSelector";
 
@@ -13,32 +13,54 @@ const CourseEditor = ({
   isPastSemester,
   currentYear,
   currentSemester,
+  entries,
 }) => {
   const year = editingEntry?.year;
   const semester = editingEntry?.semester;
 
+  const disabledCourseCodes = React.useMemo(() => {
+    return entries
+      .filter((entry) => entry.id !== editingEntry?.id)
+      .map((entry) => entry.code);
+  }, [entries, editingEntry?.id]);
+
+  const handleCourseSelect = (courseCode) => {
+    // Find the selected course in availableCourses
+    const selectedCourse = availableCourses.find((c) => c.code === courseCode);
+    if (selectedCourse) {
+      setEditingEntry({
+        ...editingEntry,
+        code: selectedCourse.code,
+        name: selectedCourse.name,
+        credit: selectedCourse.credit,
+      });
+    } else {
+      setEditingEntry({
+        ...editingEntry,
+        code: courseCode,
+        name: "",
+        credit: "",
+      });
+    }
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-md mb-4 flex items-center min-w-full">
       <div className="w-full grid grid-cols-1 md:grid-cols-6 gap-6 items-center">
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Course
           </label>
           <CourseListSelector
-            courses={availableCourses.filter(
-              (course) => !isCourseAlreadyAdded(course.code)
-            )}
             selectedCode={editingEntry.code}
-            onChange={(val) => {
-              const course = availableCourses.find((c) => c.code === val);
-              setEditingEntry({
-                ...editingEntry,
-                code: val,
-                name: course?.name || "",
-                credit: course?.credit || "",
-              });
-            }}
+            onChange={handleCourseSelect}
+            disabledCodes={disabledCourseCodes}
           />
+          {isCourseAlreadyAdded(editingEntry.code, editingEntry?.id) && (
+            <p className="text-red-500 text-xs mt-1">
+              This course has already been taken in another semester/year
+            </p>
+          )}
         </div>
 
         <div>

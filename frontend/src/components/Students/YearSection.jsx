@@ -17,6 +17,7 @@ const YearSection = ({
   currentYear,
   currentSemester,
   setEditingEntry,
+  entries,
 }) => {
   return (
     <div key={year} className="mb-8">
@@ -29,7 +30,7 @@ const YearSection = ({
           key={semester}
           year={year}
           semester={semester}
-          entries={entriesByYearSemester[year][semester]}
+          entries={entries}
           editingEntry={editingEntry}
           addNewEntry={addNewEntry}
           startEditing={startEditing}

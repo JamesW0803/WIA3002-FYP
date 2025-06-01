@@ -57,6 +57,7 @@ const AcademicProfile = () => {
                 currentYear={currentYear}
                 currentSemester={currentSemester}
                 setEditingEntry={setEditingEntry}
+                entries={entries}
               />
             ))}
 
