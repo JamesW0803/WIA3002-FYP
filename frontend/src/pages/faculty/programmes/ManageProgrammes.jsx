@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import Table from "../../../components/Table";
 import axiosClient from "../../../api/axiosClient";
+import Title from "../../../components/Title";
+import ToolBar from "../../../components/ToolBar"
+import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
 
 const ManageProgrammes = () => {
@@ -49,8 +52,9 @@ const ManageProgrammes = () => {
 
     return (
         <div className="programmesPage">
-            <h1 className="text-2xl font-bold">Programmes</h1>
-            <Table
+            <Title>Programmes</Title>
+            <Divider sx={{ marginX: 5 }} />
+            <ToolBar/>            <Table
                 header={header}
                 items={items}
                 order={order}

@@ -29,6 +29,7 @@ import ManageProgrammes from "./pages/faculty/programmes/ManageProgrammes";
 import CourseDetails from "./pages/faculty/courses/CourseDetails";
 import StudentDetails from "./pages/faculty/StudentDetails";
 import ProgrammeDetails from "./pages/faculty/programmes/ProgrammeDetails";
+import AddCourse from "./pages/faculty/courses/AddCourse";
 
 function App() {
   return (
@@ -189,6 +190,12 @@ function App() {
                   path="courses/:course_code"
                   element = {
                     <ProtectedRoute allowedRoles={["admin"]}><CourseDetails /></ProtectedRoute>
+                  } 
+              />
+              <Route 
+                  path="courses/add-course"
+                  element = {
+                    <ProtectedRoute allowedRoles={["admin"]}><AddCourse /></ProtectedRoute>
                   } 
               />
               <Route 

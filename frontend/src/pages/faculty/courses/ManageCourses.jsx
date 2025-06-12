@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import Table from "../../../components/Table";
 import axiosClient from "../../../api/axiosClient";
+import Title from "../../../components/Title";
+import ToolBar from "../../../components/ToolBar"
+import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
+
 
 const ManageCourses = () => {
     const navigate = useNavigate();
@@ -12,7 +16,7 @@ const ManageCourses = () => {
 
     const header = ["Course Code", "Course Name", "Credit Hour", "Type", "Offered In", "Action"]
     const order = ["course_code", "course_name", "credit_hours", "type", "offered_semester"]
-
+    
     useEffect(() => {
         const fetchCourses = async () => {
             try {
@@ -20,7 +24,7 @@ const ManageCourses = () => {
                 const courses = response.data;
                 setCourses(courses);
             } catch (error) {
-                console.error("Error fetching programmes: ", error);
+                console.error("Error fetching courses: ", error);
             }
         };
         fetchCourses();
@@ -52,9 +56,20 @@ const ManageCourses = () => {
         navigate(`/admin/courses/${course.course_code}`, { state : { course }})
     }
 
+    const handleButtonAddCourseOnClick = () => {
+        navigate(`/admin/courses/add-course`, { state : { courses }})
+    }
+
     return (
         <div className="coursesPage">
-            <h1 className="text-2xl font-bold">Courses</h1>
+            <Title>Courses</Title>
+            <Divider sx={{ marginX: 5 }} />
+            <ToolBar
+                button = {{
+                    title : "Add Course",
+                    onClick : handleButtonAddCourseOnClick
+                }}
+            />
             <Table
                 header={header}
                 items={items}

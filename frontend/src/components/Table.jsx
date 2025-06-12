@@ -17,9 +17,9 @@ const Row = ({item, order, indexNum = -1}) => {
 const TableData = ({ data }) => {
     switch (data.type) {
         case "text_display":
-            return <td key={data.key}>{data.value}</td>
+            return <td className="p-2" key={data.key}>{data.value}</td>
         case "clickable_text_display":
-            return <td key={data.key} onClick={data.onClick}>{data.value}</td>
+            return <td className="p-2" key={data.key} onClick={data.onClick}>{data.value}</td>
     }
 }
 
@@ -30,14 +30,14 @@ const Table = ({
     index = true 
 }) => {
     return (
-        <table>
+        <table className="m-5 ml-10">
             <thead>
                 <tr>
                     {index && <th>No.</th>}
                     {
                         header.map((item) => {
                             return (
-                                <th>{item}</th>
+                                <th className="p-2">{item}</th>
                             )
                         })
                     }

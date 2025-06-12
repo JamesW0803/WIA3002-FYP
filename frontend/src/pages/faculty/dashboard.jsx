@@ -1,6 +1,9 @@
 import axiosClient from "../../api/axiosClient"
 import { useState, useEffect } from "react";
 import Table from "../../components/Table";
+import Title from "../../components/Title";
+import ToolBar from "../../components/ToolBar"
+import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
@@ -50,7 +53,9 @@ const Dashboard = () => {
 
     return (
         <div className="dashboard">
-            <h1 className="text-2xl font-bold">Students' Progress</h1>
+            <Title>Students' Progress</Title>
+            <Divider sx={{ marginX: 5 }} />
+            <ToolBar addButton={false}/>
             <Table
                 header={header}
                 items={items}

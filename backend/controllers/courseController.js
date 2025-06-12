@@ -3,7 +3,7 @@ const { formatCourses } = require("../utils/formatter/courseFormatter");
 
 const getAllCourses = async (req, res) => {
   try {
-    const courses = await Course.find();
+    const courses = await Course.find().populate("prerequisites");
     const formattedCourses = formatCourses(courses);
     res.status(200).json(formattedCourses);
   } catch (error) {
