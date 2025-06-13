@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import Logo from "../../assets/logo.svg";
 import SignUpModal from "./SignUpModal";
+import axiosClient from "../../api/axiosClient";
+import Notification from "../../components/Students/Notification";
 
 export default function SignUpStudentPage() {
   const [formData, setFormData] = useState({
@@ -21,61 +23,257 @@ export default function SignUpStudentPage() {
     confirmPassword: "",
     department: "",
     programme: "",
+    academicSession: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [programmeOptions, setProgrammeOptions] = useState([]);
+  const [filteredProgrammes, setFilteredProgrammes] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [academicSessions, setAcademicSessions] = useState([]);
+  const [isLoading, setIsLoading] = useState({
+    departments: false,
+    programmes: false,
+    sessions: false,
+  });
+  const [validationErrors, setValidationErrors] = useState({
+    username: "",
+    email: "",
+  });
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+    type: "info",
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProgrammes = async () => {
+    const fetchInitialData = async () => {
       try {
-        const res = await fetch(
-          "http://localhost:5000/api/programmes/getAllProgrammes"
-        );
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const data = await res.json();
+        setIsLoading((prev) => ({
+          ...prev,
+          departments: true,
+          sessions: true,
+        }));
 
-        // Ensure data is an array before setting it
-        if (Array.isArray(data)) {
-          setProgrammeOptions(data);
-        } else if (Array.isArray(data.programmes)) {
-          // If the response is an object with a programmes property
-          setProgrammeOptions(data.programmes);
-        } else {
-          console.error("Unexpected API response format:", data);
-          setProgrammeOptions([]); // Set to empty array as fallback
-        }
+        // Fetch departments
+        const departmentsRes = await axiosClient.get("/programmes/departments");
+        setDepartments(departmentsRes.data);
+
+        // Fetch academic sessions
+        const sessionsRes = await axiosClient.get("/academic-sessions");
+        setAcademicSessions(
+          Array.isArray(sessionsRes.data) ? sessionsRes.data : []
+        );
       } catch (err) {
-        console.error("Failed to fetch programmes:", err);
-        setProgrammeOptions([]); // Set to empty array on error
+        console.error("Failed to fetch initial data:", err);
+      } finally {
+        setIsLoading((prev) => ({
+          ...prev,
+          departments: false,
+          sessions: false,
+        }));
       }
     };
 
-    fetchProgrammes();
+    fetchInitialData();
   }, []);
+
+  const showNotification = (message, type = "info") => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
+  const validateForm = () => {
+    const requiredFields = [
+      "username",
+      "email",
+      "contact",
+      "password",
+      "confirmPassword",
+      "department",
+      "programme",
+      "academicSession",
+    ];
+
+    const missingFields = requiredFields.filter((field) => !formData[field]);
+
+    if (missingFields.length > 0) {
+      showNotification(`Please fill in all required fields`, "error");
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateStudentEmail = (email) => {
+    // If user hasn't entered anything yet
+    if (!email) return { valid: false, message: "Email is required" };
+
+    // Check if it's already a full email (they might paste it)
+    if (email.includes("@")) {
+      const emailRegex = /^\d{8}@siswa\.um\.edu\.my$/;
+      if (!emailRegex.test(email)) {
+        return {
+          valid: false,
+          message: "Must be a valid student email (8 digits @siswa.um.edu.my)",
+        };
+      }
+      return { valid: true };
+    }
+
+    // If just numbers entered, validate the numbers
+    const numberRegex = /^\d{8}$/;
+    if (!numberRegex.test(email)) {
+      return {
+        valid: false,
+        message: "Must be 8 digits (your student ID)",
+      };
+    }
+
+    return { valid: true };
+  };
+
+  const handleDepartmentChange = async (e) => {
+    const department = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      department,
+      programme: "",
+    }));
+
+    if (department) {
+      try {
+        setIsLoading((prev) => ({ ...prev, programmes: true }));
+        const encodedDepartment = encodeURIComponent(department);
+        const response = await axiosClient.get(
+          `/programmes/by-department/${encodedDepartment}`
+        );
+        setFilteredProgrammes(response.data);
+      } catch (err) {
+        console.error("Failed to fetch programmes:", err);
+        setFilteredProgrammes([]);
+      } finally {
+        setIsLoading((prev) => ({ ...prev, programmes: false }));
+      }
+    } else {
+      setFilteredProgrammes([]);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleUsernameBlur = async () => {
+    if (!formData.username) return;
+
+    try {
+      const response = await axiosClient.get(
+        `/user/check-username/${encodeURIComponent(formData.username)}`
+      );
+      if (response.data.exists) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          username: "This username is already taken",
+        }));
+        showNotification(
+          `Username '${formData.username}' is already taken`,
+          "error"
+        );
+      } else {
+        setValidationErrors((prev) => ({ ...prev, username: "" }));
+      }
+    } catch (err) {
+      console.error("Error checking username:", err);
+    }
+  };
+
+  const handleEmailBlur = async () => {
+    if (!formData.email) return;
+
+    // First validate the format
+    const formatValidation = validateStudentEmail(formData.email);
+    if (!formatValidation.valid) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: formatValidation.message,
+      }));
+      showNotification(formatValidation.message, "error");
+      return;
+    }
+
+    // Then check if email exists
+    try {
+      const fullEmail = formData.email.includes("@")
+        ? formData.email
+        : `${formData.email}@siswa.um.edu.my`;
+
+      const response = await axiosClient.get(
+        `/user/check-email/${encodeURIComponent(fullEmail)}`
+      );
+      if (response.data.exists) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "This student email is already registered",
+        }));
+        showNotification(
+          `Student email '${fullEmail}' is already registered`,
+          "error"
+        );
+      } else {
+        setValidationErrors((prev) => ({ ...prev, email: "" }));
+      }
+    } catch (err) {
+      console.error("Error checking email:", err);
+    }
+  };
+
   const handleSignUp = async () => {
+    // Validate all fields first
+    if (!validateForm()) return;
+
+    const fullEmail = formData.email.includes("@")
+      ? formData.email
+      : `${formData.email}@siswa.um.edu.my`;
+
+    const formatValidation = validateStudentEmail(fullEmail);
+    if (!formatValidation.valid) {
+      showNotification(formatValidation.message, "error");
+      return;
+    }
+
+    // Check if passwords match
+    if (formData.password !== formData.confirmPassword) {
+      showNotification("Passwords do not match!", "error");
+      return;
+    }
+
+    // Find the selected academic session object
+    const selectedSession = academicSessions.find(
+      (session) => session._id === formData.academicSession
+    );
+
+    if (!selectedSession) {
+      showNotification("Please select a valid academic session", "error");
+      return;
+    }
+
     const payload = {
       name: formData.username,
-      email: formData.email,
+      email: fullEmail,
       password: formData.password,
       role: "student",
       faculty: "Faculty of Computer Science and Information Technology",
       department: formData.department,
-      programme: formData.programme, // Currently just a string
+      programme: formData.programme,
       contact: formData.contact,
+      academicSession: formData.academicSession,
+      semester: selectedSession.semester,
     };
-
-    console.log("Submitting registration with payload:", payload);
 
     try {
       const response = await fetch("http://localhost:5000/api/user", {
@@ -86,202 +284,313 @@ export default function SignUpStudentPage() {
 
       const result = await response.json();
 
-      console.log("Server response status:", response.status);
-      console.log("Server response body:", result);
-
       if (response.ok) {
-        console.log("Student registered successfully:", result);
         setIsSuccess(true);
+        showNotification("Registration successful!", "success");
       } else {
-        console.error(
-          "Registration failed with message:",
-          result.message || result.error
-        );
+        console.error("Registration failed:", result.message || result.error);
         setIsSuccess(false);
+
+        // Handle specific field errors
+        if (result.field === "username") {
+          showNotification(
+            `Username '${formData.username}' is already taken`,
+            "error"
+          );
+          setValidationErrors((prev) => ({
+            ...prev,
+            username: "This username is already taken",
+          }));
+        } else if (result.field === "email") {
+          showNotification(
+            `Email '${formData.email}' is already registered`,
+            "error"
+          );
+          setValidationErrors((prev) => ({
+            ...prev,
+            email: "This email is already registered",
+          }));
+        } else {
+          showNotification(result.message || "Registration failed", "error");
+        }
       }
     } catch (err) {
-      console.error("Fetch or network error occurred:", err);
+      console.error("Fetch or network error:", err);
       setIsSuccess(false);
+      showNotification("Network error. Please try again.", "error");
     } finally {
       setShowModal(true);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen py-10 bg-gray-100 font-sans">
-      <div className="bg-white p-8 rounded-md shadow-md w-full max-w-md border">
-        <div className="flex justify-center mb-6">
+    <div className="flex items-center justify-center min-h-screen py-10 bg-gray-50 font-sans">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md border border-gray-200">
+        <div className="flex justify-center mb-8">
           <img src={Logo} alt="Plan IT Logo" className="h-28 w-auto" />
         </div>
 
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Username
-        </label>
-        <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4">
-          <User className="w-5 h-5 text-[#1E3A8A] mr-2" />
-          <input
-            name="username"
-            type="text"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full outline-none text-[#1E3A8A] bg-transparent"
-          />
-        </div>
-
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Email Address
-        </label>
-        <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4">
-          <Mail className="w-5 h-5 text-[#1E3A8A] mr-2" />
-          <input
-            name="email"
-            type="email"
-            placeholder="Email address"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full outline-none text-[#1E3A8A] bg-transparent"
-          />
-        </div>
-
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Contact Number
-        </label>
-        <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4">
-          <Phone className="w-5 h-5 text-[#1E3A8A] mr-2" />
-          <input
-            name="contact"
-            type="tel"
-            placeholder="Contact number"
-            value={formData.contact}
-            onChange={handleChange}
-            className="w-full outline-none text-[#1E3A8A] bg-transparent"
-          />
-        </div>
-
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Password
-        </label>
-        <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4">
-          <Lock className="w-5 h-5 text-[#1E3A8A] mr-2" />
-          <input
-            name="password"
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full outline-none text-[#1E3A8A] bg-transparent [&::-ms-reveal]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="ml-2 text-[#1E3A8A]"
-          >
-            {showPassword ? (
-              <Eye className="w-5 h-5" />
-            ) : (
-              <EyeOff className="w-5 h-5" />
+        <div className="space-y-5">
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Username
+            </label>
+            <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 focus-within:border-[#1E3A8A] focus-within:ring-1 focus-within:ring-[#1E3A8A]">
+              <User className="w-5 h-5 text-[#1E3A8A] mr-2" />
+              <input
+                name="username"
+                type="text"
+                placeholder="Username"
+                value={formData.username}
+                onChange={handleChange}
+                onBlur={handleUsernameBlur}
+                className="w-full outline-none text-[#1E3A8A] bg-transparent placeholder-gray-400"
+              />
+            </div>
+            {validationErrors.username && (
+              <p className="text-red-600 text-xs mt-1">
+                {validationErrors.username}
+              </p>
             )}
-          </button>
-        </div>
+          </div>
 
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Confirm Password
-        </label>
-        <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4">
-          <Lock className="w-5 h-5 text-[#1E3A8A] mr-2" />
-          <input
-            name="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className="w-full outline-none text-[#1E3A8A] bg-transparent [&::-ms-reveal]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="ml-2 text-[#1E3A8A]"
-          >
-            {showConfirmPassword ? (
-              <Eye className="w-5 h-5" />
-            ) : (
-              <EyeOff className="w-5 h-5" />
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Student Email
+            </label>
+            <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 focus-within:border-[#1E3A8A] focus-within:ring-1 focus-within:ring-[#1E3A8A]">
+              <Mail className="w-5 h-5 text-[#1E3A8A] mr-2" />
+              <div className="flex items-center w-full">
+                <input
+                  name="email"
+                  type="text"
+                  placeholder="Student ID"
+                  value={
+                    formData.email.includes("@")
+                      ? formData.email.split("@")[0]
+                      : formData.email
+                  }
+                  onChange={(e) => {
+                    // Only allow numbers
+                    const value = e.target.value.replace(/\D/g, "");
+                    // Limit to 8 characters
+                    const studentId = value.slice(0, 8);
+                    setFormData((prev) => ({
+                      ...prev,
+                      email: studentId,
+                    }));
+                  }}
+                  onBlur={(e) => {
+                    const validation = validateStudentEmail(
+                      formData.email.length === 8
+                        ? `${formData.email}@siswa.um.edu.my`
+                        : formData.email
+                    );
+                    if (!validation.valid) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        email: validation.message,
+                      }));
+                      showNotification(validation.message, "error");
+                    } else {
+                      setValidationErrors((prev) => ({ ...prev, email: "" }));
+                    }
+                  }}
+                  className="w-full outline-none text-[#1E3A8A] bg-transparent placeholder-gray-400"
+                />
+                <span className="text-gray-500 ml-1 text-sm">
+                  @siswa.um.edu.my
+                </span>
+              </div>
+            </div>
+            {validationErrors.email && (
+              <p className="text-red-600 text-xs mt-1">
+                {validationErrors.email}
+              </p>
             )}
-          </button>
-        </div>
+          </div>
 
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Department
-        </label>
-        <div className="relative mb-4">
-          <select
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-            className="w-full appearance-none border border-[#1E3A8A] px-4 py-2 rounded-md text-[#1E3A8A] bg-white"
-            placeholder="Choose your department"
-          >
-            <option value="" disabled hidden>
-              Choose your department
-            </option>
-            <option value="Artificial Intelligence">
-              Artificial Intelligence
-            </option>
-            <option value="Software Engineering">Software Engineering</option>
-            <option value="Information System">Information Systems</option>
-            <option value="Computer System and Network">
-              Computer System and Network
-            </option>
-            <option value="Multimedia">Multimedia</option>
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
-        </div>
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Contact Number
+            </label>
+            <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4 focus-within:border-[#1E3A8A] focus-within:ring-1 focus-within:ring-[#1E3A8A]">
+              <Phone className="w-5 h-5 text-[#1E3A8A] mr-2" />
+              <input
+                name="contact"
+                type="tel"
+                placeholder="Contact number"
+                value={formData.contact}
+                onChange={handleChange}
+                className="w-full outline-none text-[#1E3A8A] bg-transparent placeholder-gray-400"
+              />
+            </div>
+          </div>
 
-        <label className="block mb-2 text-[#1E3A8A] font-semibold">
-          Programme
-        </label>
-        <div className="relative mb-4">
-          <select
-            name="programme"
-            value={formData.programme}
-            onChange={handleChange}
-            className="w-full appearance-none border border-[#1E3A8A] px-4 py-2 rounded-md text-[#1E3A8A] bg-white"
-            placeholder="Choose your programme"
-          >
-            <option value="" disabled hidden>
-              Select your programme
-            </option>
-            {Array.isArray(programmeOptions) && programmeOptions.length > 0 ? (
-              programmeOptions.map((prog) => (
-                <option key={prog._id} value={prog._id}>
-                  {prog.programme_name}
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Password
+            </label>
+            <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4">
+              <Lock className="w-5 h-5 text-[#1E3A8A] mr-2" />
+              <input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full outline-none text-[#1E3A8A] bg-transparent [&::-ms-reveal]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="ml-2 text-[#1E3A8A]"
+              >
+                {showPassword ? (
+                  <Eye className="w-5 h-5" />
+                ) : (
+                  <EyeOff className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Confirm Password
+            </label>
+            <div className="flex items-center border border-[#1E3A8A] rounded-md px-3 py-2 mb-4 focus-within:border-[#1E3A8A] focus-within:ring-1 focus-within:ring-[#1E3A8A]">
+              <Lock className="w-5 h-5 text-[#1E3A8A] mr-2" />
+              <input
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full outline-none text-[#1E3A8A] bg-transparent [&::-ms-reveal]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="ml-2 text-[#1E3A8A]"
+              >
+                {showConfirmPassword ? (
+                  <Eye className="w-5 h-5" />
+                ) : (
+                  <EyeOff className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Department
+            </label>
+            <div className="relative">
+              <select
+                name="department"
+                value={formData.department}
+                onChange={handleDepartmentChange}
+                className="w-full appearance-none border border-[#1E3A8A] px-4 py-2 rounded-md text-[#1E3A8A] bg-white focus-within:border-[#1E3A8A] focus-within:ring-1 focus-within:ring-[#1E3A8A]"
+                disabled={isLoading.departments}
+              >
+                <option value="" disabled hidden>
+                  {isLoading.departments
+                    ? "Loading departments..."
+                    : "Choose your department"}
                 </option>
-              ))
-            ) : (
-              <option value="" disabled>
-                Loading programmes...
-              </option>
-            )}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
-        </div>
+                <option value="Department of Artificial Intelligence">
+                  Artificial Intelligence
+                </option>
+                <option value="Department of Software Engineering">
+                  Software Engineering
+                </option>
+                <option value="Department of Information System">
+                  Information Systems
+                </option>
+                <option value="Department of Computer System and Technology">
+                  Computer System and Technology
+                </option>
+                <option value="Multimedia Unit">Multimedia</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
 
-        <button
-          className="w-full mt-4 bg-[#1E3A8A] text-white font-medium py-2 rounded-md hover:bg-white hover:text-[#1E3A8A] border border-[#1E3A8A] transition"
-          onClick={handleSignUp}
-        >
-          Sign Up as Student
-        </button>
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Programme
+            </label>
+            <div className="relative">
+              <select
+                name="programme"
+                value={formData.programme}
+                onChange={handleChange}
+                className="w-full appearance-none border border-[#1E3A8A] px-4 py-2 rounded-md text-[#1E3A8A] bg-white focus-within:border-[#1E3A8A] focus-within:ring-1 focus-within:ring-[#1E3A8A]"
+                disabled={!formData.department || isLoading.programmes}
+              >
+                <option value="" disabled hidden>
+                  {isLoading.programmes
+                    ? "Loading programmes..."
+                    : formData.department
+                    ? "Select your programme"
+                    : "Please select department first"}
+                </option>
+                {filteredProgrammes.map((prog) => (
+                  <option key={prog._id} value={prog._id}>
+                    {prog.programme_name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
 
-        <div className="text-[#1F2937] mt-4 text-center text-sm">
-          Have an account?{" "}
-          <span
-            className="text-[#1E3A8A] font-semibold hover:underline cursor-pointer"
-            onClick={() => navigate("/")}
+          <div>
+            <label className="block mb-2 text-[#1E3A8A] font-semibold">
+              Intake Academic Session
+            </label>
+            <div className="relative mb-6">
+              <select
+                name="academicSession"
+                value={formData.academicSession}
+                onChange={handleChange}
+                className="w-full appearance-none border border-[#1E3A8A] px-4 py-2 rounded-md text-[#1E3A8A] bg-white focus-within:border-[#1E3A8A] focus-within:ring-1 focus-within:ring-[#1E3A8A]"
+                disabled={isLoading.sessions}
+                required
+              >
+                <option value="" disabled hidden>
+                  {isLoading.sessions
+                    ? "Loading sessions..."
+                    : "Select intake academic session"}
+                </option>
+                {academicSessions.map((session) => (
+                  <option key={session._id} value={session._id}>
+                    {session.year} - {session.semester}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#1E3A8A] w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
+
+          <button
+            className="w-full mt-2 bg-[#1E3A8A] text-white font-medium py-2 rounded-md hover:bg-white hover:text-[#1E3A8A] border border-[#1E3A8A] transition-colors focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] focus:ring-offset-2"
+            onClick={handleSignUp}
           >
-            Log In
-          </span>
+            Sign Up as Student
+          </button>
+
+          <div className="text-[#1F2937] text-center text-sm pt-2">
+            Have an account?{" "}
+            <span
+              className="text-[#1E3A8A] font-semibold hover:underline cursor-pointer"
+              onClick={() => navigate("/")}
+            >
+              Log In
+            </span>
+          </div>
         </div>
       </div>
       <SignUpModal
@@ -291,7 +600,13 @@ export default function SignUpStudentPage() {
         onClose={() => navigate("/")}
         onRetry={() => setShowModal(false)}
       />
-      ;
+      {notification.show && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification((prev) => ({ ...prev, show: false }))}
+        />
+      )}
     </div>
   );
 }

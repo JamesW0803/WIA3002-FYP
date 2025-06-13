@@ -1,10 +1,16 @@
 import React, { useEffect } from "react";
 
-const Notification = ({ message, type = "info", isClosing, onClose }) => {
+const Notification = ({
+  title,
+  message,
+  type = "info",
+  isClosing,
+  onClose,
+}) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
-    }, 10000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [onClose]);
@@ -18,12 +24,10 @@ const Notification = ({ message, type = "info", isClosing, onClose }) => {
 
   return (
     <div
-      className={`fixed left-4 bottom-4 z-50 border-l-4 p-4 rounded-lg shadow-lg max-w-xs transition-all duration-300 ${bgColor} ${
-        isClosing ? "animate-slideOut" : "animate-slideIn"
-      }`}
+      className={`fixed left-4 bottom-4 z-50 border-l-4 p-4 rounded-lg shadow-lg max-w-xs transition-all duration-300 ${bgColor} animate-slideIn`}
     >
       <div className="flex justify-between items-start">
-        <p>{message}</p>
+        <p className="text-sm">{message}</p>
         <button
           onClick={onClose}
           className="ml-2 hover:opacity-75 text-lg font-bold"

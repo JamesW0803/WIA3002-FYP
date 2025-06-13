@@ -10,6 +10,7 @@ const SemesterCard = ({
   setPlans,
   allCourses,
   previousSemesters = [], // Default empty array
+  isViewMode = false,
 }) => {
   const MAX_CREDITS = 22;
 
@@ -129,13 +130,16 @@ const SemesterCard = ({
         <CourseList
           courses={semester?.courses || []}
           removeCourse={removeCourse}
+          isViewMode={isViewMode}
         />
       </div>
-      <CourseInput
-        onAdd={addCourse}
-        allCourses={allCourses}
-        completedCourses={completedCourses}
-      />
+      {!isViewMode && ( // Only show CourseInput if not in view mode
+        <CourseInput
+          onAdd={addCourse}
+          allCourses={allCourses}
+          completedCourses={completedCourses}
+        />
+      )}
     </div>
   );
 };

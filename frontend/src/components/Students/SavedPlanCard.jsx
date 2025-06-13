@@ -44,7 +44,10 @@ const SavedPlanCard = ({ plan, type, onEdit, onDelete, onView }) => {
               <div className="flex items-center text-sm gap-2">
                 <LineChart className="w-4 h-4 text-gray-500" />
                 <span>
-                  Current: {plan.currentGPA} | Target: {plan.gpaTarget}
+                  Current: {Number(plan.currentGPA).toFixed(2)} | Target:{" "}
+                  {plan.targetGPA
+                    ? Number(plan.targetGPA).toFixed(2)
+                    : "Not set"}
                 </span>
               </div>
               <div className="flex items-center text-sm gap-2">

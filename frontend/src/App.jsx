@@ -12,14 +12,12 @@ import AcademicProfile from "./pages/student/AcademicProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import TranscriptView from "./pages/student/TranscriptView";
-import ProgramPlanner from "./pages/student/ProgramPlanner";
-import GPAPlanner from "./pages/student/GPAPlanner";
-import SavedPlans from "./pages/student/SavedPlans";
+import AcademicPlanner from "./pages/student/AcademicPlanner";
 import ProgressTracker from "./pages/student/ProgressTracker";
 import CourseRecommendations from "./pages/student/CourseRecommendations";
-import HelpdeskPage from "./pages/student/Helpdesk";
 import FAQsPage from "./pages/student/FAQPage";
 import ContactAdvisorPage from "./pages/student/ContactAdvisorPage";
+import StudentProfile from "./pages/student/StudentProfile";
 
 import { AuthProvider } from "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
@@ -30,6 +28,7 @@ import CourseDetails from "./pages/faculty/courses/CourseDetails";
 import StudentDetails from "./pages/faculty/StudentDetails";
 import ProgrammeDetails from "./pages/faculty/programmes/ProgrammeDetails";
 import AddCourse from "./pages/faculty/courses/AddCourse";
+import AdminProfile from "./pages/faculty/AdminProfile";
 
 function App() {
   return (
@@ -51,7 +50,6 @@ function App() {
 
           {/* Student*/}
           <Route path="/" element={<Layout />}>
-
             <Route
               path="/student-dashboard"
               element={
@@ -78,28 +76,10 @@ function App() {
             />
 
             <Route
-              path="/program-planner"
+              path="/academic-planner"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <ProgramPlanner />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/gpa-planner"
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <GPAPlanner />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/saved-plans"
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <SavedPlans />
+                  <AcademicPlanner />
                 </ProtectedRoute>
               }
             />
@@ -123,10 +103,10 @@ function App() {
             />
 
             <Route
-              path="/helpdesk"
+              path="/chat-with-advisor"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <HelpdeskPage />
+                  <ContactAdvisorPage />
                 </ProtectedRoute>
               }
             />
@@ -139,27 +119,26 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
-              path="/chat-with-advisor"
+              path="/student-profile"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
-                  <ContactAdvisorPage />
+                  <StudentProfile />
                 </ProtectedRoute>
               }
             />
           </Route>
 
           {/* Faculty*/}
-          <Route path = "/admin" element = {<Layout/>}>
-              <Route
-                path="home"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
+          <Route path="/admin" element={<Layout />}>
+            <Route
+              path="home"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
               <Route
                 path="home/:studentName"
                 element={
@@ -168,22 +147,26 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route 
-                path="programmes"
-                element = {
-                  <ProtectedRoute allowedRoles={["admin"]}><ManageProgrammes /></ProtectedRoute>
-                } 
-              />
+            <Route
+              path="programmes"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ManageProgrammes />
+                </ProtectedRoute>
+              }
+            />
               <Route 
                 path="programmes/:programme_code"
                 element = {
                   <ProtectedRoute allowedRoles={["admin"]}><ProgrammeDetails /></ProtectedRoute>
                 } 
               />
-              <Route 
-                path="courses"
-                element = {
-                  <ProtectedRoute allowedRoles={["admin"]}><ManageCourses /></ProtectedRoute>
+            <Route
+              path="courses"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ManageCourses />
+                </ProtectedRoute>
                 }
               />
               <Route 
@@ -196,14 +179,24 @@ function App() {
                   path="courses/add-course"
                   element = {
                     <ProtectedRoute allowedRoles={["admin"]}><AddCourse /></ProtectedRoute>
-                  } 
-              />
-              <Route 
-                path="helpdesk"
-                element = {
-                  <ProtectedRoute allowedRoles={["admin"]}><Helpdesk /></ProtectedRoute>
-                } 
-              />
+                }
+            />
+            <Route
+              path="helpdesk"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Helpdesk />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="profile"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminProfile />
+                </ProtectedRoute>
+              }
+            />
           </Route>
         </Routes>
       </AuthProvider>

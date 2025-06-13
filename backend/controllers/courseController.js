@@ -3,8 +3,20 @@ const { formatCourses } = require("../utils/formatter/courseFormatter");
 
 const getAllCourses = async (req, res) => {
   try {
-    const courses = await Course.find().populate("prerequisites");
-    const formattedCourses = formatCourses(courses);
+    const { search } = req.query;
+    let query = {};
+
+    if (search) {
+      query = {
+        $or: [
+          { course_code: { $regex: search, $options: "i" } },
+          { course_name: { $regex: search, $options: "i" } },
+        ],
+      };
+    }
+
+    const courses = await Course.find(query).populate("prerequisites");
+    const formattedCourses = formatCourses(courses)
     res.status(200).json(formattedCourses);
   } catch (error) {
     res.status(500).json({ message: error.message });

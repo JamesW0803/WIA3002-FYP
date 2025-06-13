@@ -14,7 +14,7 @@ router.use("/courses", authenticate, courseRoutes);
 router.use("/students", authenticate, studentRoutes);
 // router.use("/programmes", authenticate, programmeRoutes);
 router.use("/programmes", programmeRoutes);
-router.use("/academic-sessions", authenticate, academicSessionRoutes);
+router.use("/academic-sessions", academicSessionRoutes);
 router.use("/curriculums", curriculumRoutes);
 
 module.exports = router;

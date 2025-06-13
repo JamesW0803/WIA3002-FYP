@@ -2,7 +2,14 @@ import React from "react";
 import SemesterCard from "./SemesterCard";
 import { Card, CardContent } from "../../components/ui/card";
 
-const YearCard = ({ yearData, planId, setPlans, plans, allCourses }) => {
+const YearCard = ({
+  yearData,
+  planId,
+  setPlans,
+  plans,
+  allCourses,
+  isViewMode = false,
+}) => {
   return (
     <Card className="bg-gray-50">
       <CardContent className="p-4">
@@ -25,6 +32,7 @@ const YearCard = ({ yearData, planId, setPlans, plans, allCourses }) => {
                 plans={plans}
                 allCourses={allCourses}
                 previousSemesters={previousSemesters}
+                isViewMode={isViewMode} // Pass the view mode to SemesterCard
               />
             );
           })}
