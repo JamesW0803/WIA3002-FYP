@@ -1,5 +1,5 @@
 const Course = require("../models/Course");
-const { formatCourses } = require("../utils/formatter/courseFormatter");
+const { formatCourses , formatCourse } = require("../utils/formatter/courseFormatter");
 
 const getAllCourses = async (req, res) => {
   try {
@@ -59,7 +59,43 @@ const addCourse = async (req, res) => {
   }
 };
 
+const getCourseByCode = async (req, res) => {
+  try {
+    const { course_code } = req.params;
+
+    const course = await Course.findOne({course_code}).populate("prerequisites");
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    const formattedCourse = formatCourse(course); 
+    res.status(200).json(formattedCourse);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteCourseByCode = async (req, res) => {
+  try {
+    const { course_code } = req.params;
+
+    const deletedCourse = await Course.findOneAndDelete({course_code});
+
+    if (!deletedCourse) {
+      return res.status(404).json({ message: "Course not exist" });
+    }
+
+    const formattedCourse = formatCourse(deletedCourse); 
+    res.status(200).json();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllCourses,
+  getCourseByCode,
   addCourse,
+  deleteCourseByCode
 };

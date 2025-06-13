@@ -1,4 +1,12 @@
-const Row = ({item, order, indexNum = -1}) => {
+import TableActionBar from "./TableActionBar"
+
+const Row = ({
+    item, 
+    order, 
+    indexNum = -1, 
+    tableActionBarButton = null,
+    identifier = null
+}) => {
     return (
         <tr>
             {indexNum !== -1 && <td>{indexNum+1}</td>}
@@ -9,6 +17,14 @@ const Row = ({item, order, indexNum = -1}) => {
                         <TableData data={data}  />
                     )
                 })
+            }
+            {tableActionBarButton && 
+                <TableActionBar
+                    viewButton={tableActionBarButton.viewButton}
+                    identifier={item.find(data => data.key === identifier)?.value}
+                    // editButton={tableActionBarButton.editButton}
+                    deleteButton={tableActionBarButton.deleteButton}
+                />
             }
         </tr>
     )
@@ -27,7 +43,9 @@ const Table = ({
     header, 
     items, 
     order, 
-    index = true 
+    index = true,
+    tableActionBarButton = null,
+    identifier = null
 }) => {
     return (
         <table className="m-5 ml-10">
@@ -41,16 +59,20 @@ const Table = ({
                             )
                         })
                     }
+                    {tableActionBarButton && <th>Actions</th>}
                 </tr>
             </thead>
             <tbody>
                 {
-                    items.map((item, indexNum) => {
-                        if(index)
-                            return <Row item={item} order={order} indexNum={indexNum}/>        
-                        else
-                            return <Row item={item} order={order}/>        
-                    })
+                    items.map((item, indexNum) => (
+                        <Row 
+                            item={item} 
+                            order={order} 
+                            indexNum={indexNum}
+                            tableActionBarButton={tableActionBarButton}
+                            identifier={identifier}
+                        />        
+                    ))
                 }
             </tbody>
         </table>

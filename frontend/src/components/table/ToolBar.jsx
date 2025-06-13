@@ -1,6 +1,6 @@
 import SearchBar from "./SearchBar";
 import Filter from "./Filter";
-import CustomButton from "./CustomButton"
+import CustomButton from "../CustomButton"
 import AddIcon from '@mui/icons-material/Add';
 
 const ToolBar = ({searchBar, filter, button, addButton = true}) => {
