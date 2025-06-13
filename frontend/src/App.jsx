@@ -21,9 +21,13 @@ import StudentProfile from "./pages/student/StudentProfile";
 
 import { AuthProvider } from "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
-import ManageCourses from "./pages/faculty/ManageCourses";
+import ManageCourses from "./pages/faculty/courses/ManageCourses";
 import Helpdesk from "./pages/faculty/Helpdesk";
-import ManageProgrammes from "./pages/faculty/ManageProgrammes";
+import ManageProgrammes from "./pages/faculty/programmes/ManageProgrammes";
+import CourseDetails from "./pages/faculty/courses/CourseDetails";
+import StudentDetails from "./pages/faculty/StudentDetails";
+import ProgrammeDetails from "./pages/faculty/programmes/ProgrammeDetails";
+import AddCourse from "./pages/faculty/courses/AddCourse";
 import AdminProfile from "./pages/faculty/AdminProfile";
 
 function App() {
@@ -135,6 +139,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+              <Route
+                path="home/:studentName"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <StudentDetails/>
+                  </ProtectedRoute>
+                }
+              />
             <Route
               path="programmes"
               element={
@@ -143,13 +155,31 @@ function App() {
                 </ProtectedRoute>
               }
             />
+              <Route 
+                path="programmes/:programme_code"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><ProgrammeDetails /></ProtectedRoute>
+                } 
+              />
             <Route
               path="courses"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <ManageCourses />
                 </ProtectedRoute>
-              }
+                }
+              />
+              <Route 
+                  path="courses/:course_code"
+                  element = {
+                    <ProtectedRoute allowedRoles={["admin"]}><CourseDetails /></ProtectedRoute>
+                  } 
+              />
+              <Route 
+                  path="courses/add-course"
+                  element = {
+                    <ProtectedRoute allowedRoles={["admin"]}><AddCourse /></ProtectedRoute>
+                }
             />
             <Route
               path="helpdesk"

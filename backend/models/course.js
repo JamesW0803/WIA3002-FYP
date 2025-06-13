@@ -43,6 +43,10 @@ const courseSchema = new mongoose.Schema(
       type: String,
       enum: ALL_SEMESTERS,
     },
+    study_level: {
+      type: Number,
+      enum: [0, 1, 2, 3],
+    },
   },
   {
     timestamps: true,

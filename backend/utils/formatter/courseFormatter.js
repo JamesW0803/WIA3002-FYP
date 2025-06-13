@@ -19,6 +19,7 @@ const formatCourse = (course) => {
     faculty: course.faculty ?? "-",
     department: course.department ?? "-",
     offered_semester: course.offered_semester ?? "-",
+    study_level: course.study_level ?? "-",
   };
 };
 

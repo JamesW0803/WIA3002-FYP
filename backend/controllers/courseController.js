@@ -15,8 +15,9 @@ const getAllCourses = async (req, res) => {
       };
     }
 
-    const courses = await Course.find(query);
-    res.status(200).json(courses);
+    const courses = await Course.find(query).populate("prerequisites");
+    const formattedCourses = formatCourses(courses)
+    res.status(200).json(formattedCourses);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

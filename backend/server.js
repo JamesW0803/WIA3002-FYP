@@ -16,5 +16,5 @@ app.use("/api", routes);
 database.connectToMongoDB();
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  console.log(`Server is listening on port ${port}`);
 });
