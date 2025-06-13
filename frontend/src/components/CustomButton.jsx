@@ -1,20 +1,33 @@
 import Button from '@mui/material/Button';
-import AddIcon from '@mui/icons-material/Add';
 
-const CustomButton = ({ title , onClick}) => {
+const CustomButton = ({ 
+  title, 
+  onClick, 
+  startIcon = null, 
+  variant = 'contained',
+  sx = {},
+  ...props
+ }) => {
+
+  const defaultStyles = {
+    backgroundColor: variant === 'contained' ? '#1E3A8A' : 'transparent',
+    color: variant === 'contained' ? 'white' : '#1E3A8A',
+    borderColor: variant === 'outlined' ? '#1E3A8A' : undefined,
+    textTransform: 'none',
+    '&:hover': {
+      backgroundColor:
+        variant === 'contained' ? '#1E40AF' : '#EEF2FF',
+      borderColor: variant === 'outlined' ? '#1E40AF' : undefined,
+    },
+  };
+
   return (
     <Button
-      variant="contained"
-      startIcon={<AddIcon />}
+      variant={variant}
+      startIcon={startIcon}
       onClick={onClick}
-      sx={{
-        backgroundColor: '#1E3A8A',
-        color: 'white',
-        '&:hover': {
-          backgroundColor: '#1E40AF', // Slightly darker blue on hover
-        },
-        textTransform: 'none', // Optional: Prevents ALL CAPS
-      }}
+      sx={{ ...defaultStyles, ...sx }}
+      {...props}
     >
       {title}
     </Button>

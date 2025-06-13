@@ -1,14 +1,14 @@
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 
-const SelectInputField = ({ label , options }) => {
+const SelectInputField = ({ label , options , value , onChange}) => {
   return (
     <div className="flex items-center gap-4 mb-4 ml-5">
       <label className="w-40 text-left font-medium">{label}</label>
       <FormControl className="w-[500px]">
         <InputLabel>{label}</InputLabel>
         <Select
-        //   value={value}
-        //   onChange={onChange}
+          value={value}
+          onChange={onChange}
           label={label}
         >
           {options.map((option) => (

@@ -4,6 +4,7 @@ import Title from "../../../components/Title";
 import Divider from '@mui/material/Divider';
 import TextInputField from "../../../components/form/TextInputField";
 import SelectInputField from "../../../components/form/SelectInputField";
+import ActionBar from "../../../components/form/ActionBar";
 import { DEPARTMENTS } from "../../../constants/department";
 import { COURSE_TYPES } from "../../../constants/courseType";
 import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
@@ -16,10 +17,10 @@ const semesters = ["Semester 1", "Semester 2", "Semester 1 & 2", "Special Semest
 const basicInformationSession = {
     title : "Basic Information",
     fields : [
-        { type : "text", label : "Course Code" },
-        { type : "text", label : "Course Name" },
-        { type : "text", label : "Credit Hours" },
-        { type : "text", label : "Description" },
+        { type : "text", key : "course_code" , label : "Course Code" },
+        { type : "text", key : "course_name" , label : "Course Name" },
+        { type : "text", key : "credit_hours" , label : "Credit Hours" },
+        { type : "text", key : "description" , label : "Description" },
     ]
 }
 
@@ -29,46 +30,37 @@ const classificationSession = {
         {
             type : "select",
             label : "Faculty",
+            key : "faculty",
             options : faculties.map((item) => ({label : item , value : item}))
         },
         {
             type : "select",
             label : "Department",
+            key : "department",
             options : DEPARTMENTS.map((item) => ({label : item , value : item}))
         },
         {
             type : "select",
             label : "Type",
+            key : "type",
             options : COURSE_TYPES.map((item) => ({label : READABLE_COURSE_TYPES[item], value : item}))
         },
         {
             type : "select",
             label : "Study Level",
+            key : "study_level",
             options : studyLevels.map((item) => ({label : item , value : item}))
         },
         {
             type : "select",
             label : "Offered In",
+            key : "offered_semester",
             options : semesters.map((item) => ({label : item , value : item}))
         }
     ]
 }
 
-const AddCourse = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const courses  = location.state.courses
-
-    return (
-        <div className="page-add-course">
-            <Title>Courses | New Course</Title>
-            <Divider sx={{ marginX: 5 }} />
-            <ConsolidatedForm courses={courses} />
-        </div> 
-    )
-}
-
-const ConsolidatedForm = ( {courses} ) => {
+const ConsolidatedForm = ({ courses , formData , setFormData}) => {
     const formSessions = [ basicInformationSession , classificationSession ]
 
     return (
@@ -78,29 +70,48 @@ const ConsolidatedForm = ( {courses} ) => {
                     <FormSession
                         title = {formSession.title}
                         fields = {formSession.fields}
+                        formData = {formData}
+                        setFormData = {setFormData}
                     />
                 )
             })}
-            <PrerequisitesFormSession courses={courses} />
+            <PrerequisitesFormSession 
+                courses={courses} 
+                formData = {formData}
+                setFormData = {setFormData}
+            />
         </div>
     )
 }
 
-const FormSession = ({ title , fields}) => {
+const FormSession = ({ title , fields , formData , setFormData}) => {
     return (
         <div id={`form-session-${title}`} className="flex flex-col">
             <span className="font-semibold ml-16 my-4">{title}</span>
             {fields.map((field) => {
                 if(field.type === "text") 
-                    return <TextInputField label={field.label}/>
+                    return <TextInputField 
+                                label={field.label}
+                                value={formData[field.key]}
+                                onChange={ (e) => 
+                                    setFormData({...formData, [field.key] : e.target.value})
+                                }
+                            />
                 else if (field.type === "select")
-                    return <SelectInputField label={field.label} options={field.options}/>
+                    return <SelectInputField 
+                                label={field.label} 
+                                options={field.options}
+                                value={formData[field.key]}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, [field.key]: e.target.value })
+                                }
+                            />
             })}
         </div>
     )
 }
 
-const PrerequisitesFormSession = ({courses}) => {
+const PrerequisitesFormSession = ({ courses , formData , setFormData}) => {
     const [prerequisites, setPrerequisites] = useState([""])
     const courseOptions = courses.map((course) => ({
         label: `${course.course_code} ${course.course_name}`,
@@ -108,13 +119,28 @@ const PrerequisitesFormSession = ({courses}) => {
     }));
 
     const handleAdd = () => {
-        setPrerequisites([...prerequisites, ""]);
+        setFormData({
+            ...formData,
+            prerequisites: [...formData.prerequisites, ""]
+        });   
     };
 
 
-    const handleRemove = (index) => {
-        const updated = prerequisites.filter((_, i) => i !== index);
-        setPrerequisites(updated);
+    const handleRemove = ( index ) => {
+        const updated = formData.prerequisites.filter((_, i) => i !== index);
+        setFormData({
+            ...formData,
+            prerequisites: updated
+        });
+    };
+
+    const handleChange = (index, value) => {
+        const updated = [...formData.prerequisites];
+        updated[index] = value;
+        setFormData({
+            ...formData,
+            prerequisites: updated
+        });
     };
 
     return (
@@ -124,13 +150,13 @@ const PrerequisitesFormSession = ({courses}) => {
                 Select any prerequisite course if applicable
             </span>
 
-            {prerequisites.map((value, index) => (
+            {formData.prerequisites.map((value, index) => (
                 <div key={index} className="flex flex-row items-center">
                     <SelectInputField
                         label={`Prerequisite ${index + 1}`}
                         options={courseOptions}
-                        // value={value}
-                        // onChange={(e) => handleChange(index, e.target.value)}
+                        value={value}
+                        onChange={ (e) => handleChange(index, e.target.value)}                    
                     />
                     {index >= 0 && (
                         <button
@@ -153,6 +179,65 @@ const PrerequisitesFormSession = ({courses}) => {
                 </button>
             </div>
         </div>
+    )
+}
+
+const AddCourse = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const courses  = location.state.courses
+    const [formData, setFormData] = useState({
+        course_code : "",
+        course_name : "",
+        type : "",
+        credit_hours : null,
+        description : "",
+        prerequisites : [],
+        faculty : "",
+        offered_semester : [],
+        study_level : -1
+    })
+
+    const handleCancel = () => {
+        navigate(`/admin/courses`)
+    }
+
+    const handleAdd = async() => {
+        // Submit course form
+        try {
+            const response = await axiosClient.post("/courses", formData);
+            const newAddedCourse = response.data
+            console.log("Course is added successfully")
+        } catch (error) {
+            console.error("Error creating course: ", error);
+        } finally {
+            navigate(`/admin/courses`)
+
+        }      
+        // console.log("Form Data sent: ", formData)
+    }
+    
+    const cancelButton = {
+        title : "Cancel",
+        onClick : handleCancel
+    }
+
+    const addButton = {
+        title : "Add",
+        onClick : handleAdd
+    }
+
+    return (
+        <div className="page-add-course flex flex-col">
+            <Title>Courses | New Course</Title>
+            <Divider sx={{ marginX: 5 }} />
+            <ConsolidatedForm 
+                courses={courses} 
+                formData = {formData}
+                setFormData = {setFormData}
+            />
+            <ActionBar button1={cancelButton} button2={addButton}/>
+        </div> 
     )
 }
 

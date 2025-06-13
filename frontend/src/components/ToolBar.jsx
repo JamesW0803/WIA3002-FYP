@@ -1,6 +1,7 @@
 import SearchBar from "./SearchBar";
 import Filter from "./Filter";
 import CustomButton from "./CustomButton"
+import AddIcon from '@mui/icons-material/Add';
 
 const ToolBar = ({searchBar, filter, button, addButton = true}) => {
 
@@ -14,6 +15,7 @@ const ToolBar = ({searchBar, filter, button, addButton = true}) => {
                     <CustomButton
                         title = {button.title}
                         onClick={button.onClick}
+                        startIcon={<AddIcon/>}
                     />
                 }
             </div>
