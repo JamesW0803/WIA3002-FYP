@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import Table from "../../../components/Table";
+import Table from "../../../components/table/Table";
 import axiosClient from "../../../api/axiosClient";
 import Title from "../../../components/Title";
-import ToolBar from "../../../components/ToolBar"
+import ToolBar from "../../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
+import FormDialog from "../../../components/dialog/FormDialog"
 import { useNavigate } from "react-router-dom";
 
 
@@ -14,7 +15,11 @@ const ManageCourses = () => {
     const [items, setItems] = useState([]);
     const [clickableItems, setClickableItems] = useState(["course_code"])
 
-    const header = ["Course Code", "Course Name", "Credit Hour", "Type", "Offered In", "Action"]
+    const [openDialog, setOpenDialog] = useState(false);
+    const [selectedCourseCodeToDelete, setSelectedCourseCodeToDelete] = useState(null);
+
+
+    const header = ["Course Code", "Course Name", "Credit Hour", "Type", "Offered In"]
     const order = ["course_code", "course_name", "credit_hours", "type", "offered_semester"]
     
     useEffect(() => {
@@ -43,7 +48,7 @@ const ManageCourses = () => {
                         key,
                         value,
                         type: clickableItems.includes(key) ? "clickable_text_display" : "text_display",
-                        onClick : clickableItems.includes(key) ? () => handleCourseOnClick(course)  : null
+                        onClick : clickableItems.includes(key) ? () => handleCourseOnClick(course.course_code)  : null
                     }
                 })
             )
@@ -51,13 +56,43 @@ const ManageCourses = () => {
         setItems(latestItem);
     }, [courses])
     
-    const handleCourseOnClick = (course) => {
+    const handleCourseOnClick = (course_code) => {
         // navigate to course page
-        navigate(`/admin/courses/${course.course_code}`, { state : { course }})
+        navigate(`/admin/courses/${course_code}`, { state : { course_code }})
     }
 
     const handleButtonAddCourseOnClick = () => {
         navigate(`/admin/courses/add-course`, { state : { courses }})
+    }
+
+    const handleDeleteButtonOnClick = (course_code) => {
+        console.log("course_code", course_code)
+        setSelectedCourseCodeToDelete(course_code);
+        setOpenDialog(true);
+    }
+
+    const confirmDeleteCourse = async () => {
+        try {
+            const response = await axiosClient.delete(`/courses/${selectedCourseCodeToDelete}`);
+            setCourses(prev => prev.filter(course => course.course_code !== selectedCourseCodeToDelete));
+        } catch (error) {
+            console.error("Error deleting course:", error);
+        } finally {
+            setOpenDialog(false);
+            setSelectedCourseCodeToDelete(null);
+        }
+    };
+
+    const coursesActionBar = {
+        viewButton : {
+            onClick : handleCourseOnClick
+        },
+        // editButton : {
+
+        // },
+        deleteButton : {
+            onClick : handleDeleteButtonOnClick
+        }
     }
 
     return (
@@ -74,7 +109,18 @@ const ManageCourses = () => {
                 header={header}
                 items={items}
                 order={order}
+                tableActionBarButton={coursesActionBar}
+                identifier={"course_code"}
                 // index={false}
+            />
+            <FormDialog
+                open={openDialog}
+                onClose={() => setOpenDialog(false)}
+                onConfirm={confirmDeleteCourse}
+                title="Delete Course"
+                content={`Are you sure you want to delete course with code "${selectedCourseCodeToDelete}"?`}
+                confirmText="Delete"
+                cancelText="Cancel"
             />
         </div> 
     )

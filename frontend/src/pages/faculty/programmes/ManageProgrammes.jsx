@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import Table from "../../../components/Table";
+import Table from "../../../components/table/Table";
 import axiosClient from "../../../api/axiosClient";
 import Title from "../../../components/Title";
-import ToolBar from "../../../components/ToolBar"
+import ToolBar from "../../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
 

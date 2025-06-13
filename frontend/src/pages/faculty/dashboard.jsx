@@ -1,8 +1,8 @@
 import axiosClient from "../../api/axiosClient"
 import { useState, useEffect } from "react";
-import Table from "../../components/Table";
+import Table from "../../components/table/Table";
 import Title from "../../components/Title";
-import ToolBar from "../../components/ToolBar"
+import ToolBar from "../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
 
@@ -60,6 +60,7 @@ const Dashboard = () => {
                 header={header}
                 items={items}
                 order={order}
+                actionBar={false}
                 // index={false}
             />
         </div> 
