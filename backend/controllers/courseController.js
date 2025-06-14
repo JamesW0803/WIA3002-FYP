@@ -93,9 +93,40 @@ const deleteCourseByCode = async (req, res) => {
   }
 };
 
+const editCourse = async (req, res) => {
+  const { course_code } = req.params;
+  const updatedData = req.body;
+
+  try {
+    if (updatedData.prerequisites.length > 0) {
+      const prereqCourse = await Course.findOne({ course_code: updatedData.prerequisites[0] });
+      if (!prereqCourse) {
+        return res.status(400).json({ message: "Invalid prerequisite course code" });
+      }
+      updatedData.prerequisites = [prereqCourse._id];
+    }
+
+    const updatedCourse = await Course.findOneAndUpdate(
+      { course_code },        // filter
+      updatedData,            // updated fields
+      { new: true }           // return updated document
+    );
+
+    if (!updatedCourse) {
+      return res.status(404).json({ message: 'Course not exist' });
+    }
+
+    res.status(200).json(updatedCourse);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update course', details: err.message });
+  }
+};
+
+
 module.exports = {
   getAllCourses,
   getCourseByCode,
   addCourse,
-  deleteCourseByCode
+  deleteCourseByCode,
+  editCourse,
 };

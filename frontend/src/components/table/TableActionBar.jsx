@@ -17,7 +17,7 @@ const TableActionBar = ({ viewButton, editButton, deleteButton, identifier}) => 
       )}
       {editButton && (
         <IconButton
-          onClick={editButton.onClick}
+          onClick={() => {editButton.onClick(identifier)}}
           sx={{ color: "#065F46" }} // green-800
           title="Edit"
         >

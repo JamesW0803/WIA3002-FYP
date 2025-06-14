@@ -22,7 +22,7 @@ const Row = ({
                 <TableActionBar
                     viewButton={tableActionBarButton.viewButton}
                     identifier={item.find(data => data.key === identifier)?.value}
-                    // editButton={tableActionBarButton.editButton}
+                    editButton={tableActionBarButton.editButton}
                     deleteButton={tableActionBarButton.deleteButton}
                 />
             }
@@ -31,6 +31,7 @@ const Row = ({
 }
 
 const TableData = ({ data }) => {
+    if (!data) return <td className="p-2">-</td>; // fallback
     switch (data.type) {
         case "text_display":
             return <td className="p-2" key={data.key}>{data.value}</td>

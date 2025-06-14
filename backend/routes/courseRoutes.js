@@ -5,13 +5,15 @@ const {
     getAllCourses, 
     addCourse, 
     getCourseByCode, 
-    deleteCourseByCode 
+    deleteCourseByCode, 
+    editCourse
 } = require("../controllers/courseController");
 
 router.use(checkRole(["student", "admin"]));
 
 router.get("/", getAllCourses);
 router.get("/:course_code", getCourseByCode)
+router.put("/:course_code", editCourse)
 router.delete("/:course_code", deleteCourseByCode)
 router.post("/", addCourse);
 
