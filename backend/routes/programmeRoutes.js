@@ -8,6 +8,9 @@ const {
   getAllProgrammes,
   getAllDepartments,
   getProgrammesByDepartment,
+  getProgrammeByCode,
+  editProgramme,
+  deleteProgrammeByCode,
 } = require("../controllers/programmeController");
 
 // Public routes (no auth required)
@@ -20,5 +23,9 @@ router.use(authenticate);
 router.use(checkRole(["admin"]));
 router.post("/", addProgramme);
 router.post("/intake", addProgrammeIntake);
+router.post("/", addProgramme)
+router.get("/:programme_code", getProgrammeByCode)
+router.put("/:programme_code", editProgramme)
+router.delete("/:programme_code", deleteProgrammeByCode)
 
 module.exports = router;

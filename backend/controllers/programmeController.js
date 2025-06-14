@@ -1,5 +1,6 @@
 const Programme = require("../models/Programme");
 const ProgrammeIntake = require("../models/ProgrammeIntake");
+const { formatProgramme , formatProgrammes } = require("../utils/formatter/programmeFormatter");
 
 // Helper function to validate department
 const validateDepartment = (department) => {
@@ -120,10 +121,67 @@ const getAllDepartments = async (req, res) => {
   }
 };
 
+const getProgrammeByCode = async (req, res) => {
+  try {
+    const { programme_code } = req.params;
+
+    const programme = await Programme.findOne({programme_code});
+
+    if (!programme) {
+      return res.status(404).json({ message: "Programme not found" });
+    }
+
+    const formattedProgramme = formatProgramme(programme)
+    res.status(200).json(formattedProgramme);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteProgrammeByCode = async (req, res) => {
+  try {
+    const { programme_code } = req.params;
+
+    const deletedProgramme = await Programme.findOneAndDelete({programme_code});
+
+    if (!deletedProgramme) {
+      return res.status(404).json({ message: "Programme not exist" });
+    }
+
+    res.status(200).json(deletedProgramme);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const editProgramme = async (req, res) => {
+  const { programme_code } = req.params;
+  const updatedData = req.body;
+
+  try {
+    const updatedProgramme = await Programme.findOneAndUpdate(
+      { programme_code },        // filter
+      updatedData,            // updated fields
+      { new: true }           // return updated document
+    );
+
+    if (!updatedProgramme) {
+      return res.status(404).json({ message: 'Programme not exist' });
+    }
+
+    res.status(200).json(updatedProgramme);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update programme', details: err.message });
+  }
+};
+
 module.exports = {
   addProgramme,
   addProgrammeIntake,
   getAllProgrammes,
   getProgrammesByDepartment,
   getAllDepartments,
+  getProgrammeByCode,
+  editProgramme,
+  deleteProgrammeByCode
 };

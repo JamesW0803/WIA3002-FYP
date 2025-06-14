@@ -1,8 +1,8 @@
-const ARTIFICIAL_INTELLIGENCE = "Artificial Intelligence";
-const SOFTWARE_ENGINEERING = "Software Engineering";
-const INFORMATION_SYSTEM = "Information System";
-const COMPUTER_SYSTEM_AND_NETWORK = "Computer System and Network";
-const MULTIMEDIA = "Multimedia";
+const ARTIFICIAL_INTELLIGENCE = "Department of Artificial Intelligence";
+const SOFTWARE_ENGINEERING = "Department of Software Engineering";
+const INFORMATION_SYSTEM = "Department of Information System";
+const COMPUTER_SYSTEM_AND_NETWORK = "Department of Computer System and Network";
+const MULTIMEDIA = "Department of Multimedia";
 
 const DEPARTMENTS = [
     ARTIFICIAL_INTELLIGENCE,
