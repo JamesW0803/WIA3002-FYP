@@ -5,60 +5,12 @@ import Divider from '@mui/material/Divider';
 import TextInputField from "../../../components/form/TextInputField";
 import SelectInputField from "../../../components/form/SelectInputField";
 import ActionBar from "../../../components/form/ActionBar";
-import { DEPARTMENTS } from "../../../constants/department";
-import { COURSE_TYPES } from "../../../constants/courseType";
-import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import { useLocation , useNavigate } from "react-router-dom";
+import { formSessions } from "../../../constants/courseFormConfig"
 
-const faculties = ["Faculty of Computer Science and Information Technology"]
-const studyLevels = [0 , 1, 2, 3]
-const semesters = ["Semester 1", "Semester 2", "Semester 1 & 2", "Special Semester", "ALL"]
+const basicInformationSession = formSessions.find((session) => session["title"] === "Basic Information")
 
-const basicInformationSession = {
-    title : "Basic Information",
-    fields : [
-        { type : "text", key : "course_code" , label : "Course Code" },
-        { type : "text", key : "course_name" , label : "Course Name" },
-        { type : "text", key : "credit_hours" , label : "Credit Hours" },
-        { type : "text", key : "description" , label : "Description" },
-    ]
-}
-
-const classificationSession = {
-    title : "Classification",
-    fields : [
-        {
-            type : "select",
-            label : "Faculty",
-            key : "faculty",
-            options : faculties.map((item) => ({label : item , value : item}))
-        },
-        {
-            type : "select",
-            label : "Department",
-            key : "department",
-            options : DEPARTMENTS.map((item) => ({label : item , value : item}))
-        },
-        {
-            type : "select",
-            label : "Type",
-            key : "type",
-            options : COURSE_TYPES.map((item) => ({label : READABLE_COURSE_TYPES[item], value : item}))
-        },
-        {
-            type : "select",
-            label : "Study Level",
-            key : "study_level",
-            options : studyLevels.map((item) => ({label : item , value : item}))
-        },
-        {
-            type : "select",
-            label : "Offered In",
-            key : "offered_semester",
-            options : semesters.map((item) => ({label : item , value : item}))
-        }
-    ]
-}
+const classificationSession = formSessions.find((session) => session["title"] === "Classification")
 
 const ConsolidatedForm = ({ courses , formData , setFormData}) => {
     const formSessions = [ basicInformationSession , classificationSession ]
@@ -90,15 +42,21 @@ const FormSession = ({ title , fields , formData , setFormData}) => {
             <span className="font-semibold ml-16 my-4">{title}</span>
             {fields.map((field) => {
                 if(field.type === "text") 
-                    return <TextInputField 
+                    return (
+                    <div id={`form-field-${field.key}`} className="w-1/2">
+                        <TextInputField 
                                 label={field.label}
                                 value={formData[field.key]}
                                 onChange={ (e) => 
                                     setFormData({...formData, [field.key] : e.target.value})
                                 }
-                            />
+                        />
+                    </div>
+                    )
                 else if (field.type === "select")
-                    return <SelectInputField 
+                    return (
+                        <div id={`form-field-${field.key}`} className="w-1/2">
+                            <SelectInputField 
                                 label={field.label} 
                                 options={field.options}
                                 value={formData[field.key]}
@@ -106,6 +64,9 @@ const FormSession = ({ title , fields , formData , setFormData}) => {
                                     setFormData({ ...formData, [field.key]: e.target.value })
                                 }
                             />
+                        </div>
+                    )
+
             })}
         </div>
     )
@@ -195,7 +156,7 @@ const AddCourse = () => {
         prerequisites : [],
         faculty : "",
         offered_semester : [],
-        study_level : -1
+        study_level : null
     })
 
     const handleCancel = () => {

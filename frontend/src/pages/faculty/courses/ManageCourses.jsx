@@ -5,8 +5,8 @@ import Title from "../../../components/Title";
 import ToolBar from "../../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import FormDialog from "../../../components/dialog/FormDialog"
+import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import { useNavigate } from "react-router-dom";
-
 
 const ManageCourses = () => {
     const navigate = useNavigate();
@@ -44,6 +44,9 @@ const ManageCourses = () => {
         const latestItem = courses.map((course) => {
             return  (
                 Object.entries(course).map(([key, value]) => {
+                    if(key === "type"){
+                        value = READABLE_COURSE_TYPES[value]
+                    }
                     return {
                         key,
                         value,
@@ -58,7 +61,12 @@ const ManageCourses = () => {
     
     const handleCourseOnClick = (course_code) => {
         // navigate to course page
-        navigate(`/admin/courses/${course_code}`, { state : { course_code }})
+        navigate(`/admin/courses/${course_code}`, { state : { course_code , editMode : false , courses}})
+    }
+
+    const handleEditButtonOnClick = (course_code) => {
+        // navigate to course page
+        navigate(`/admin/courses/${course_code}`, { state : { course_code , editMode : true}})
     }
 
     const handleButtonAddCourseOnClick = () => {
@@ -66,7 +74,6 @@ const ManageCourses = () => {
     }
 
     const handleDeleteButtonOnClick = (course_code) => {
-        console.log("course_code", course_code)
         setSelectedCourseCodeToDelete(course_code);
         setOpenDialog(true);
     }
@@ -87,9 +94,9 @@ const ManageCourses = () => {
         viewButton : {
             onClick : handleCourseOnClick
         },
-        // editButton : {
-
-        // },
+        editButton : {
+            onClick : handleEditButtonOnClick
+        },
         deleteButton : {
             onClick : handleDeleteButtonOnClick
         }
