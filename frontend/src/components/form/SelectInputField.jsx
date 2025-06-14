@@ -1,7 +1,6 @@
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 
 const SelectInputField = ({ label , options , value , onChange, editMode = true}) => {
-  console.log("options: "   ,options)
   return (
     <div className="flex items-center gap-4 mb-4 ml-5">
       <label className="w-40 text-left font-semibold">{label}</label>
