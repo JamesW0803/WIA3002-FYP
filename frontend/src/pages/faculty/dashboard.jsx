@@ -22,7 +22,6 @@ const Dashboard = () => {
                 const response = await axiosClient.get("/students");
                 const students = response.data;
                 setStudents(students);
-                
             }catch(error){
                 console.error("Error fetching students.")
             }
@@ -38,7 +37,7 @@ const Dashboard = () => {
                         key,
                         value,
                         type: clickableItems.includes(key) ? "clickable_text_display" : "text_display",
-                        onClick : clickableItems.includes(key) ? () => handleStudentOnClick(student)  : null
+                        onClick : clickableItems.includes(key) ? () => handleStudentOnClick(student.username)  : null
                     }
                 })
             )
@@ -46,10 +45,19 @@ const Dashboard = () => {
         setItems(latestItem);
     }, [students])
 
-    const handleStudentOnClick = (student) => {
+    const handleStudentOnClick = ( student_name ) => {
         // navigate to student details page
-        navigate(`/admin/home/${student.username}`, { state : { student }})
+        navigate(`/admin/student-progress/${student_name}`, { state : { student_name }})
     }
+
+    const StudentsActionBar = {
+        viewButton : {
+            onClick : handleStudentOnClick
+        },
+        editButton : null,
+        deleteButton : null
+    }
+
 
     return (
         <div className="dashboard">
@@ -60,7 +68,8 @@ const Dashboard = () => {
                 header={header}
                 items={items}
                 order={order}
-                actionBar={false}
+                tableActionBarButton={StudentsActionBar}
+                identifier={"username"}
                 // index={false}
             />
         </div> 
