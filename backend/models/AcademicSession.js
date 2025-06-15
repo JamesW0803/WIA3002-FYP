@@ -27,6 +27,14 @@ const academicSessionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    next: {
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "AcademicSession",
+    },
+    previous: {
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "AcademicSession",
+    },
   },
   {
     timestamps: true,

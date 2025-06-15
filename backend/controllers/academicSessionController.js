@@ -2,7 +2,7 @@ const AcademicSession = require("../models/AcademicSession");
 
 const addAcademicSession = async (req, res) => {
   try {
-    const { year, semester, isCurrent } = req.body;
+    const { year, semester, isCurrent , next , previous} = req.body;
 
     // Validate year format, for debugging in Postman only
     if (!/^\d{4}\/\d{4}$/.test(year?.trim())) {
@@ -31,6 +31,8 @@ const addAcademicSession = async (req, res) => {
       year,
       semester,
       isCurrent,
+      next : next ?? null,
+      previous : previous ?? null,
     });
     const savedSession = await newAcademicSession.save();
     res.status(201).json(savedSession);
@@ -63,7 +65,44 @@ const getAllAcademicSessions = async (req, res) => {
   }
 };
 
+const getCurrentAcademicSession = async (req, res) => {
+  try {
+    const currentSession = await AcademicSession.findOne({ isCurrent: true });
+
+    if (!currentSession) {
+      return res.status(404).json({ message: "No current academic session found" });
+    }
+
+    res.status(200).json(currentSession);
+  } catch (error) {
+    console.error("Error fetching current academic session:", error);
+    res.status(500).json({
+      message: "Error fetching current academic session",
+      error: error.message,
+    });
+  }
+};
+
+const getAcademicSessionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const academicSession = await AcademicSession.findById(id);
+
+    if (!academicSession) {
+      return res.status(404).json({ message: "Academic session not found" });
+    }
+
+    res.status(200).json(academicSession);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 module.exports = {
   addAcademicSession,
   getAllAcademicSessions,
+  getCurrentAcademicSession,
+  getAcademicSessionById
 };

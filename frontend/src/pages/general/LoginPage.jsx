@@ -61,7 +61,7 @@ export default function LoginPage() {
           localStorage.removeItem("studentSemester");
         }
         // Navigate after successful login
-        navigate(role === "student" ? "/student-dashboard" : "/admin/home");
+        navigate(role === "student" ? "/student-dashboard" : "/admin/student-progress");
       }
     } catch (error) {
       console.error("Error during login:", error);

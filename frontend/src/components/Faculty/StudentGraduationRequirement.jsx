@@ -38,7 +38,7 @@ const courseData = [
   },
 ];
 
-const GraduationRequirement = () => {
+const StudentGraduationRequirement = () => {
   return (
     <div style={{ width: '80%', margin: 'auto', marginTop: '2rem' }}>
         <Header/>
@@ -54,7 +54,7 @@ const Header = () => {
             the minimum credit requirements from each of the course categories listed
             below
         </Typography>
-    )
+)
 }
 
 const CourseAccordion = () => {
@@ -87,4 +87,4 @@ const CourseAccordion = () => {
     )
 }
 
-export default GraduationRequirement;
+export default StudentGraduationRequirement;
