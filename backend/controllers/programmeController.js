@@ -43,23 +43,6 @@ const addProgramme = async (req, res) => {
   }
 };
 
-// Add programme intake (unchanged)
-const addProgrammeIntake = async (req, res) => {
-  try {
-    const { programme_id, academic_session_id } = req.body;
-    const newProgrameIntake = new ProgrammeIntake({
-      programme_id,
-      academic_session_id,
-    });
-
-    const savedProgrameIntake = await newProgrameIntake.save();
-    res.status(201).json(savedProgrameIntake);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-    console.log("Error adding new academic session programme: ", error);
-  }
-};
-
 // Get all programmes (with optional filtering)
 const getAllProgrammes = async (req, res) => {
   try {
@@ -177,7 +160,6 @@ const editProgramme = async (req, res) => {
 
 module.exports = {
   addProgramme,
-  addProgrammeIntake,
   getAllProgrammes,
   getProgrammesByDepartment,
   getAllDepartments,

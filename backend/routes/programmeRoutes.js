@@ -22,7 +22,6 @@ router.use(authenticate);
 // Admin-only routes
 router.use(checkRole(["admin"]));
 router.post("/", addProgramme);
-router.post("/intake", addProgrammeIntake);
 router.post("/", addProgramme)
 router.get("/:programme_code", getProgrammeByCode)
 router.put("/:programme_code", editProgramme)
