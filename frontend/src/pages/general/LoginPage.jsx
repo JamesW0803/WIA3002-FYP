@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Logo from "../../assets/logo.svg";
 import axiosClient from "../../api/axiosClient";
 import { useAuth } from "../../context/AuthContext";
+import { jwtDecode } from "jwt-decode";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -31,10 +32,28 @@ export default function LoginPage() {
       const response = await axiosClient.post("/user/login", payload);
 
       if (response.status === 200) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        const currentUser = JSON.parse(localStorage.getItem("user"));
-        setUser(currentUser);
+        const { token, user } = response.data;
+
+        // 1. store the raw token
+        localStorage.setItem("token", token);
+
+        // 2. decode it
+        const decoded = jwtDecode(token);
+        // your backend is signing { user_id: user.id, role: user.role }
+        const userId = decoded.user_id;
+
+        // 3. store the decoded user_id
+        localStorage.setItem("userId", userId);
+
+        // (optionally) keep the user object around too
+        localStorage.setItem("user", JSON.stringify(user));
+        setUser(user);
+
+        // clear any old semester/year data for students
+        if (role === "student") {
+          localStorage.removeItem("studentYear");
+          localStorage.removeItem("studentSemester");
+        }
 
         // Clear previous year/semester data when logging in
         if (role === "student") {

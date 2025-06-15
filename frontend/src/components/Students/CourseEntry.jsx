@@ -18,6 +18,11 @@ const CourseEntry = ({
           <div className="col-span-5">
             <p className="font-medium text-lg">{entry.code}</p>
             <p className="text-md text-gray-600">{entry.name}</p>
+            {entry.isRetake && (
+              <span className="inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded ml-2">
+                Retake
+              </span>
+            )}
           </div>
           <div className="col-span-2">
             <p className="text-md">Credit: {entry.credit}</p>

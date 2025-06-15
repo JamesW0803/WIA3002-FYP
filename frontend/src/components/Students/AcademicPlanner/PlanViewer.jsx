@@ -1,7 +1,6 @@
 import React from "react";
 import { Button } from "../../ui/button";
 import PlanCard from "../PlanCard";
-import { COURSES_DATABASE } from "../../../constants/courses";
 
 const PlanViewer = ({
   viewingPlan,
@@ -10,6 +9,8 @@ const PlanViewer = ({
   programPlans,
   scrollToEditSection,
   viewSectionRef,
+  allCourses,
+  completedCoursesByYear,
 }) => {
   return (
     <section
@@ -48,7 +49,8 @@ const PlanViewer = ({
         plan={programPlans.find((p) => p.id === viewingPlan)}
         setPlans={() => {}}
         plans={programPlans}
-        allCourses={COURSES_DATABASE}
+        allCourses={allCourses}
+        completedCoursesByYear={completedCoursesByYear}
         isViewMode={true}
       />
     </section>

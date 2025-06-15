@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { usePDF } from "react-to-pdf";
+import axiosClient from "../../api/axiosClient";
 
 const TranscriptView = () => {
   const [entries, setEntries] = useState([]);
-  const [availableCourses, setAvailableCourses] = useState([]);
   const { toPDF, targetRef } = usePDF({
     filename: "transcript.pdf",
     page: { margin: 20 },
@@ -11,114 +11,48 @@ const TranscriptView = () => {
   });
 
   useEffect(() => {
-    const mockCourses = [
-      { code: "WIX1002", name: "Fundamentals of Programming", credit: 5 },
-      { code: "WIA1002", name: "Data Structure", credit: 5 },
-      { code: "GIG1012", name: "Philosophy and Current Issues", credit: 2 },
-      { code: "WIX1003", name: "Database Systems", credit: 4 },
-      { code: "WIX2001", name: "Computer Networks", credit: 4 },
-      { code: "WIX2002", name: "Operating Systems", credit: 4 },
-      { code: "WIX3001", name: "Software Engineering", credit: 5 },
-      { code: "WIX3002", name: "Artificial Intelligence", credit: 4 },
-      { code: "MPU3113", name: "Ethnic Relations", credit: 3 },
-      { code: "MPU3123", name: "Islamic Civilization", credit: 3 },
-      { code: "WIX4001", name: "Final Year Project", credit: 8 },
-      { code: "WIX4002", name: "Machine Learning", credit: 4 },
-    ];
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
-    const mockEntries = [
-      {
-        year: "Year 1",
-        semester: "Semester 1",
-        code: "WIX1002",
-        status: "Passed",
-        grade: "A",
-      },
-      {
-        year: "Year 1",
-        semester: "Semester 1",
-        code: "GIG1012",
-        status: "Passed",
-        grade: "B+",
-      },
-      {
-        year: "Year 1",
-        semester: "Semester 2",
-        code: "WIA1002",
-        status: "Passed",
-        grade: "A-",
-      },
-      {
-        year: "Year 1",
-        semester: "Semester 2",
-        code: "WIX1003",
-        status: "Passed",
-        grade: "B",
-      },
-      {
-        year: "Year 1",
-        semester: "Semester 2",
-        code: "MPU3113",
-        status: "Passed",
-        grade: "A",
-      },
-      {
-        year: "Year 2",
-        semester: "Semester 1",
-        code: "WIX2001",
-        status: "Passed",
-        grade: "B+",
-      },
-      {
-        year: "Year 2",
-        semester: "Semester 1",
-        code: "WIX2002",
-        status: "Passed",
-        grade: "A-",
-      },
-      {
-        year: "Year 2",
-        semester: "Semester 2",
-        code: "WIX3001",
-        status: "Passed",
-        grade: "A",
-      },
-      {
-        year: "Year 2",
-        semester: "Semester 2",
-        code: "MPU3123",
-        status: "Passed",
-        grade: "B+",
-      },
-      {
-        year: "Year 3",
-        semester: "Semester 1",
-        code: "WIX3002",
-        status: "Passed",
-        grade: "A-",
-      },
-      {
-        year: "Year 3",
-        semester: "Semester 1",
-        code: "WIX4001",
-        status: "In Progress",
-        grade: "-",
-      },
-      {
-        year: "Year 3",
-        semester: "Semester 2",
-        code: "WIX4002",
-        status: "Planned",
-        grade: "-",
-      },
-    ];
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        const userId = decoded.user_id;
+        if (!userId) return;
 
-    setAvailableCourses(mockCourses);
-    setEntries(mockEntries);
+        const res = await axiosClient.get(`/academic-profile/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = res.data;
+
+        if (Array.isArray(data.entries)) {
+          const mapped = data.entries.map((entry) => ({
+            year: `Year ${entry.year}`,
+            semester: `Semester ${entry.semester}`,
+            code: entry.course.course_code,
+            name: entry.course.course_name,
+            credit: entry.course.credit_hours,
+            grade: entry.grade,
+            status: entry.status,
+            isRetake:
+              entry.isRetake === true && entry.status !== "Failed"
+                ? true
+                : false,
+          }));
+
+          setEntries(mapped);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching transcript data:", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const gradeToPoint = (grade) => {
     const scale = {
+      "A+": 4.0,
       A: 4.0,
       "A-": 3.7,
       "B+": 3.3,
@@ -127,52 +61,66 @@ const TranscriptView = () => {
       "C+": 2.3,
       C: 2.0,
       "C-": 1.7,
+      "D+": 1.3,
       D: 1.0,
       F: 0.0,
     };
-    return scale[grade] || null;
+    return scale[grade] ?? null;
   };
 
-  const passedEntries = entries.filter((e) => e.status === "Passed");
+  const calculateGradePoint = (entry) => {
+    const credit = entry.credit || 0;
+    const point = gradeToPoint(entry.grade) || 0;
+    return (credit * point).toFixed(2);
+  };
 
-  // Group by year, then by semester
-  const grouped = passedEntries.reduce((acc, curr) => {
-    acc[curr.year] = acc[curr.year] || {};
-    acc[curr.year][curr.semester] = acc[curr.year][curr.semester] || [];
-    acc[curr.year][curr.semester].push(curr);
-    return acc;
-  }, {});
+  const isFail = (entry) => entry.status === "Failed";
 
-  // Calculate GPA for a semester
-  const calculateSemesterGPA = (semesterCourses) => {
-    const { totalCredits, totalPoints } = semesterCourses.reduce(
-      (acc, entry) => {
-        const course = availableCourses.find((c) => c.code === entry.code);
-        const point = gradeToPoint(entry.grade);
-        if (course && point !== null) {
-          acc.totalCredits += course.credit;
-          acc.totalPoints += course.credit * point;
-        }
-        return acc;
-      },
-      { totalCredits: 0, totalPoints: 0 }
-    );
+  const grouped = useMemo(() => {
+    return entries.reduce((acc, curr) => {
+      acc[curr.year] = acc[curr.year] || {};
+      acc[curr.year][curr.semester] = acc[curr.year][curr.semester] || [];
+      acc[curr.year][curr.semester].push(curr);
+      return acc;
+    }, {});
+  }, [entries]);
+
+  const calculateSemesterGPA = (courses) => {
+    let totalPoints = 0;
+    let totalCredits = 0;
+    for (const course of courses) {
+      const point = gradeToPoint(course.grade);
+      if (point !== null) {
+        totalPoints += point * course.credit;
+        if (point > 0) totalCredits += course.credit; // exclude failed
+      }
+    }
     return totalCredits ? (totalPoints / totalCredits).toFixed(2) : "-";
   };
 
-  // Calculate overall CGPA
-  const totalCredits = passedEntries.reduce((sum, entry) => {
-    const course = availableCourses.find((c) => c.code === entry.code);
-    return sum + (course?.credit || 0);
-  }, 0);
-
-  const totalPoints = passedEntries.reduce((sum, entry) => {
-    const course = availableCourses.find((c) => c.code === entry.code);
+  const latestPassedAttemptsMap = {};
+  entries.forEach((entry) => {
     const point = gradeToPoint(entry.grade);
-    return sum + (course?.credit || 0) * (point || 0);
-  }, 0);
+    if (point > 0 && entry.status === "Passed") {
+      latestPassedAttemptsMap[entry.code] = entry; // keeps latest
+    }
+  });
 
+  const latestPassedAttempts = Object.values(latestPassedAttemptsMap);
+
+  const totalCredits = latestPassedAttempts.reduce(
+    (sum, e) => sum + (e.credit || 0),
+    0
+  );
+  const totalPoints = latestPassedAttempts.reduce(
+    (sum, e) => sum + gradeToPoint(e.grade) * (e.credit || 0),
+    0
+  );
   const cgpa = totalCredits ? (totalPoints / totalCredits).toFixed(2) : "-";
+
+  const allPassedCredits = entries.reduce((acc, entry) => {
+    return isFail(entry) ? acc : acc + (entry.credit || 0);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -188,68 +136,72 @@ const TranscriptView = () => {
         </div>
 
         <div ref={targetRef} className="p-6 bg-white rounded-lg shadow-sm">
-          {Object.entries(grouped).map(([year, semesters]) => (
-            <div key={year} className="mb-8">
-              <h3 className="text-xl font-semibold text-gray-700 mb-4">
-                {year}
-              </h3>
+          {Object.keys(grouped).length === 0 ? (
+            <p className="text-gray-500 text-center">
+              No transcript data available.
+            </p>
+          ) : (
+            Object.entries(grouped).map(([year, semesters]) => (
+              <div key={year} className="mb-8">
+                <h3 className="text-xl font-semibold text-gray-700 mb-4">
+                  {year}
+                </h3>
+                {Object.entries(semesters).map(([semester, courses]) => {
+                  const semesterGPA = calculateSemesterGPA(courses);
+                  return (
+                    <div key={semester} className="mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-lg font-medium text-gray-600">
+                          {semester}
+                        </h4>
+                        <span className="text-gray-700 font-medium">
+                          Semester GPA: {semesterGPA}
+                        </span>
+                      </div>
 
-              {Object.entries(semesters).map(([semester, courses]) => {
-                const semesterGPA = calculateSemesterGPA(courses);
-
-                return (
-                  <div key={semester} className="mb-6">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-lg font-medium text-gray-600">
-                        {semester}
-                      </h4>
-                      <span className="text-gray-700 font-medium">
-                        Semester GPA: {semesterGPA}
-                      </span>
-                    </div>
-
-                    <table className="w-full bg-white shadow-md rounded-xl overflow-hidden mb-4">
-                      <thead className="bg-gray-100 text-left">
-                        <tr>
-                          <th className="px-4 py-2 w-1/5">Course Code</th>
-                          <th className="px-4 py-2 w-2/5">Course Name</th>
-                          <th className="px-4 py-2 w-1/5">Credit</th>
-                          <th className="px-4 py-2 w-1/5">Grade</th>
-                          <th className="px-4 py-2 w-1/5">Grade Point</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {courses.map((entry, idx) => {
-                          const course =
-                            availableCourses.find(
-                              (c) => c.code === entry.code
-                            ) || {};
-                          return (
+                      <table className="w-full bg-white shadow-md rounded-xl overflow-hidden mb-4">
+                        <thead className="bg-gray-100 text-left">
+                          <tr>
+                            <th className="px-4 py-2 w-1/5">Course Code</th>
+                            <th className="px-4 py-2 w-2/5">Course Name</th>
+                            <th className="px-4 py-2 w-1/5">Credit</th>
+                            <th className="px-4 py-2 w-1/5">Grade</th>
+                            <th className="px-4 py-2 w-1/5">Grade Point</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {courses.map((entry, idx) => (
                             <tr key={idx} className="border-t">
-                              <td className="px-4 py-2">{entry.code}</td>
                               <td className="px-4 py-2">
-                                {course.name || "-"}
+                                {entry.code}
+                                {entry.isRetake && (
+                                  <span className="ml-2 inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
+                                    Retake
+                                  </span>
+                                )}
                               </td>
+
+                              <td className="px-4 py-2">{entry.name || "-"}</td>
                               <td className="px-4 py-2">
-                                {course.credit || "-"}
+                                {entry.credit || "-"}
                               </td>
                               <td className="px-4 py-2">{entry.grade}</td>
                               <td className="px-4 py-2">
-                                {gradeToPoint(entry.grade) ?? "-"}
+                                {calculateGradePoint(entry)}
                               </td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
+          )}
 
           <div className="text-right text-lg font-semibold text-gray-700 mt-6">
-            Total Credits: {totalCredits} | CGPA: {cgpa}
+            Total Credits: {allPassedCredits} | CGPA: {cgpa}
           </div>
         </div>
       </div>

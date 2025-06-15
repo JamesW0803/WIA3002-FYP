@@ -25,6 +25,7 @@ const CurrentAcademicStatus = ({
             placeholder="e.g. 3.25"
             value={currentGPA}
             onChange={(e) => setCurrentGPA(e.target.value)}
+            disabled={true}
           />
         </div>
         <div>
@@ -37,6 +38,7 @@ const CurrentAcademicStatus = ({
             placeholder="e.g. 45"
             value={completedCredits}
             onChange={(e) => setCompletedCredits(e.target.value)}
+            disabled={true}
           />
         </div>
       </div>

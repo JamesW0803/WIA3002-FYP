@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "../../ui/card";
 import SavedPlanCard from "../SavedPlanCard";
 import PlanEditor from "./PlanEditor";
 import PlanViewer from "./PlanViewer";
 import { Plus } from "lucide-react";
+import { generateNewPlanFromStartingPoint } from "../AcademicPlanner/utils/planHelpers";
+import axiosClient from "../../../api/axiosClient";
 
 const ProgramPlansSection = ({
   programPlans,
@@ -22,7 +24,12 @@ const ProgramPlansSection = ({
   viewSectionRef,
   scrollToEditSection,
   scrollToViewSection,
+  completedCourses,
+  allCourses,
+  completedCoursesByYear,
+  startingPlanPoint,
 }) => {
+  const [backupPlan, setBackupPlan] = useState(null);
   const addPlan = () => {
     const activePlans = programPlans.filter(
       (plan) => !tempPlans.includes(plan.id)
@@ -33,52 +40,89 @@ const ProgramPlansSection = ({
       return;
     }
 
-    const newPlan = {
-      id: Date.now(),
-      name: `Plan ${String.fromCharCode(65 + activePlans.length)}`,
-      created: new Date().toISOString().split("T")[0],
-      semesters: 8,
-      credits: 0,
-      notes: "",
-      years: [
-        {
-          year: 1,
-          semesters: [
-            {
-              id: Date.now(),
-              name: "Year 1 - Semester 1",
-              courses: [],
-              completed: false,
-            },
-            {
-              id: Date.now() + 1,
-              name: "Year 1 - Semester 2",
-              courses: [],
-              completed: false,
-            },
-          ],
-        },
-      ],
-    };
+    const newPlan = generateNewPlanFromStartingPoint(
+      activePlans.length,
+      startingPlanPoint
+    );
 
     setUnsavedPlan(newPlan);
     setEditingPlan(newPlan.id);
     setIsCreatingNew(true);
-    setTempPlans([...tempPlans, newPlan.id]);
+    setTempPlans([...tempPlans, newPlan._id]);
     scrollToEditSection();
   };
 
+  const handleSave = async (updatedPlanData) => {
+    try {
+      const token = localStorage.getItem("token");
+      const planId = editingPlan;
+
+      // Send PUT to /academic-plans/plans/:planId
+      const res = await axiosClient.put(
+        `/academic-plans/plans/${planId}`,
+        updatedPlanData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const saved = res.data.data;
+
+      // Merge updated plan into state
+      setProgramPlans((prev) =>
+        prev.map((p) =>
+          p.id === planId ? { ...saved, id: saved.identifier } : p
+        )
+      );
+    } catch (err) {
+      console.error("Failed to save plan", err);
+      alert(
+        `Failed to save plan: ${err.response?.data?.message || err.message}`
+      );
+    } finally {
+      // Exit edit mode
+      setEditingPlan(null);
+    }
+  };
+
   const handleEditPlan = (plan) => {
-    setEditingPlan(plan.id);
+    setBackupPlan(plan);
+    // if we were in View mode, close it
     setViewingPlan(null);
+
+    // make sure we're in “edit existing,” not “create new”
     setIsCreatingNew(false);
+
+    // open the editor for this plan
+    setEditingPlan(plan.id);
     scrollToEditSection();
   };
 
   const handleViewPlan = (plan) => {
-    setViewingPlan(plan.id);
+    console.log("Viewing plan:", plan);
+    const planId = plan.id;
+    console.log("Plan ID:", planId);
+    setViewingPlan(planId);
     setEditingPlan(null);
     scrollToViewSection();
+  };
+
+  const handleDeletePlan = async (plan) => {
+    if (!window.confirm(`Delete plan “${plan.name}”?`)) return;
+    try {
+      const token = localStorage.getItem("token");
+      // call your DELETE /academic-plans/:id
+      await axiosClient.delete(`/academic-plans/plans/${plan.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // remove from state
+      setProgramPlans(programPlans.filter((p) => p.id !== plan.id));
+      // if we were viewing it, close viewer
+      if (viewingPlan === plan.id) {
+        setViewingPlan(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete plan", err);
+      alert("Could not delete plan—please try again.");
+    }
   };
 
   return (
@@ -96,16 +140,11 @@ const ProgramPlansSection = ({
                 key={plan.id}
                 plan={plan}
                 type="program"
-                onEdit={() => handleEditPlan(plan)}
+                onEdit={() => {
+                  handleEditPlan(plan);
+                }}
                 onDelete={() => {
-                  if (window.confirm(`Delete ${plan.name}?`)) {
-                    setProgramPlans(
-                      programPlans.filter((p) => p.id !== plan.id)
-                    );
-                    if (viewingPlan === plan.id) {
-                      setViewingPlan(null);
-                    }
-                  }
+                  handleDeletePlan(plan);
                 }}
                 onView={() => handleViewPlan(plan)}
               />
@@ -130,6 +169,12 @@ const ProgramPlansSection = ({
       {/* Edit Section */}
       {editingPlan && (
         <PlanEditor
+          plan={programPlans.find((p) => p.id === editingPlan)}
+          onCancel={() => setEditingPlan(null)}
+          onSave={handleSave}
+          allCourses={allCourses}
+          completedCourses={completedCourses}
+          completedCoursesByYear={completedCoursesByYear}
           editingPlan={editingPlan}
           setEditingPlan={setEditingPlan}
           isCreatingNew={isCreatingNew}
@@ -141,12 +186,31 @@ const ProgramPlansSection = ({
           tempPlans={tempPlans}
           setTempPlans={setTempPlans}
           editSectionRef={editSectionRef}
+          originalPlan={backupPlan}
+          onDiscard={() => {
+            if (isCreatingNew) {
+              // undo the “new plan” placeholder
+              setTempPlans((ts) => ts.filter((id) => id !== editingPlan));
+              setUnsavedPlan(null);
+            } else {
+              // restore the backed-up version
+              setProgramPlans((ps) =>
+                ps.map((p) => (p.id === editingPlan ? backupPlan : p))
+              );
+            }
+            // close the editor
+            setEditingPlan(null);
+            setBackupPlan(null);
+          }}
         />
       )}
 
       {/* View Section */}
       {viewingPlan && (
         <PlanViewer
+          allCourses={allCourses}
+          completedCourses={completedCourses}
+          completedCoursesByYear={completedCoursesByYear}
           viewingPlan={viewingPlan}
           setViewingPlan={setViewingPlan}
           setEditingPlan={setEditingPlan}

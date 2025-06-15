@@ -13,6 +13,7 @@
     "clsx": "^2.1.1",
     "frontend": "file:",
     "install": "^0.13.0",
+    "jwt-decode": "^4.0.0",
     "lucide-react": "^0.506.0",
     "npm": "^11.4.0",
     "react": "^19.1.0",
