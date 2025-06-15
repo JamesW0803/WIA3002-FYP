@@ -121,10 +121,33 @@ const ProgrammeEnrollmentDetails = () => {
 }
 
 const NavTab = () => {
+    const location = useLocation();
+    const isActive = (path) => {
+        return location.pathname.includes(path);
+    };
+
     return (
-        <div className="flex gap-4 mt-2">
-          <Link to="graduation-requirement">Graduation Requirement</Link>
-          <Link to="course-plan">Course Plan</Link>
+        <div className="flex gap-4 mt-8 border-b border-gray-200 ml-10 w-[90%]">
+            <Link 
+                to="graduation-requirement"
+                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
+                    isActive('graduation-requirement') 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+                Graduation Requirement
+            </Link>
+            <Link 
+                to="course-plan"
+                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
+                    isActive('course-plan') 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+                Course Plan
+            </Link>
         </div>
     )
 }
@@ -169,18 +192,19 @@ const ProgrammeEnrollmentDisplayColumn = ({ entries, handleInputChange, editMode
                 if(!field) return
                 if(field.type === "text") 
                     return (
-                    <div id={`form-field-${field.key}`} className="h-[70px]">
+                    <div id={`form-field-${field.key}`} className="h-[50px]">
                         <TextInputField 
                                 label={field.label}
                                 value={value}
                                 onChange={handleInputChange(key)}
                                 editMode={editMode}
+                                size={"small"}
                         />
                     </div>
                     )
                 else if (field.type === "select")
                     return (
-                        <div id={`form-field-${field.key}`}>
+                        <div id={`form-field-${field.key}`} className="h-[50px]">
                             <SelectInputField 
                                 label={field.label} 
                                 options={field.options}

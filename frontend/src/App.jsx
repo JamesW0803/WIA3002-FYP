@@ -34,6 +34,7 @@ import ProgrammeDetails from "./pages/faculty/programmes/ProgrammeDetails";
 import AddCourse from "./pages/faculty/courses/AddCourse";
 import AdminProfile from "./pages/faculty/AdminProfile";
 import ManageProgrammeEnrollments from "./pages/faculty/programmeIntakes/ManageProgrammeEnrollments";
+import AddProgrammeEnrollment from "./pages/faculty/programmeIntakes/AddProgrammeEnrollment";
 
 function App() {
   return (
@@ -167,6 +168,12 @@ function App() {
                   <ManageProgrammeEnrollments />
                 </ProtectedRoute>
               }
+            />
+            <Route 
+                path="programme-intakes/add-programme-intake"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><AddProgrammeEnrollment /></ProtectedRoute>
+                } 
             />
             <Route
               path="programme-intakes/:programme_intake_code"

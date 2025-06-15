@@ -26,7 +26,6 @@ const ManageProgrammeEnrollment = () => {
                 const response = await axiosClient.get("/programme-intakes");
                 const programmeEnrollments = response.data;
                 setProgrammeEnrollments(programmeEnrollments)
-                console.log(programmeEnrollments)
             } catch (error) {
                 console.error("Error fetching programme enrollment: ", error);
             }
@@ -66,7 +65,7 @@ const ManageProgrammeEnrollment = () => {
     }
 
     const handleButtonAddProgrammeEnrollmentOnClick = () => {
-        navigate(`/admin/programme-intakes/add-programme`, { state : { programmeEnrollments }})
+        navigate(`/admin/programme-intakes/add-programme-intake`, { state : { programmeEnrollments }})
     }
 
     const handleDeleteButtonOnClick = (programme_intake_code) => {
