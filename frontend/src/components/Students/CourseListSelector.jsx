@@ -95,23 +95,29 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
                 return (
                   <div
                     key={course.code}
-                    className={`p-2 ${
+                    className={`p-2 relative ${
                       isDisabled
-                        ? "opacity-50 text-gray-400 pointer-events-none"
+                        ? "opacity-50 pointer-events-none"
                         : "hover:bg-gray-100 cursor-pointer"
                     }`}
                     onClick={() => handleSelectCourse(course)}
                   >
-                    <div className="flex justify-between items-center">
+                    <div
+                      className={`flex justify-between items-center ${
+                        isDisabled ? "blur-[1px]" : ""
+                      }`}
+                    >
                       <span>
                         {course.code} - {course.name} ({course.credit} credits)
                       </span>
-                      {isDisabled && (
-                        <span className="text-xs text-gray-500 ml-2">
-                          (Already added)
-                        </span>
-                      )}
                     </div>
+                    {isDisabled && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">
+                          Already taken
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })

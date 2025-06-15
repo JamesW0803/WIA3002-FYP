@@ -8,11 +8,12 @@ const YearCard = ({
   setPlans,
   plans,
   allCourses,
+  completedCoursesByYear,
   isViewMode = false,
 }) => {
   return (
-    <Card className="bg-gray-50">
-      <CardContent className="p-4">
+    <Card className="bg-gray-50 overflow-visible relative z-0">
+      <CardContent className="p-4 relative z-0 overflow-visible">
         <div className="space-y-6">
           {yearData.semesters.map((semester, index) => {
             const previousSemesters = yearData.semesters.slice(0, index).concat(
@@ -32,7 +33,8 @@ const YearCard = ({
                 plans={plans}
                 allCourses={allCourses}
                 previousSemesters={previousSemesters}
-                isViewMode={isViewMode} // Pass the view mode to SemesterCard
+                completedCoursesByYear={completedCoursesByYear}
+                isViewMode={isViewMode}
               />
             );
           })}

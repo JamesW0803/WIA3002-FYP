@@ -9,10 +9,13 @@ const PlanCard = ({
   plans,
   setPlans,
   allCourses,
+  completedCourses,
+  completedCoursesByYear,
   isViewMode = false,
 }) => {
   const addYear = () => {
-    const newYearNumber = plan.years.length + 1;
+    const lastYear = plan.years[plan.years.length - 1].year;
+    const newYearNumber = lastYear + 1;
     const newYear = {
       year: newYearNumber,
       semesters: [
@@ -75,8 +78,8 @@ const PlanCard = ({
   );
 
   return (
-    <Card className="bg-white shadow-md">
-      <CardContent className="p-6 space-y-6">
+    <Card className="bg-white shadow-md overflow-visible relative z-0">
+      <CardContent className="p-6 space-y-6 overflow-visible relative z-0">
         <div className="flex justify-between items-center">
           <div>
             <h3 className="text-xl font-semibold">{plan.name}</h3>
@@ -112,6 +115,8 @@ const PlanCard = ({
                 setPlans={setPlans}
                 plans={plans}
                 allCourses={allCourses}
+                completedCourses={completedCourses}
+                completedCoursesByYear={completedCoursesByYear}
                 isViewMode={isViewMode}
               />
             </div>

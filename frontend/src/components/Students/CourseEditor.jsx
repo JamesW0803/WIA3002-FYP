@@ -18,9 +18,16 @@ const CourseEditor = ({
   const year = editingEntry?.year;
   const semester = editingEntry?.semester;
 
+  // CourseEditor.jsx (updated part)
   const disabledCourseCodes = React.useMemo(() => {
     return entries
-      .filter((entry) => entry.id !== editingEntry?.id)
+      .filter((entry) => {
+        const sameCourse = entry.code === editingEntry?.code;
+        const sameId = entry.id === editingEntry?.id;
+        // Only disable if the course was passed or is ongoing (not failed)
+        const passedOrOngoing = entry.status !== "Failed";
+        return !sameId && sameCourse && passedOrOngoing;
+      })
       .map((entry) => entry.code);
   }, [entries, editingEntry?.id]);
 

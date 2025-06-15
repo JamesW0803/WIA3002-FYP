@@ -34,13 +34,13 @@ const courseSchema = new mongoose.Schema(
     ],
     faculty: {
       type: String,
-      default: "Faculty of Computer Science and Engineering",
+      default: "Faculty of Computer Science and Information Technology",
     },
     department: {
       type: String,
     },
     offered_semester: {
-      type: String,
+      type: [String],
       enum: ALL_SEMESTERS,
     },
     study_level: {
