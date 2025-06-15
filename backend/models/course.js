@@ -46,7 +46,6 @@ const courseSchema = new mongoose.Schema(
     study_level: {
       type: Number,
       enum: [0, 1, 2, 3],
-      default: 0,
     },
   },
   {

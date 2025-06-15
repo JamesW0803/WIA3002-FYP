@@ -12,13 +12,14 @@ const formatCourse = (course) => {
   return {
     course_code: course.course_code ?? "-",
     course_name: course.course_name ?? "-",
-    type: READABLE_COURSE_TYPES[course.type] ?? READABLE_COURSE_TYPES.UNKNOWN,
+    type: course.type ?? "-",
     credit_hours: course.credit_hours ?? "-",
     description: course.description ?? "-",
     prerequisites: course.prerequisites ?? [],
     faculty: course.faculty ?? "-",
     department: course.department ?? "-",
     offered_semester: course.offered_semester ?? "-",
+    study_level: course.study_level ?? "-",
   };
 };
 

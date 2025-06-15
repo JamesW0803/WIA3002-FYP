@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import LoginPage from "./pages/general/LoginPage";
 import ForgotPasswordPage from "./pages/general/ForgotPasswordPage";
 import EmailSentPage from "./pages/general/EmailSentPage";
@@ -18,13 +19,22 @@ import CourseRecommendations from "./pages/student/CourseRecommendations";
 import FAQsPage from "./pages/student/FAQPage";
 import ContactAdvisorPage from "./pages/student/ContactAdvisorPage";
 import StudentProfile from "./pages/student/StudentProfile";
+import ProgrammeEnrollmentDetails from "./pages/faculty/programmeIntakes/ProgrammeEnrollmentDetails";
+import GraduationRequirement from "./components/Faculty/GraduationRequirement"
+import CoursePlan from "./components/Faculty/CoursePlan"
 
 import { AuthProvider } from "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
-import ManageCourses from "./pages/faculty/ManageCourses";
+import ManageCourses from "./pages/faculty/courses/ManageCourses";
 import Helpdesk from "./pages/faculty/Helpdesk";
-import ManageProgrammes from "./pages/faculty/ManageProgrammes";
+import ManageProgrammes from "./pages/faculty/programmes/ManageProgrammes";
+import CourseDetails from "./pages/faculty/courses/CourseDetails";
+import StudentDetails from "./pages/faculty/StudentDetails";
+import ProgrammeDetails from "./pages/faculty/programmes/ProgrammeDetails";
+import AddCourse from "./pages/faculty/courses/AddCourse";
 import AdminProfile from "./pages/faculty/AdminProfile";
+import ManageProgrammeEnrollments from "./pages/faculty/programmeIntakes/ManageProgrammeEnrollments";
+import AddProgrammeEnrollment from "./pages/faculty/programmeIntakes/AddProgrammeEnrollment";
 
 function App() {
   return (
@@ -135,6 +145,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+              <Route
+                path="home/:studentName"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <StudentDetails/>
+                  </ProtectedRoute>
+                }
+              />
             <Route
               path="programmes"
               element={
@@ -144,12 +162,59 @@ function App() {
               }
             />
             <Route
+              path="programme-intakes"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ManageProgrammeEnrollments />
+                </ProtectedRoute>
+              }
+            />
+            <Route 
+                path="programme-intakes/add-programme-intake"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><AddProgrammeEnrollment /></ProtectedRoute>
+                } 
+            />
+            <Route
+              path="programme-intakes/:programme_intake_code"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ProgrammeEnrollmentDetails />
+                </ProtectedRoute>
+              }
+            >
+              <Route
+                index
+                element={<Navigate to="graduation-requirement" replace />}
+              />
+              <Route path="graduation-requirement" element={<GraduationRequirement />} />
+              <Route path="course-plan" element={<CoursePlan />} />
+            </Route>
+            <Route 
+                path="programmes/:programme_code"
+                element = {
+                  <ProtectedRoute allowedRoles={["admin"]}><ProgrammeDetails /></ProtectedRoute>
+                } 
+              />
+            <Route
               path="courses"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <ManageCourses />
                 </ProtectedRoute>
-              }
+                }
+              />
+              <Route 
+                  path="courses/:course_code"
+                  element = {
+                    <ProtectedRoute allowedRoles={["admin"]}><CourseDetails /></ProtectedRoute>
+                  } 
+              />
+              <Route 
+                  path="courses/add-course"
+                  element = {
+                    <ProtectedRoute allowedRoles={["admin"]}><AddCourse /></ProtectedRoute>
+                }
             />
             <Route
               path="helpdesk"

@@ -34,7 +34,11 @@ export const ADMIN_NAV_ITEMS = [
   },
   {
     title: "Programmes",
-    path: "/admin/programmes",
+    submenu : [
+      { title : "Overview" , path : "/admin/programmes"},
+      { title : "Programme Enrollment" , path : "/admin/programme-intakes"}
+
+    ]
   },
   {
     title: "Courses",

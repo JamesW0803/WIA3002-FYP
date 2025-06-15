@@ -5,6 +5,11 @@ require("./ProgrammePlan")
 
 const programmeIntake = new mongoose.Schema(
   {
+    programme_intake_code: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     programme_id: {
       type: mongoose.Schema.Types.ObjectId, 
       ref: "Programme",
@@ -22,6 +27,18 @@ const programmeIntake = new mongoose.Schema(
     number_of_students_enrolled: {
       type: Number,
       default: 0,
+    },
+    graduation_rate: {
+      type: Number,
+      default: 0,
+    },
+    min_semester: {
+      type: Number,
+      default: 7,
+    },
+    max_semester: {
+      type: Number,
+      default: 11,
     }
   },
   {
