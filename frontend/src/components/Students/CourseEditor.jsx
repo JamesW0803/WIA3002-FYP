@@ -266,14 +266,6 @@ const CourseEditor = ({
             <CheckCircle className="h-4 w-4 mr-1" />
             All prerequisites met
           </p>
-          {prerequisiteCheck.requiredCourses.length > 0 && (
-            <p className="text-green-700 text-xs mt-1">
-              Required:{" "}
-              {prerequisiteCheck.requiredCourses
-                .map((p) => p.course_code)
-                .join(", ")}
-            </p>
-          )}
         </div>
       );
     }
@@ -304,8 +296,8 @@ const CourseEditor = ({
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200">
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-start">
-        <div className="md:col-span-2">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+        <div className="md:col-span-2 row-span-2 md:row-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Course
           </label>
@@ -319,7 +311,6 @@ const CourseEditor = ({
               This course has already been taken in another semester/year
             </p>
           )}
-          {renderPrerequisiteStatus()}
         </div>
 
         <div>
@@ -377,7 +368,7 @@ const CourseEditor = ({
           </div>
         )}
 
-        <div className="flex items-end gap-2">
+        <div className="md:col-span-2 flex gap-2 w-[250px]">
           <button
             type="button"
             onClick={handleSave}
@@ -392,7 +383,7 @@ const CourseEditor = ({
               getUnmetLocalPrereqs().length > 0 ||
               hasSameSemesterPrerequisites()
             }
-            className={`px-4 py-2 rounded-md flex-1 ${
+            className={`px-4 py-2 rounded-md flex-1 border transition-colors ${
               prerequisiteCheck.allPrerequisitesMet &&
               !isCheckingPrerequisites &&
               editingEntry.code &&
@@ -400,9 +391,9 @@ const CourseEditor = ({
               ((editingEntry.status !== "Passed" &&
                 editingEntry.status !== "Failed") ||
                 editingEntry.grade)
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-200 text-gray-500 cursor-not-allowed"
-            } transition-colors`}
+                ? "bg-[#1E3A8A] text-white border-[#1E3A8A] hover:bg-white hover:text-[#1E3A8A]"
+                : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
+            }`}
           >
             {isCheckingPrerequisites ? "Checking..." : "Save Course"}
           </button>
@@ -414,6 +405,9 @@ const CourseEditor = ({
             Cancel
           </button>
         </div>
+      </div>
+      <div className="md:col-span-6 max-w-[385px]">
+        {renderPrerequisiteStatus()}
       </div>
     </div>
   );
