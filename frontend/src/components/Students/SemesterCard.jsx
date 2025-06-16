@@ -82,6 +82,29 @@ const SemesterCard = ({
       return;
     }
 
+    // Flatten all semesters and track order
+    const currentPlan = plans.find((p) => p.id === planId);
+    let targetSemesterIndex = -1;
+    const allSemesters = [];
+
+    if (currentPlan) {
+      currentPlan.years.forEach((y, yIndex) => {
+        y.semesters.forEach((sem, sIndex) => {
+          const combinedIndex = yIndex * 2 + sIndex;
+          allSemesters.push({
+            year: y.year,
+            name: sem.name,
+            index: combinedIndex,
+            courses: sem.courses,
+          });
+
+          if (y.year === year && sem.name === semester.name) {
+            targetSemesterIndex = combinedIndex;
+          }
+        });
+      });
+    }
+
     // Find the actual semester in plans by ID or name
     const updatedPlans = plans.map((plan) => {
       if (plan.id !== planId) return plan;
@@ -102,30 +125,59 @@ const SemesterCard = ({
           }
 
           // Check prerequisites
-          const prerequisiteCourses = (courseToAdd.prerequisites || [])
-            .map((prereqId) => allCourses.find((c) => c._id === prereqId))
-            .filter(Boolean);
+          // Step 1: Get prerequisite course codes from _id list
+          const prerequisiteCodes = (courseToAdd.prerequisites || [])
+            .map((prereqId) => {
+              const course = allCourses.find((c) => c._id === prereqId);
+              return course?.code;
+            })
+            .filter(Boolean); // Removes any undefined/null
 
-          const unmetPrereqs = prerequisiteCourses.filter((prereq) => {
-            let isPassed = false;
-            Object.values(completedCoursesByYear).forEach((yearData) => {
-              Object.values(yearData).forEach((semCourses) => {
-                semCourses.forEach((c) => {
-                  if (c.code === prereq.code && c.status === "Passed") {
-                    isPassed = true;
-                  }
-                });
-              });
-            });
-            return !isPassed;
-          });
+          // Step 2: Check if code is already passed
+          const isCodePassed = (code) => {
+            for (const year of Object.values(completedCoursesByYear)) {
+              for (const semester of Object.values(year)) {
+                for (const course of semester) {
+                  if (course.code === code && course.status === "Passed")
+                    return true;
+                }
+              }
+            }
+            return false;
+          };
 
+          // Step 3: Check if code already exists in previous semesters in the same plan
+          const isCodeInPlan = (code) => {
+            const priorSemesters = allSemesters.filter(
+              (s) => s.index < targetSemesterIndex
+            );
+            return priorSemesters.some((sem) =>
+              sem.courses.some((c) => c.code === code)
+            );
+          };
+
+          console.log("WIA3001 prerequisites (by code):", prerequisiteCodes);
+          console.log("Passed courses:", Array.from(passedCourses));
+          console.log(
+            "Courses in earlier plan semesters:",
+            allSemesters
+              .filter((s) => s.index < targetSemesterIndex)
+              .flatMap((s) => s.courses.map((c) => c.code))
+          );
+
+          // Step 4: Check all prerequisite codes
+          const unmetPrereqs = prerequisiteCodes.filter(
+            (code) => !isCodePassed(code) && !isCodeInPlan(code)
+          );
+
+          console.log("Unmet prerequisites:", unmetPrereqs);
+
+          // Step 5: Alert if unmet
           if (unmetPrereqs.length > 0) {
-            const missingList = unmetPrereqs
-              .map((c) => `${c.code} - ${c.name}`)
-              .join("\n");
             alert(
-              `Cannot add ${courseCode}. Missing prerequisites:\n${missingList}`
+              `Cannot add ${
+                courseToAdd.code
+              }. Missing prerequisites:\n${unmetPrereqs.join(", ")}`
             );
             return sem;
           }

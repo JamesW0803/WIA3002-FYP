@@ -13,8 +13,9 @@ import {
 import axiosClient from "../../api/axiosClient";
 import semesterMapping from "../../constants/semesterMapping";
 import rawDefaultPlan from "../../constants/defaultPlan.json";
-import generateCustomCoursePlan from "../../utils/generateCustomCoursePlan";
+import generateCustomPlan from "../../utils/generateCustomPlan";
 import { findLastCompletedSemester } from "../../components/Students/AcademicPlanner/utils/planHelpers";
+import getRemainingCourses from "../../utils/getRemainingCourses";
 
 const groupDefaultPlanByYearSemester = (allCourses) => {
   let specializationCount = 1;
@@ -62,7 +63,6 @@ const groupDefaultPlanByYearSemester = (allCourses) => {
 
 const CourseRecommendations = () => {
   const [generatedPlan, setGeneratedPlan] = useState([]);
-  const [strategy, setStrategy] = useState("balanced");
   const [allCourses, setAllCourses] = useState([]);
   const [defaultPlan, setDefaultPlan] = useState([]);
   const [expandedYears, setExpandedYears] = useState(() => {
@@ -72,18 +72,21 @@ const CourseRecommendations = () => {
     });
     return initialState;
   });
-  const [planMode, setPlanMode] = useState("normal"); // normal | gapYear | gapSem | outbound
-  const [gapModalOpen, setGapModalOpen] = useState(false); // For gap year/semester
-  const [courseModalOpen, setCourseModalOpen] = useState(false); // For course details
-  const [selection, setSelection] = useState({ year: 1, sem: 1 });
+  const [planMode, setPlanMode] = useState("normal");
+  const [selection, setSelection] = useState({
+    type: null,
+    year: 1,
+    sem: 1,
+  });
   const [completedEntries, setCompletedEntries] = useState([]);
-  const [startPoint, setStartPoint] = useState({ year: 1, sem: 1 });
-  const [gapYears, setGapYears] = useState([]);
-  const [gapSemesters, setGapSemesters] = useState([]);
-  const [outboundSemesters, setOutboundSemesters] = useState([]);
   const [remainingCourses, setRemainingCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [prerequisiteDetails, setPrerequisiteDetails] = useState([]);
+  const [courseModalOpen, setCourseModalOpen] = useState(false);
+  const [gapModalOpen, setGapModalOpen] = useState(false);
+  const [gapYears, setGapYears] = useState([]);
+  const [gapSemesters, setGapSemesters] = useState([]);
+  const [outboundSemesters, setOutboundSemesters] = useState([]);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -100,30 +103,15 @@ const CourseRecommendations = () => {
           }),
         ]);
 
-        const allCoursesData = coursesRes.data.map((course) => ({
-          ...course,
-          // Convert prerequisite IDs to codes if needed
-          prerequisites: course.prerequisites
-            ? course.prerequisites
-                .map((id) => {
-                  const prereq = coursesRes.data.find((c) => c._id === id);
-                  return prereq ? prereq.course_code : null;
-                })
-                .filter(Boolean)
-            : [],
-        }));
-        setAllCourses(allCoursesData);
+        setAllCourses(coursesRes.data);
+        setCompletedEntries(profileRes.data.entries);
+        setDefaultPlan(groupDefaultPlanByYearSemester(rawDefaultPlan));
 
-        const defaultPlanData = groupDefaultPlanByYearSemester(rawDefaultPlan);
-        setDefaultPlan(defaultPlanData);
-
-        const entries = profileRes.data.entries;
-        setCompletedEntries(entries);
-        const last = findLastCompletedSemester(entries);
-        setStartPoint({ year: last.year, sem: last.semester });
-
-        // Calculate remaining courses using allCoursesData and entries
-        calculateRemainingCourses(allCoursesData, entries, last);
+        const remaining = getRemainingCourses(
+          coursesRes.data,
+          profileRes.data.entries
+        );
+        setRemainingCourses(remaining);
       } catch (err) {
         console.error("Failed to fetch data:", err);
       }
@@ -133,11 +121,21 @@ const CourseRecommendations = () => {
   }, []);
 
   // Add this function to fetch prerequisite details
-  const fetchPrerequisiteDetails = (prerequisiteCodes) => {
+  const fetchPrerequisiteDetails = (prereqs) => {
     try {
-      const details = prerequisiteCodes
-        .map((code) => {
-          const course = allCourses.find((c) => c.course_code === code);
+      const details = prereqs
+        .map((pr) => {
+          // If already full object, just use it
+          if (typeof pr === "object" && pr.course_code) {
+            return {
+              code: pr.course_code,
+              name: pr.course_name,
+              credits: pr.credit_hours,
+            };
+          }
+
+          // Otherwise, lookup by course code
+          const course = allCourses.find((c) => c.course_code === pr);
           return course
             ? {
                 code: course.course_code,
@@ -158,7 +156,13 @@ const CourseRecommendations = () => {
   // Update the course card click handler
   const handleCourseClick = async (course) => {
     setSelectedCourse(course);
-    if (course.prerequisites && course.prerequisites.length > 0) {
+
+    // Check if prerequisites exist and are in the correct format
+    if (
+      course.prerequisites &&
+      Array.isArray(course.prerequisites) &&
+      course.prerequisites.length > 0
+    ) {
       fetchPrerequisiteDetails(course.prerequisites);
     } else {
       setPrerequisiteDetails([]);
@@ -166,75 +170,71 @@ const CourseRecommendations = () => {
     setCourseModalOpen(true);
   };
 
-  const calculateRemainingCourses = (
-    allCoursesData,
-    entries,
-    lastCompletedSemester
-  ) => {
-    // Create a map of course codes to their latest status
-    const courseStatusMap = new Map();
-
-    entries.forEach((entry) => {
-      const code = entry.course.course_code;
-      // Only keep the latest status for each course
-      if (
-        !courseStatusMap.has(code) ||
-        entry.year > courseStatusMap.get(code).year ||
-        (entry.year === courseStatusMap.get(code).year &&
-          entry.semester > courseStatusMap.get(code).semester)
-      ) {
-        courseStatusMap.set(code, {
-          status: entry.status,
-          year: entry.year,
-          semester: entry.semester,
-        });
-      }
-    });
-
-    // Get all course codes that are either:
-    // 1. Not passed at all, or
-    // 2. Failed in their latest attempt
-    const remainingCourses = allCoursesData.filter((course) => {
-      const latestStatus = courseStatusMap.get(course.course_code);
-
-      // If never taken, include it
-      if (!latestStatus) return true;
-
-      // If latest status is failed, include it
-      if (latestStatus.status === "Failed") return true;
-
-      // Otherwise, exclude it (passed in latest attempt)
-      return false;
-    });
-
-    setRemainingCourses(remainingCourses);
-
-    // Debug logs
-    console.log("Course status map:", courseStatusMap);
-    console.log("Remaining courses count:", remainingCourses.length);
-  };
-
-  const handleGeneratePlan = () => {
-    const last = findLastCompletedSemester(completedEntries);
-
-    const plan = generateCustomCoursePlan({
-      completedEntries,
-      allCourses,
-      gapYears,
-      gapSemesters,
-      outboundSemesters,
-      startPoint: { year: last.year, sem: last.semester },
-      strategy: planMode === "normal" ? "regular" : planMode,
-    });
-
-    setGeneratedPlan(plan);
-  };
-
   const toggleYear = (year) => {
     setExpandedYears((prev) => ({
       ...prev,
       [year]: !prev[year],
     }));
+  };
+
+  const handleGeneratePlan = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+
+      const result = await generateCustomPlan(userId, token, {
+        lightweight: planMode === "lighter",
+        gapYears: selection.type === "gapYear" ? [selection.year] : [],
+        gapSemesters:
+          selection.type === "gapSem"
+            ? [`Y${selection.year}S${selection.sem}`]
+            : [],
+        outboundSemesters:
+          selection.type === "outbound"
+            ? [`Y${selection.year}S${selection.sem}`]
+            : [],
+      });
+
+      if (result.success) {
+        const formattedPlan = Object.entries(result.plan).flatMap(
+          ([year, sems]) => {
+            return Object.entries(sems).map(([sem, courses]) => ({
+              year: year.replace("Year ", ""),
+              sem: sem.replace("Semester ", ""),
+              courses: courses.map((code) => {
+                const course = allCourses.find(
+                  (c) => c.course_code === code
+                ) || {
+                  course_code: code,
+                  course_name: code.includes("SPECIALIZATION")
+                    ? "Specialization Elective"
+                    : "Unknown Course",
+                  credit_hours: 3,
+                  type: "programme_elective",
+                };
+                return course;
+              }),
+            }));
+          }
+        );
+
+        setGeneratedPlan(formattedPlan);
+      } else {
+        console.error("Plan generation failed:", result.message);
+      }
+    } catch (error) {
+      console.error("Error generating plan:", error);
+    }
+  };
+
+  const handlePlanModeChange = (mode) => {
+    if (["gapYear", "gapSem", "outbound"].includes(mode)) {
+      setSelection((prev) => ({ ...prev, type: mode }));
+      setGapModalOpen(true);
+    } else {
+      setPlanMode(mode);
+      setSelection({ type: null, year: 1, sem: 1 });
+    }
   };
 
   const adaptivePlanByYear = Object.entries(
@@ -368,13 +368,16 @@ const CourseRecommendations = () => {
                         {course.type.replace(/_/g, " ")}
                       </span>
                     </div>
-                    {course.prerequisites &&
+                    {/* ✅ Fix here */}
+                    {Array.isArray(course.prerequisites) &&
                       course.prerequisites.length > 0 && (
                         <p className="text-xs text-gray-500">
-                          Requires: ({course.prerequisites.length})
-                          prerequisites
+                          <span className="font-medium">Requires:</span> (
+                          {course.prerequisites.length}) prerequisite
+                          {course.prerequisites.length !== 1 ? "s" : ""}
                         </p>
                       )}
+
                     {course.offered_semester && (
                       <p className="text-xs text-gray-500">
                         <span className="font-medium">Offered:</span>{" "}
@@ -425,17 +428,7 @@ const CourseRecommendations = () => {
                       name="planMode"
                       value={opt.value}
                       checked={planMode === opt.value}
-                      onChange={() => {
-                        setPlanMode(opt.value);
-                        // Only open modal for gap year/semester or outbound
-                        if (
-                          ["gapYear", "gapSem", "outbound"].includes(opt.value)
-                        ) {
-                          setGapModalOpen(true);
-                        } else {
-                          setGapModalOpen(false);
-                        }
-                      }}
+                      onChange={() => handlePlanModeChange(opt.value)}
                       className="h-4 w-4 text-blue-600 border-gray-300"
                     />
                     <label className="ml-2 text-sm text-gray-700">
@@ -444,6 +437,83 @@ const CourseRecommendations = () => {
                   </div>
                 ))}
               </div>
+              {selection.type && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
+                    <h4 className="font-semibold mb-4">
+                      {selection.type === "gapYear"
+                        ? "Select year to gap"
+                        : selection.type === "gapSem"
+                        ? "Select semester to gap"
+                        : "Select outbound semester"}
+                    </h4>
+
+                    <div className="mb-4">
+                      <label className="block text-sm mb-1">Year</label>
+                      <select
+                        value={selection.year}
+                        onChange={(e) =>
+                          setSelection((s) => ({
+                            ...s,
+                            year: +e.target.value,
+                          }))
+                        }
+                        className="w-full border p-2 rounded"
+                      >
+                        {[1, 2, 3, 4].map((y) => (
+                          <option key={y} value={y}>
+                            Year {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {(selection.type === "gapSem" ||
+                      selection.type === "outbound") && (
+                      <div className="mb-4">
+                        <label className="block text-sm mb-1">Semester</label>
+                        <select
+                          value={selection.sem}
+                          onChange={(e) =>
+                            setSelection((s) => ({
+                              ...s,
+                              sem: +e.target.value,
+                            }))
+                          }
+                          className="w-full border p-2 rounded"
+                        >
+                          {[1, 2].map((s) => (
+                            <option key={s} value={s}>
+                              Semester {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-3">
+                      <button
+                        className="px-4 py-2 text-gray-600"
+                        onClick={() => {
+                          setSelection({ type: null, year: 1, sem: 1 });
+                          setPlanMode("normal");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="px-4 py-2 bg-blue-600 text-white rounded"
+                        onClick={() => {
+                          setPlanMode(selection.type);
+                          setSelection({ ...selection, type: null });
+                        }}
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-center">
@@ -465,13 +535,13 @@ const CourseRecommendations = () => {
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <GraduationCap className="w-5 h-5 text-gray-600" />
               Suggested Course Plan (
-              {strategy === "regular"
+              {planMode === "regular"
                 ? "Regular Workload"
-                : strategy === "lighter"
+                : planMode === "lighter"
                 ? "Lighter Workload"
-                : strategy === "gapYear"
+                : planMode === "gapYear"
                 ? "With Gap Year"
-                : strategy === "gapSem"
+                : planMode === "gapSem"
                 ? "With Gap Semester"
                 : "Outbound Programme"}
               )
@@ -553,9 +623,9 @@ const CourseRecommendations = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
             <h4 className="font-semibold mb-4">
-              {planMode === "gapYear"
+              {selection.type === "gapYear"
                 ? "Select year to gap"
-                : planMode === "gapSem"
+                : selection.type === "gapSem"
                 ? "Select semester to gap"
                 : "Select outbound semester"}
             </h4>
@@ -577,7 +647,7 @@ const CourseRecommendations = () => {
               </select>
             </div>
 
-            {(planMode === "gapSem" || planMode === "outbound") && (
+            {(selection.type === "gapSem" || selection.type === "outbound") && (
               <div className="mb-4">
                 <label className="block text-sm mb-1">Semester</label>
                 <select
@@ -609,11 +679,11 @@ const CourseRecommendations = () => {
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded"
                 onClick={() => {
-                  if (planMode === "gapYear") {
+                  if (selection.type === "gapYear") {
                     setGapYears((g) => [...g, selection.year]);
-                  } else if (planMode === "gapSem") {
+                  } else if (selection.type === "gapSem") {
                     setGapSemesters((g) => [...g, { ...selection }]);
-                  } else if (planMode === "outbound") {
+                  } else if (selection.type === "outbound") {
                     setOutboundSemesters((g) => [...g, { ...selection }]);
                   }
                   setGapModalOpen(false);
@@ -677,7 +747,7 @@ const CourseRecommendations = () => {
                 )}
               </div>
 
-              {prerequisiteDetails.length > 0 && (
+              {prerequisiteDetails.length > 0 ? (
                 <div className="mb-6">
                   <h4 className="font-medium text-gray-700 mb-2">
                     Prerequisites ({prerequisiteDetails.length})
@@ -702,6 +772,24 @@ const CourseRecommendations = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : selectedCourse.prerequisites &&
+                Array.isArray(selectedCourse.prerequisites) &&
+                selectedCourse.prerequisites.length > 0 ? (
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-700 mb-2">
+                    Prerequisites ({selectedCourse.prerequisites.length})
+                  </h4>
+                  <p className="text-gray-600">
+                    Prerequisite details could not be loaded
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-700 mb-2">
+                    Prerequisites
+                  </h4>
+                  <p className="text-gray-600">No prerequisites required</p>
                 </div>
               )}
 

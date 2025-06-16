@@ -26,6 +26,7 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
           code: course.course_code,
           name: course.course_name,
           credit: course.credit_hours,
+          prerequisites: course.prerequisites || [],
         }));
         setCourses(formattedCourses);
       } catch (error) {
@@ -63,6 +64,39 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
     setShowDropdown(false);
   };
 
+  const renderCourseItem = (course) => {
+    const isDisabled = disabledCodes.includes(course.code);
+    const hasPrerequisites =
+      course.prerequisites && course.prerequisites.length > 0;
+
+    return (
+      <div
+        key={course.code}
+        onClick={() => !isDisabled && handleSelectCourse(course)}
+        className={`p-2 hover:bg-gray-100 cursor-pointer ${
+          isDisabled ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="font-medium">
+              {course.code} - {course.name} ({course.credit} credits)
+            </div>
+            {hasPrerequisites && (
+              <div className="text-xs text-gray-500 mt-1">
+                Prerequisites:{" "}
+                {course.prerequisites.map((p) => p.course_code).join(", ")}
+              </div>
+            )}
+          </div>
+          {isDisabled && (
+            <span className="text-xs text-red-500 ml-2">Already taken</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="relative w-full">
       <input
@@ -90,37 +124,7 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
                   : "No courses found"}
               </div>
             ) : (
-              filteredCourses.map((course) => {
-                const isDisabled = disabledCodes.includes(course.code);
-                return (
-                  <div
-                    key={course.code}
-                    className={`p-2 relative ${
-                      isDisabled
-                        ? "opacity-50 pointer-events-none"
-                        : "hover:bg-gray-100 cursor-pointer"
-                    }`}
-                    onClick={() => handleSelectCourse(course)}
-                  >
-                    <div
-                      className={`flex justify-between items-center ${
-                        isDisabled ? "blur-[1px]" : ""
-                      }`}
-                    >
-                      <span>
-                        {course.code} - {course.name} ({course.credit} credits)
-                      </span>
-                    </div>
-                    {isDisabled && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">
-                          Already taken
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+              filteredCourses.map(renderCourseItem)
             )}
           </div>
         )}

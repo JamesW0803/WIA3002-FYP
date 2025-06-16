@@ -40,6 +40,28 @@ exports.saveAcademicProfile = async (req, res) => {
       })
     );
 
+    for (const entry of entries) {
+      const course = await Course.findOne({ course_code: entry.code });
+      if (course?.prerequisites?.length > 0) {
+        const sameSemesterPrereqs = await Course.find({
+          course_code: { $in: course.prerequisites.map((p) => p.course_code) },
+        }).then((prereqs) => {
+          return entries.some(
+            (e) =>
+              prereqs.some((p) => p.course_code === e.code) &&
+              e.year === entry.year &&
+              e.semester === entry.semester
+          );
+        });
+
+        if (sameSemesterPrereqs) {
+          return res.status(400).json({
+            message: `Course ${entry.code} cannot be taken in the same semester as its prerequisites`,
+          });
+        }
+      }
+    }
+
     const validEntries = mappedEntries.filter((e) => e !== null);
 
     let savedProfile;
