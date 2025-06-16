@@ -170,6 +170,30 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const getStudentProfile = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    console.log("🔍 Fetching student with ID:", userId);
+
+    const student = await Student.findById(userId)
+      .populate("programme", "name")
+      .populate("academicSession", "intakeYear");
+
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    res.status(200).json({
+      name: student.username,
+      email: student.email,
+      phone: student.contact,
+      department: student.department,
+      programme: student.programme?.name || "-",
+      intake: student.academicSession?.intakeYear || "-",
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch student profile", error });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -177,4 +201,5 @@ module.exports = {
   resetPassword,
   checkUsernameExists,
   checkEmailExists,
+  getStudentProfile,
 };

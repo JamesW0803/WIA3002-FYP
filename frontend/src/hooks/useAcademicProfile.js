@@ -81,11 +81,14 @@ export const useAcademicProfile = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await axiosClient.get("/courses");
+        const response = await axiosClient.get("/courses", {
+          params: { minimal: "true" },
+        });
         const formattedCourses = response.data.map((course) => ({
-          code: course.course_code,
-          name: course.course_name,
-          credit: course.credit_hours,
+          code: course.code,
+          name: course.name,
+          credit: course.credit,
+          prerequisites: course.prerequisites,
         }));
         setAvailableCourses(formattedCourses);
       } catch (error) {
@@ -140,7 +143,7 @@ export const useAcademicProfile = () => {
     }
   };
 
-  const saveEntry = () => {
+  const saveEntry = async () => {
     if (!editingEntry) return;
 
     if (!editingEntry.code) {
@@ -148,15 +151,14 @@ export const useAcademicProfile = () => {
       return;
     }
 
+    const selectedCourse = availableCourses.find(
+      (c) => c.code === editingEntry.code
+    );
+
     // Find all previous attempts of this course
     const previousAttempts = entries.filter(
       (entry) =>
         entry.code === editingEntry.code && entry.id !== editingEntry.id
-    );
-
-    // Check if there are any previous failed attempts
-    const hasFailedAttempts = previousAttempts.some(
-      (attempt) => attempt.status === "Failed"
     );
 
     // Check if there are any passed or ongoing attempts
@@ -174,7 +176,29 @@ export const useAcademicProfile = () => {
     }
 
     // If there are failed attempts, mark this as a retake
-    const isRetake = hasFailedAttempts && editingEntry.status !== "Failed";
+    const isRetake = entries.some(
+      (e) =>
+        e.code === editingEntry.code &&
+        e.status === "Failed" &&
+        e.id !== editingEntry.id
+    );
+
+    if (!isRetake) {
+      const prerequisiteCheck = await checkCoursePrerequisites(
+        editingEntry.code
+      );
+      if (!prerequisiteCheck.allPrerequisitesMet) {
+        showNotification(
+          `Cannot add ${
+            editingEntry.code
+          }. Missing prerequisites: ${prerequisiteCheck.unmetPrerequisites.join(
+            ", "
+          )}`,
+          "error"
+        );
+        return;
+      }
+    }
 
     const entryToSave = {
       ...editingEntry,
@@ -293,20 +317,22 @@ export const useAcademicProfile = () => {
       const decoded = JSON.parse(atob(token.split(".")[1]));
       const userId = decoded.user_id;
 
-      const response = await axiosClient.post(`/academic-profile/${userId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ entries: processedEntries }),
-      });
+      const response = await axiosClient.post(
+        `/academic-profile/${userId}`,
+        { entries: processedEntries },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      const data = await response.json();
+      const data = response.data;
       console.log("Saved:", data);
       showNotification("Academic profile updated successfully!", "success");
     } catch (error) {
       console.error("Error saving profile:", error);
+      showNotification("Failed to save academic profile", "error");
     }
   };
 
@@ -346,6 +372,23 @@ export const useAcademicProfile = () => {
     return grouped;
   }, [entries]);
 
+  const checkCoursePrerequisites = async (courseCode) => {
+    try {
+      const userId = getUserIdFromStorage();
+      const response = await axiosClient.get(
+        `/courses/${courseCode}/check-prerequisites/${userId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Prerequisite check failed:", error);
+      return {
+        hasPrerequisites: false,
+        unmetPrerequisites: [],
+        allPrerequisitesMet: true,
+      };
+    }
+  };
+
   return {
     editingEntry,
     availableCourses,
@@ -369,5 +412,6 @@ export const useAcademicProfile = () => {
     showNotification,
     closeNotification,
     setEditingEntry,
+    checkCoursePrerequisites,
   };
 };

@@ -109,6 +109,7 @@ const AcademicPlanner = () => {
         // Validate and transform the courses data
         const validatedCourses = response.data
           .map((course) => ({
+            _id: course._id,
             code: course.course_code || course.code || "",
             name: course.course_name || course.name || "",
             credit: course.credit_hours || course.credit || 0,

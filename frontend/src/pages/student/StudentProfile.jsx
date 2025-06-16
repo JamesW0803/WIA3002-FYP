@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -12,6 +12,7 @@ import {
   Image,
   User,
 } from "lucide-react";
+import axiosClient from "../../api/axiosClient";
 
 const getInitials = (username) => {
   const match = username.match(/[a-zA-Z]/g) || [];
@@ -37,15 +38,11 @@ const StudentProfile = () => {
   const [name, setName] = useState("James Wong Yi Ngie");
   const [email] = useState("22004837@siswa.um.edu.my");
   const [studentId] = useState("22004837");
-  const [intake] = useState("2023/2023");
+  const [intake, setIntake] = useState("-");
   const [phone, setPhone] = useState("011-10592288");
   const [address, setAddress] = useState("Pacific 63, Jalan 13/6");
-  const [programme] = useState(
-    "Bachelor of Computer Science (Software Engineering)"
-  );
-  const [department] = useState("Department of Software Engineering");
-  const [semester] = useState(6);
-  const [cgpa] = useState(3.75);
+  const [programme, setProgramme] = useState("-");
+  const [department, setDepartment] = useState("-");
   const [status] = useState("Active");
 
   const [bgColor, setBgColor] = useState("#1E3A8A");
@@ -60,6 +57,13 @@ const StudentProfile = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [showProfilePicOptions, setShowProfilePicOptions] = useState(false);
+
+  const storedYear = parseInt(localStorage.getItem("studentYear")) || 1;
+  const storedSemester = parseInt(localStorage.getItem("studentSemester")) || 1;
+  const storedCgpa = parseFloat(localStorage.getItem("studentCGPA")) || 0.0;
+
+  const [semester] = useState(storedYear * storedSemester);
+  const [cgpa] = useState(storedCgpa);
 
   const handleSetDefaultProfile = (color) => {
     setBgColor(color);
@@ -118,6 +122,46 @@ const StudentProfile = () => {
     // Show success message
     alert("Password changed successfully!");
   };
+
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const user = JSON.parse(localStorage.getItem("user")); // { username, role }
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        const userId = decoded.user_id;
+
+        console.log("📦 Token:", token);
+        console.log("👤 Decoded userId:", userId);
+        console.log(
+          "📤 Sending request to: ",
+          `/user/student-profile/${userId}`
+        );
+
+        const res = await axiosClient.get(`/user/student-profile/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = res.data;
+        console.log("✅ Received student profile:", data);
+
+        setProgramme(data.programme);
+        setDepartment(data.department);
+        setIntake(data.intake);
+      } catch (error) {
+        console.error("❌ Failed to load student profile:", error);
+        if (error.response) {
+          console.error(
+            "📡 Server responded with:",
+            error.response.status,
+            error.response.data
+          );
+        }
+      }
+    };
+
+    fetchStudentProfile();
+  }, []);
 
   return (
     <div className="min-h-screen p-4 md:p-6 bg-gray-50">

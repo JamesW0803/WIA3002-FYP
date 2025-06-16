@@ -118,6 +118,12 @@ const TranscriptView = () => {
   );
   const cgpa = totalCredits ? (totalPoints / totalCredits).toFixed(2) : "-";
 
+  useEffect(() => {
+    if (!isNaN(cgpa) && cgpa !== "-") {
+      localStorage.setItem("studentCGPA", cgpa);
+    }
+  }, [cgpa]);
+
   const allPassedCredits = entries.reduce((acc, entry) => {
     return isFail(entry) ? acc : acc + (entry.credit || 0);
   }, 0);
