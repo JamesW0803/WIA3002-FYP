@@ -22,6 +22,9 @@ import StudentProfile from "./pages/student/StudentProfile";
 import ProgrammeEnrollmentDetails from "./pages/faculty/programmeIntakes/ProgrammeEnrollmentDetails";
 import GraduationRequirement from "./components/Faculty/GraduationRequirement";
 import CoursePlan from "./components/Faculty/CoursePlan";
+import StudentAcademicProfile from "./components/Faculty/StudentAcademicProfile";
+import StudentGraduationRequirement from "./components/Faculty/StudentGraduationRequirement";
+import StudentCoursePlan from "./components/Faculty/StudentCoursePlan";
 
 import { AuthProvider } from "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
@@ -29,7 +32,7 @@ import ManageCourses from "./pages/faculty/courses/ManageCourses";
 import Helpdesk from "./pages/faculty/Helpdesk";
 import ManageProgrammes from "./pages/faculty/programmes/ManageProgrammes";
 import CourseDetails from "./pages/faculty/courses/CourseDetails";
-import StudentDetails from "./pages/faculty/StudentDetails";
+import StudentDetails from "./pages/faculty/studentProgress/StudentDetails";
 import ProgrammeDetails from "./pages/faculty/programmes/ProgrammeDetails";
 import AddCourse from "./pages/faculty/courses/AddCourse";
 import AdminProfile from "./pages/faculty/AdminProfile";
@@ -138,21 +141,44 @@ function App() {
           {/* Faculty*/}
           <Route path="/admin" element={<Layout />}>
             <Route
-              path="home"
+              path="student-progress"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminDashboard />
                 </ProtectedRoute>
               }
             />
+            {/* <Route
+                path="student-progress/:student_name"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <StudentDetails/>
+                  </ProtectedRoute>
+                }
+              /> */}
             <Route
-              path="home/:studentName"
+              path="student-progress/:student_name"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <StudentDetails />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route
+                index
+                element={<Navigate to="academic-profile" replace />}
+              />
+              <Route
+                path="academic-profile"
+                element={<StudentAcademicProfile />}
+              />
+
+              <Route
+                path="graduation-requirement"
+                element={<StudentGraduationRequirement />}
+              />
+              <Route path="course-plan" element={<StudentCoursePlan />} />
+            </Route>
             <Route
               path="programmes"
               element={

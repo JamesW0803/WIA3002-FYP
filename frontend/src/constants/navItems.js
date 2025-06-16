@@ -30,15 +30,14 @@ export const STUDENT_NAV_ITEMS = [
 export const ADMIN_NAV_ITEMS = [
   {
     title: "Home",
-    path: "/admin/home",
+    path: "/admin/student-progress",
   },
   {
     title: "Programmes",
-    submenu : [
-      { title : "Overview" , path : "/admin/programmes"},
-      { title : "Programme Enrollment" , path : "/admin/programme-intakes"}
-
-    ]
+    submenu: [
+      { title: "Overview", path: "/admin/programmes" },
+      { title: "Programme Enrollment", path: "/admin/programme-intakes" },
+    ],
   },
   {
     title: "Courses",

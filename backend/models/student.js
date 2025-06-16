@@ -3,6 +3,7 @@ const User = require("./User");
 require("./ProgrammePlan");
 require("./Programme");
 require("./AcademicSession");
+require("./ProgrammeIntake");
 require("./StudentAcademicPlan");
 
 const studentSchema = new mongoose.Schema({
@@ -25,6 +26,11 @@ const studentSchema = new mongoose.Schema({
     ref: "AcademicSession",
     required: true,
   },
+  programme_intake: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "ProgrammeIntake",
+    required: false,
+  },
   semester: {
     type: String,
     required: true,
@@ -43,6 +49,6 @@ const studentSchema = new mongoose.Schema({
   ],
 });
 
-const Student = User.discriminator("Student", studentSchema);
+const Student = User.discriminator("student", studentSchema);
 
 module.exports = Student;
