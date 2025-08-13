@@ -164,6 +164,7 @@ const AddCourse = () => {
     }
 
     const handleAdd = async() => {
+        console.log("formData: ", formData)
         // Submit course form
         try {
             const response = await axiosClient.post("/courses", formData);

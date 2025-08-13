@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Accordion,
   AccordionSummary,
@@ -8,33 +8,27 @@ import {
   MenuItem,
   Checkbox,
   FormControlLabel,
-  Button,
   Box,
-  Grid,
-  Divider,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ActionBar from '../../../components/form/ActionBar';
-import { useLocation , useNavigate } from "react-router-dom";
+import { READABLE_COURSE_TYPES } from '../../../constants/courseType';
+import { useNavigate } from "react-router-dom";
 import axiosClient from '../../../api/axiosClient';
 
-const availableCourses = [
-  { code: 'WIX1002', name: 'Fundamentals of Programming' },
-  { code: 'WIX1003', name: 'Data Structures' },
-  { code: 'WIX1004', name: 'Database Systems' },
-  // Add more courses as needed
-];
-
-const initialCourseData = [
-  { title: 'University Courses', requiredCredits: 14, courses: [] },
-  { title: 'Faculty Core Courses', requiredCredits: 17, courses: [] },
-  { title: 'University Elective Courses', requiredCredits: 8, courses: [] },
-  { title: 'Programme Core Courses', requiredCredits: 59, courses: [] },
-  { title: 'Specialization Elective Courses', requiredCredits: 30, courses: [] },
-];
+// Title and credits mapping
+const typeToCategoryTitle = {
+  university: { title: 'University Courses', requiredCredits: 14 },
+  faculty_core: { title: 'Faculty Core Courses', requiredCredits: 17 },
+  university_elective: { title: 'University Elective Courses', requiredCredits: 8 },
+  programme_core: { title: 'Programme Core Courses', requiredCredits: 59 },
+  specialization_elective: { title: 'Specialization Elective Courses', requiredCredits: 30 },
+};
 
 const AddProgrammeEnrollment = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const [programmes, setProgrammes] = useState([])
+  const [academicSession, setAcademicSession] = useState([])
   const [formData, setFormData] = useState({
     programme_code: '',
     year: '',
@@ -44,23 +38,61 @@ const AddProgrammeEnrollment = () => {
     coursePlanAutoGenerate: false,
   });
 
-  const [categories, setCategories] = useState(initialCourseData);
+  const [groupedCategories, setGroupedCategories] = useState([]);
+  const [selectedCourses, setSelectedCourses] = useState({});
 
-  const handleCourseToggle = (categoryIndex, courseCode) => {
-    setCategories((prev) =>
-      prev.map((cat, idx) => {
-        if (idx !== categoryIndex) return cat;
-        const isAlreadyAdded = cat.courses.some((c) => c.code === courseCode);
-        return {
-          ...cat,
-          courses: isAlreadyAdded
-            ? cat.courses.filter((c) => c.code !== courseCode)
-            : [...cat.courses, availableCourses.find((c) => c.code === courseCode)],
-        };
-      })
-    );
-  };
+  // Fetch and group courses
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axiosClient.get("/courses");
+        const programmeRes = await axiosClient.get("/programmes")
+        const academicSessionRes = await axiosClient.get("/academic-sessions")
 
+        setAcademicSession(academicSessionRes.data)
+        setProgrammes(programmeRes.data)
+        const courses = response.data;
+
+        // Group by course type
+        const grouped = courses.reduce((acc, course) => {
+          if (!acc[course.type]) acc[course.type] = [];
+          acc[course.type].push(course);
+          return acc;
+        }, {});
+
+        const transformed = Object.entries(grouped).map(([type, courses]) => ({
+          type,
+          title: READABLE_COURSE_TYPES[type],
+          requiredCredits: typeToCategoryTitle[type]?.requiredCredits || 0,
+          courses,
+        }));
+
+        setGroupedCategories(transformed);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+const handleCourseToggle = (type, course) => {
+  setSelectedCourses((prev) => {
+    const prevSelected = prev[type] || [];
+    const isSelected = prevSelected.some((c) => c.course_code === course.course_code);
+    const updated = isSelected
+      ? prevSelected.filter((c) => c.course_code !== course.course_code)
+      : [...prevSelected, course];
+
+    return {
+      ...prev,
+      [type]: updated,
+    };
+  });
+};
+
+
+  // Form changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
@@ -69,38 +101,36 @@ const AddProgrammeEnrollment = () => {
     });
   };
 
+  // Cancel
+  const handleCancel = () => {
+    navigate(`/admin/programme-intakes/`);
+  };
 
-    const handleCancel = () => {
-        navigate(`/admin/programme-intakes/`)
+  // Submit
+  const handleAdd = async () => {
+    try {
+      const payload = {
+        ...formData,
+        graduation_requirements: selectedCourses, // Optional: structure as needed
+      };
+      console.log("Payload: ", payload);
+      const response = await axiosClient.post("/programme-intakes", payload);
+      console.log("Programme Enrollment added successfully");
+    } catch (error) {
+      console.error("Error creating programme enrollment:", error);
+    } finally {
+      navigate(`/admin/programme-intakes`);
     }
+  };
 
-    const handleAdd = async() => {
-        // Submit programme intake form
-        try {
-            const payload = {
-                ...formData
-            }
-            console.log("Payload: ", payload)
-            const response = await axiosClient.post("/programme-intakes", payload);
-            const newProgrammeEnrollment = response.data
-            console.log("Programme Enrollment is added successfully")
-        } catch (error) {
-            console.error("Error creating programme enrollment: ", error);
-        } finally {
-            navigate(`/admin/programme-intakes`)
-        }    
-        console.log("YES")  
-    }
-    
-    const cancelButton = {
-        title : "Cancel",
-        onClick : handleCancel
-    }
+  // Buttons
+  const cancelButton = { title: "Cancel", onClick: handleCancel };
+  const addButton = { title: "Add", onClick: handleAdd };
 
-    const addButton = {
-        title : "Add",
-        onClick : handleAdd
-    }
+  const totalSelectedCredits = Object.values(selectedCourses).flat().reduce(
+  (sum, course) => sum + (course.credit_hours || 0),
+  0
+);
 
   return (
     <Box sx={{ width: '80%', margin: 'auto', marginTop: '2rem' }}>
@@ -116,13 +146,9 @@ const AddProgrammeEnrollment = () => {
           value={formData.programme_code}
           onChange={handleChange}
         >
-          {[
-            { code: 'SE', name: 'Bachelor of Computer Science(Software Engineering)' },
-            { code: 'AI', name: 'Bachelor of Computer Science(Artificial Intelligence)' },
-            { code: 'CSN', name:'Bachelor of Computer Science(Computer System and Networking)' },
-          ].map((prog) => (
-            <MenuItem key={prog.code} value={prog.code}>
-              {prog.name}
+          {programmes.map((prog) => (
+            <MenuItem key={prog.programme_code} value={prog.programme_code}>
+              {prog.programme_name}
             </MenuItem>
           ))}
         </TextField>
@@ -134,9 +160,9 @@ const AddProgrammeEnrollment = () => {
           value={formData.year}
           onChange={handleChange}
         >
-          {["2022/2023", "2023/2024", "2024/2025", "2025/2026"].map((year) => (
-            <MenuItem key={year} value={year}>
-              {year}
+          {academicSession.map((academicSession) => (
+            <MenuItem key={academicSession.year} value={academicSession.year}>
+              {academicSession.year}
             </MenuItem>
           ))}
         </TextField>
@@ -185,41 +211,43 @@ const AddProgrammeEnrollment = () => {
       </Box>
 
       <Box mt={4}>
-        <Typography variant="body1" gutterBottom>
-          Students are required to complete a total of 128 credit hours by fulfilling
-          the minimum credit requirements from each of the course categories below:
-        </Typography>
+      <Typography variant="body1" gutterBottom>
+        Students must complete a total of <strong>{totalSelectedCredits}</strong> credit hours based on selected courses:
+      </Typography>
 
-        {categories.map((cat, index) => (
-          <Accordion key={index}>
+
+        {groupedCategories.map((category) => (
+          <Accordion key={category.type}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography fontWeight="bold">
-                {cat.title} ({cat.requiredCredits} credits required)
+                {category.title} ({(selectedCourses[category.type]?.reduce((sum, c) => sum + (c.credit_hours || 0), 0) || 0)} credits selected)
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
-              {availableCourses.map((course) => (
+              {category.courses.map((course) => (
                 <Box
-                  key={course.code}
+                  key={course.course_code}
                   display="flex"
                   alignItems="center"
                   justifyContent="space-between"
                   py={1}
                 >
-                  <Box>
-                    <Typography variant="body2">
-                      {course.code} - {course.name}
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2">
+                    {course.course_code} - {course.course_name}
+                  </Typography>
                   <Checkbox
-                    checked={cat.courses.some((c) => c.code === course.code)}
-                    onChange={() => handleCourseToggle(index, course.code)}
+                    checked={
+                      (selectedCourses[category.type] || []).some(
+                        (c) => c.course_code === course.course_code
+                      )
+                    }
+                    onChange={() => handleCourseToggle(category.type, course)}
                   />
                 </Box>
               ))}
-              {availableCourses.length === 0 && (
+              {category.courses.length === 0 && (
                 <Typography fontStyle="italic" color="text.secondary">
-                  No courses available
+                  No courses available in this category.
                 </Typography>
               )}
             </AccordionDetails>
@@ -238,7 +266,8 @@ const AddProgrammeEnrollment = () => {
         label="Auto-generate semester-to-semester course plan"
         sx={{ mt: 2 }}
       />
-        <ActionBar button1={cancelButton} button2={addButton}/>
+
+      <ActionBar button1={cancelButton} button2={addButton} />
     </Box>
   );
 };

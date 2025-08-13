@@ -89,9 +89,9 @@ const ManageProgrammeEnrollment = () => {
         viewButton : {
             onClick : handleProgrammeEnrollmentOnClick
         },
-        editButton : {
-            onClick : handleEditButtonOnClick
-        },
+        // editButton : {
+        //     onClick : handleEditButtonOnClick
+        // },
         deleteButton : {
             onClick : handleDeleteButtonOnClick
         }

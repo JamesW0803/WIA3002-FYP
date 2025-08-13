@@ -14,7 +14,7 @@ const Dashboard = () => {
     const [clickableItems, setClickableItems] = useState(["username"])
 
     const header = ["Name", "Programme", "Current Semester", "Expected Graduation", "Progress", "Status"]
-    const order = ["username", "programme", "currentSemester", "expectedGraduation", "progress", "status"]
+    const order = ["username", "programme_name", "currentSemester", "expectedGraduation", "progress", "status"]
     
     useEffect(() => {
         const fetchStudents = async () =>{
