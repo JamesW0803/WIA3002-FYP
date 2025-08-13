@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Accordion,
   AccordionSummary,
@@ -13,96 +12,24 @@ import {
   Paper
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-
-const coursePlan = [
-  {
-    year: 'Year 1',
-    semesters: [
-      {
-        name: 'Semester 1',
-        courses: [
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    year: 'Year 2',
-    semesters: [
-      {
-        name: 'Semester 1',
-        courses: [
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    year: 'Year 3',
-    semesters: [],
-  },
-  {
-    year: 'Year 4',
-    semesters: [],
-  },
-];
-
-const CourseTable = ({ courses }) => (
-  <TableContainer component={Paper} sx={{ mb: 2 }}>
-    <Table>
-      <TableHead>
-        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-          <TableCell><strong>Course Code</strong></TableCell>
-          <TableCell><strong>Course Name</strong></TableCell>
-          <TableCell><strong>Credit</strong></TableCell>
-          <TableCell><strong>Type</strong></TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {courses.map((course, index) => (
-          <TableRow key={index}>
-            <TableCell>{course.code}</TableCell>
-            <TableCell>{course.name}</TableCell>
-            <TableCell>{course.credit}</TableCell>
-            <TableCell>{course.type}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </TableContainer>
-);
+import { useOutletContext } from "react-router-dom";
+import React, { useMemo } from 'react';
+import { READABLE_COURSE_TYPES } from '../../constants/courseType';
 
 const CoursePlan = () => {
+  const { coursePlan, programmeEnrollment } = useOutletContext();
+
+  const semesterPlans = programmeEnrollment.programme_plan?.semester_plans || [];
+
+  const transformedPlan = useMemo(() => transformPlan(semesterPlans), [semesterPlans]);
+
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>
-        Reference course plan for students enrolled in Bachelor of Computer Science
-        (Software Engineering) session 2022/2023 Semester 1
+        Reference course plan for students enrolled in {programmeEnrollment.programme_name} session {programmeEnrollment.year} {programmeEnrollment.semester}
       </Typography>
 
-      {coursePlan.map((yearItem, yearIdx) => (
+      {transformedPlan.map((yearItem, yearIdx) => (
         <Accordion key={yearIdx} defaultExpanded={yearIdx === 0}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography fontWeight="bold">{yearItem.year}</Typography>
@@ -127,6 +54,61 @@ const CoursePlan = () => {
       ))}
     </div>
   );
+};
+
+const CourseTable = ({ courses }) => (
+  <TableContainer component={Paper} sx={{ mb: 2 }}>
+    <Table size="small">
+      <TableHead>
+        <TableRow>
+          <TableCell>Course Code</TableCell>
+          <TableCell>Course Name</TableCell>
+          <TableCell>Credit Hours</TableCell>
+          <TableCell>Type</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {courses.map((course, idx) => (
+          <TableRow key={idx}>
+            <TableCell>{course.course_code}</TableCell>
+            <TableCell>{course.course_name}</TableCell>
+            <TableCell>{course.credit_hours}</TableCell>
+            <TableCell>{course.type}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
+
+const transformPlan = (semesterPlans) => {
+  const years = [];
+
+  for (let i = 0; i < semesterPlans.length; i++) {
+    const yearIndex = Math.floor(i / 2); // 2 semesters per year
+    const semesterIndex = i % 2;
+
+    if (!years[yearIndex]) {
+      years[yearIndex] = {
+        year: `Year ${yearIndex + 1}`,
+        semesters: [],
+      };
+    }
+
+    years[yearIndex].semesters.push({
+      name: `Semester ${semesterIndex + 1}`,
+      courses: semesterPlans[i].courses.map(course => ({
+        course_code: course.course_code,
+        course_name: course.course_name,
+        credit_hours: course.credit_hours,
+        type: READABLE_COURSE_TYPES[course.type],
+        // type: course.type,
+
+      })),
+    });
+  }
+
+  return years;
 };
 
 export default CoursePlan;

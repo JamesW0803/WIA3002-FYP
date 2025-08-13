@@ -50,7 +50,7 @@ const ManageProgrammes = () => {
                         key,
                         value,
                         type: clickableItems.includes(key) ? "clickable_text_display" : "text_display",
-                        onClick : clickableItems.includes(key) ? () => handleProgrammeOnClick(programme)  : null
+                        onClick : clickableItems.includes(key) ? () => handleProgrammeOnClick(programme.programme_code)  : null
                     }
                 })
             )

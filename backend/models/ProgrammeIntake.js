@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 require("./Programme");
 require("./AcademicSession");
 require("./ProgrammePlan")
+require("./Course")
 
 const programmeIntake = new mongoose.Schema(
   {
@@ -39,7 +40,13 @@ const programmeIntake = new mongoose.Schema(
     max_semester: {
       type: Number,
       default: 11,
-    }
+    },
+    graduation_requirements: {
+        type: [mongoose.Schema.Types.ObjectId], 
+        ref: "Course",
+        required: true,
+    },
+
   },
   {
     timestamps: true,

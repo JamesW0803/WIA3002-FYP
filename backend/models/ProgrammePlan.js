@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-require("./SemesterPlan"); 
-require("./ProgrammeIntake"); 
+require("./SemesterPlan");
+require("./ProgrammeIntake");
 require("./Student");
 
 const programmePlanSchema = new mongoose.Schema(
@@ -15,16 +15,6 @@ const programmePlanSchema = new mongoose.Schema(
         ref: "SemesterPlan",
       },
     ],
-    owner: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      refPath: "ownerModel",
-    },
-    ownerModel: {
-      type: String,
-      required: true,
-      enum: ["Student", "ProgrameIntake"]
-    }
   },
   {
     timestamps: true,
