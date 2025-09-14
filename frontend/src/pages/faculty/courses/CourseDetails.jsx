@@ -140,6 +140,7 @@ const CourseDisplayTable = ({
 }
 
 const CourseDisplayColumn = ({ entries, handleInputChange, editMode }) => {
+    console.log("entries: ", entries)
     const location = useLocation();
     const [courses, setCourses] = useState(location.state?.courses || [])
 
@@ -147,7 +148,8 @@ const CourseDisplayColumn = ({ entries, handleInputChange, editMode }) => {
         <div className="w-1/2">
             {entries.map(([key, value]) => {
                 const field = allCourseFields.find((field) => field.key === key)
-               if (key === "prerequisites") {
+                if(field == null) return
+                if (key === "prerequisites") {
                     const options = courses.map((course) => ({
                         label: course.course_code + " - " + course.course_name,
                         value: course.course_code

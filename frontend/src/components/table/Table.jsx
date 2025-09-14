@@ -8,8 +8,11 @@ const Row = ({
     identifier = null
 }) => {
     return (
-        <tr>
-            {indexNum !== -1 && <td>{indexNum+1}</td>}
+        <tr className="bg-white shadow-sm rounded">
+            {indexNum !== -1 && 
+            <td className="px-6 py-4 text-sm text-gray-800 whitespace-nowrap">
+                {indexNum+1}
+                </td>}
             {   
                 order.map((key) => {
                     const data = item.find((data) => data.key === key)
@@ -31,12 +34,18 @@ const Row = ({
 }
 
 const TableData = ({ data }) => {
-    if (!data) return <td className="p-2">-</td>; // fallback
+    if (!data) return <td className="px-6 py-4">-</td>; // fallback
     switch (data.type) {
         case "text_display":
-            return <td className="p-2" key={data.key}>{data.value}</td>
+            return (
+                <td className="px-6 py-4 text-sm text-gray-800 " key={data.key}>
+                {data.value}
+                </td>
+            )
         case "clickable_text_display":
-            return <td className="p-2" key={data.key} onClick={data.onClick}>{data.value}</td>
+            return (
+                    <td className="px-6 py-4 text-sm text-gray-800 whitespace-nowrap" key={data.key} onClick={data.onClick}>{data.value}</td>
+            )
     }
 }
 
@@ -49,18 +58,26 @@ const Table = ({
     identifier = null
 }) => {
     return (
-        <table className="m-5 ml-10">
+        <table className="w-[90%] table-auto border-separate border-spacing-y-2 pl-10">
             <thead>
-                <tr>
-                    {index && <th>No.</th>}
+                <tr className="bg-blue-300">
+                    {index && 
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-[#e3eefe] rounded">
+                            No.
+                        </th>}
                     {
                         header.map((item) => {
                             return (
-                                <th className="p-2">{item}</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-[#e3eefe] rounded">
+                                    {item}
+                                </th>
                             )
                         })
                     }
-                    {tableActionBarButton && <th>Actions</th>}
+                    {tableActionBarButton && 
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-[#e3eefe] rounded">
+                        Actions
+                    </th>}
                 </tr>
             </thead>
             <tbody>

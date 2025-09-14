@@ -55,7 +55,25 @@ const addCourse = async (req, res) => {
       faculty,
       department,
       offered_semester,
+      study_level
     } = req.body;
+
+    let prerequisitesCourseIds = [];
+
+    if (prerequisites?.length > 0) {
+      const prerequisiteCourses = await Promise.all(
+        prerequisites.map((code) =>
+          Course.findOne({ course_code: code })
+        )
+      );
+
+      // Check for invalid prerequisite course codes
+      if (prerequisiteCourses.includes(null)) {
+        return res.status(400).json({ error: "One or more prerequisite course codes are invalid." });
+      }
+
+      prerequisitesCourseIds = prerequisiteCourses.map(course => course._id);
+    }
 
     const newCourse = new Course({
       course_code,
@@ -63,10 +81,11 @@ const addCourse = async (req, res) => {
       type,
       credit_hours,
       description,
-      prerequisites,
+      prerequisites : prerequisitesCourseIds,
       faculty,
       department,
       offered_semester,
+      study_level
     });
 
     const savedCourse = await newCourse.save();

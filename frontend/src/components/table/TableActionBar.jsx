@@ -5,7 +5,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 const TableActionBar = ({ viewButton, editButton, deleteButton, identifier}) => {
   return (
-    <div id="action-bar" className="flex flex-row justify-end gap-2 pr-[400px]">
+    <div id="action-bar" className="flex flex-row justify-center items-center gap-2">
       {viewButton && (
         <IconButton
           onClick={() => {viewButton.onClick(identifier)}}
