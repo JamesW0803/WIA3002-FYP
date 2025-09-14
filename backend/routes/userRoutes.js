@@ -8,7 +8,11 @@ const {
   checkUsernameExists,
   checkEmailExists,
   getStudentProfile,
+  updateStudentProfile,
+  upload,
+  changePassword,
 } = require("../controllers/authController");
+const { authenticate } = require("../middleware/authMiddleware");
 
 router.post("/", register);
 router.post("/login", login);
@@ -17,5 +21,12 @@ router.post("/reset-password", resetPassword);
 router.get("/check-username/:username", checkUsernameExists);
 router.get("/check-email/:email", checkEmailExists);
 router.get("/student-profile/:userId", getStudentProfile);
+router.put(
+  "/student-profile/:userId",
+  authenticate,
+  upload.single("profilePic"),
+  updateStudentProfile
+);
+router.put("/change-password", authenticate, changePassword);
 
 module.exports = router;

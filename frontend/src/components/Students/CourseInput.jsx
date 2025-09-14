@@ -8,11 +8,15 @@ import React, {
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import ReactDOM from "react-dom";
+import { validateCourseAddition } from "./AcademicPlanner/utils/planHelpers";
 
 const CourseInput = ({
   onAdd,
   allCourses = [],
   completedCoursesByYear = {},
+  semester,
+  ongoingCourses = new Set(),
+  passedCourses,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -79,6 +83,27 @@ const CourseInput = ({
     return [...available, ...failed, ...taken];
   }, [searchTerm, allCourses, getCourseStatus]);
 
+  // After filteredCourses is defined…
+  const enrichedCourses = useMemo(() => {
+    if (!semester) return [];
+    return filteredCourses.map((course) => {
+      const completedCoursesArray = Array.isArray(passedCourses)
+        ? passedCourses
+        : Array.from(passedCourses || []);
+      const { isValid, message } = validateCourseAddition(
+        course,
+        semester,
+        allCourses,
+        completedCoursesArray
+      );
+      return {
+        ...course,
+        _canAdd: isValid,
+        _reason: message,
+      };
+    });
+  }, [filteredCourses, semester, allCourses, passedCourses]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -100,6 +125,20 @@ const CourseInput = ({
 
   const handleAdd = () => {
     if (!selectedCourse) return;
+
+    // Final validation check before adding
+    const validation = validateCourseAddition(
+      selectedCourse,
+      semester,
+      allCourses,
+      passedCourses
+    );
+
+    if (!validation.isValid) {
+      alert(`Cannot add course: ${validation.message}`);
+      return;
+    }
+
     onAdd(selectedCourse.code);
     setSearchTerm("");
     setSelectedCourse(null);
@@ -138,16 +177,21 @@ const CourseInput = ({
                     "px",
                 }}
               >
-                {filteredCourses.length > 0 ? (
+                {enrichedCourses.length > 0 ? (
                   <>
                     {/* Available courses */}
-                    {filteredCourses
+                    {enrichedCourses
                       .filter((course) => !getCourseStatus(course.code))
                       .map((course) => (
                         <div
                           key={course.code}
-                          className="p-2 hover:bg-gray-100 cursor-pointer"
+                          className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                            !course._canAdd
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
                           onClick={() => {
+                            if (!course._canAdd) return;
                             setSelectedCourse(course);
                             setSearchTerm(`${course.code} - ${course.name}`);
                             setShowDropdown(false);
@@ -158,6 +202,11 @@ const CourseInput = ({
                           <div className="text-xs text-gray-500">
                             {course.credit || 0} credits
                           </div>
+                          {!course._canAdd && (
+                            <div className="text-xs text-red-500 mt-1">
+                              {course._reason}
+                            </div>
+                          )}
                         </div>
                       ))}
 

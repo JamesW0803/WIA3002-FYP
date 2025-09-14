@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import CourseList from "./CourseList";
 import CourseInput from "./CourseInput";
+import { validateCourseAddition } from "./AcademicPlanner/utils/planHelpers";
 
 const SemesterCard = ({
   planId,
@@ -22,7 +23,6 @@ const SemesterCard = ({
 
   console.log("Actual semester courses:", actualSemester?.courses);
 
-  // Create a Set of all passed course codes from completedCoursesByYear
   const passedCourses = useMemo(() => {
     const passed = new Set();
     Object.values(completedCoursesByYear).forEach((yearData) => {
@@ -60,11 +60,14 @@ const SemesterCard = ({
     ) || 0;
 
   const addCourse = (courseCode) => {
+    console.log("Attempting to add course:", courseCode);
     const courseToAdd = allCourses.find((c) => c.code === courseCode);
     if (!courseToAdd) {
       alert(`Course ${courseCode} not found in course catalog`);
       return;
     }
+
+    console.log("All passed courses:", passedCourses);
 
     // Check if course is already passed
     if (passedCourses.has(courseCode)) {
@@ -79,6 +82,18 @@ const SemesterCard = ({
       alert(
         `Course ${courseCode} is currently ongoing and cannot be taken again`
       );
+      return;
+    }
+
+    const { isValid, message } = validateCourseAddition(
+      courseToAdd,
+      actualSemester,
+      allCourses,
+      Array.from(passedCourses)
+    );
+    console.log("Validation result:", { isValid, message });
+    if (!isValid) {
+      alert(`Cannot add ${courseCode}. ${message}`);
       return;
     }
 
@@ -121,64 +136,6 @@ const SemesterCard = ({
           const alreadyAdded = sem.courses.some((c) => c.code === courseCode);
           if (alreadyAdded) {
             alert(`Course ${courseCode} already exists in this semester`);
-            return sem;
-          }
-
-          // Check prerequisites
-          // Step 1: Get prerequisite course codes from _id list
-          const prerequisiteCodes = (courseToAdd.prerequisites || [])
-            .map((prereqId) => {
-              const course = allCourses.find((c) => c._id === prereqId);
-              return course?.code;
-            })
-            .filter(Boolean); // Removes any undefined/null
-
-          // Step 2: Check if code is already passed
-          const isCodePassed = (code) => {
-            for (const year of Object.values(completedCoursesByYear)) {
-              for (const semester of Object.values(year)) {
-                for (const course of semester) {
-                  if (course.code === code && course.status === "Passed")
-                    return true;
-                }
-              }
-            }
-            return false;
-          };
-
-          // Step 3: Check if code already exists in previous semesters in the same plan
-          const isCodeInPlan = (code) => {
-            const priorSemesters = allSemesters.filter(
-              (s) => s.index < targetSemesterIndex
-            );
-            return priorSemesters.some((sem) =>
-              sem.courses.some((c) => c.code === code)
-            );
-          };
-
-          console.log("WIA3001 prerequisites (by code):", prerequisiteCodes);
-          console.log("Passed courses:", Array.from(passedCourses));
-          console.log(
-            "Courses in earlier plan semesters:",
-            allSemesters
-              .filter((s) => s.index < targetSemesterIndex)
-              .flatMap((s) => s.courses.map((c) => c.code))
-          );
-
-          // Step 4: Check all prerequisite codes
-          const unmetPrereqs = prerequisiteCodes.filter(
-            (code) => !isCodePassed(code) && !isCodeInPlan(code)
-          );
-
-          console.log("Unmet prerequisites:", unmetPrereqs);
-
-          // Step 5: Alert if unmet
-          if (unmetPrereqs.length > 0) {
-            alert(
-              `Cannot add ${
-                courseToAdd.code
-              }. Missing prerequisites:\n${unmetPrereqs.join(", ")}`
-            );
             return sem;
           }
 
@@ -265,15 +222,16 @@ const SemesterCard = ({
             courses={actualSemester?.courses || []}
             removeCourse={removeCourse}
             isViewMode={isViewMode}
-            passedCourses={passedCourses}
+            passedCourses={Array.from(passedCourses)}
           />
         </div>
         {!isViewMode && (
           <CourseInput
             onAdd={addCourse}
             allCourses={allCourses}
-            passedCourses={passedCourses}
+            passedCourses={Array.from(passedCourses)}
             ongoingCourses={ongoingCourses}
+            semester={actualSemester}
           />
         )}
       </div>

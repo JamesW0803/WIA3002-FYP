@@ -28,11 +28,11 @@ const academicSessionSchema = new mongoose.Schema(
       default: false,
     },
     next: {
-      type: mongoose.Schema.Types.ObjectId, 
+      type: mongoose.Schema.Types.ObjectId,
       ref: "AcademicSession",
     },
     previous: {
-      type: mongoose.Schema.Types.ObjectId, 
+      type: mongoose.Schema.Types.ObjectId,
       ref: "AcademicSession",
     },
   },

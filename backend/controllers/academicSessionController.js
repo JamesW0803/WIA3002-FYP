@@ -2,7 +2,7 @@ const AcademicSession = require("../models/AcademicSession");
 
 const addAcademicSession = async (req, res) => {
   try {
-    const { year, semester, isCurrent , next , previous} = req.body;
+    const { year, semester, isCurrent, next, previous } = req.body;
 
     // Validate year format, for debugging in Postman only
     if (!/^\d{4}\/\d{4}$/.test(year?.trim())) {
@@ -31,8 +31,8 @@ const addAcademicSession = async (req, res) => {
       year,
       semester,
       isCurrent,
-      next : next ?? null,
-      previous : previous ?? null,
+      next: next ?? null,
+      previous: previous ?? null,
     });
     const savedSession = await newAcademicSession.save();
     res.status(201).json(savedSession);
@@ -70,7 +70,9 @@ const getCurrentAcademicSession = async (req, res) => {
     const currentSession = await AcademicSession.findOne({ isCurrent: true });
 
     if (!currentSession) {
-      return res.status(404).json({ message: "No current academic session found" });
+      return res
+        .status(404)
+        .json({ message: "No current academic session found" });
     }
 
     res.status(200).json(currentSession);
@@ -99,10 +101,9 @@ const getAcademicSessionById = async (req, res) => {
   }
 };
 
-
 module.exports = {
   addAcademicSession,
   getAllAcademicSessions,
   getCurrentAcademicSession,
-  getAcademicSessionById
+  getAcademicSessionById,
 };

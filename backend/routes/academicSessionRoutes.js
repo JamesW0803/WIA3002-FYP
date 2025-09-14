@@ -11,10 +11,11 @@ const {
 
 router.get("/", getAllAcademicSessions);
 
+router.get("/current", authenticate, getCurrentAcademicSession);
+
 router.use(authenticate);
 router.use(checkRole(["admin"]));
 router.post("/", addAcademicSession);
-router.get("/current", getCurrentAcademicSession)
-router.get("/:id", getAcademicSessionById)
+router.get("/:id", getAcademicSessionById);
 
 module.exports = router;

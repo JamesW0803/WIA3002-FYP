@@ -36,3 +36,132 @@
     transform: rotate(360deg);
   }
 }
+
+/* Smooth transitions for chat elements */
+.chat-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar for chat area */
+.chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Message bubble animations */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-animate {
+  animation: messageSlideIn 0.3s ease-out;
+}
+
+@keyframes flashFadeYellow {
+  0% {
+    /* Tailwind yellow-400-ish: rgb(250, 204, 21) with some alpha */
+    background-color: rgba(250, 204, 21, 0.28);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.flash-highlight {
+  animation: flashFadeYellow 1.2s ease-out;
+}
+
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 200px;
+}
+
+/* Enhanced chat animations */
+.chat-message-enter {
+  opacity: 0;
+  transform: translateY(10px) scale(0.95);
+}
+
+.chat-message-enter-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-message-exit {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.chat-message-exit-active {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Custom scrollbar for chat */
+.chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Message highlight animation */
+@keyframes messageHighlight {
+  0% {
+    background-color: rgba(250, 204, 21, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.message-highlight {
+  animation: messageHighlight 2s ease-out;
+}
+
+/* Smooth transitions */
+.chat-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover effects */
+.chat-hover {
+  transition: all 0.2s ease;
+}
+
+.chat-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

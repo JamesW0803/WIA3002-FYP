@@ -78,10 +78,11 @@ export default function getRemainingCourses(allCourses, completedEntries) {
     }
   });
 
-  const takeKIAR = passedCourses.has("SHE4444");
+  const she4Passed = passedCourses.has("SHE4444");
+  const kiarPassed = passedCourses.has("GQX0056");
   return remainingCourses.filter((c) => {
-    if (c.course_code === "SHE4444") return !takeKIAR;
-    if (c.course_code === "GQX0056") return takeKIAR;
+    if (c.course_code === "SHE4444") return !kiarPassed; // hide SHE4 if KIAR already passed
+    if (c.course_code === "GQX0056") return !she4Passed; // hide KIAR if SHE4 already passed
     return true;
   });
 }

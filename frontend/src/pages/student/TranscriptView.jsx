@@ -98,24 +98,28 @@ const TranscriptView = () => {
     return totalCredits ? (totalPoints / totalCredits).toFixed(2) : "-";
   };
 
-  const latestPassedAttemptsMap = {};
+  const latestAttemptsMap = {};
   entries.forEach((entry) => {
     const point = gradeToPoint(entry.grade);
-    if (point > 0 && entry.status === "Passed") {
-      latestPassedAttemptsMap[entry.code] = entry; // keeps latest
+    if (point !== null) {
+      // Assumes entries are chronological (later items overwrite earlier ones).
+      // If not guaranteed, sort entries first by (year, semester) or by a timestamp.
+      latestAttemptsMap[entry.code] = entry;
     }
   });
 
-  const latestPassedAttempts = Object.values(latestPassedAttemptsMap);
+  const latestAttempts = Object.values(latestAttemptsMap);
 
-  const totalCredits = latestPassedAttempts.reduce(
-    (sum, e) => sum + (e.credit || 0),
+  const totalCredits = latestAttempts.reduce(
+    (sum, e) => sum + (gradeToPoint(e.grade) > 0 ? e.credit || 0 : 0),
     0
   );
-  const totalPoints = latestPassedAttempts.reduce(
-    (sum, e) => sum + gradeToPoint(e.grade) * (e.credit || 0),
+
+  const totalPoints = latestAttempts.reduce(
+    (sum, e) => sum + (gradeToPoint(e.grade) || 0) * (e.credit || 0),
     0
   );
+
   const cgpa = totalCredits ? (totalPoints / totalCredits).toFixed(2) : "-";
 
   useEffect(() => {

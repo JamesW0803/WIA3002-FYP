@@ -7,6 +7,10 @@ require("./ProgrammeIntake");
 require("./StudentAcademicPlan");
 
 const studentSchema = new mongoose.Schema({
+  fullName: {
+    type: String,
+    default: "",
+  },
   faculty: {
     type: String,
     required: true,
@@ -14,17 +18,17 @@ const studentSchema = new mongoose.Schema({
   },
   department: {
     type: String,
-    required: true,
+    required: false,
   },
   programme: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Programme",
-    required: true,
+    required: false,
   },
   academicSession: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "AcademicSession",
-    required: true,
+    required: false,
   },
   programme_intake: {
     type: mongoose.Schema.Types.ObjectId,
@@ -33,7 +37,7 @@ const studentSchema = new mongoose.Schema({
   },
   semester: {
     type: String,
-    required: true,
+    required: false,
   },
   programme_plans: [
     {
@@ -47,6 +51,18 @@ const studentSchema = new mongoose.Schema({
       ref: "StudentAcademicPlan",
     },
   ],
+  address: {
+    type: String,
+    default: "",
+  },
+  profilePicture: {
+    type: String,
+    default: null,
+  },
+  profileColor: {
+    type: String,
+    default: "#1E3A8A",
+  },
 });
 
 const Student = User.discriminator("student", studentSchema);

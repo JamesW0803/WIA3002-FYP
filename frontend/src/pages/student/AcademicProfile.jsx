@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { useAcademicProfile } from "../../hooks/useAcademicProfile";
 import Onboarding from "../../components/Students/Onboarding";
 import YearSection from "../../components/Students/YearSection";
@@ -6,6 +7,7 @@ import Notification from "../../components/Students/Notification";
 const AcademicProfile = () => {
   const {
     editingEntry,
+    sessionLoading,
     availableCourses,
     entries,
     years,
@@ -17,6 +19,7 @@ const AcademicProfile = () => {
     entriesByYearSemester,
     isCourseAlreadyAdded,
     isPastSemester,
+    isFutureSemester,
     startEditing,
     cancelEditing,
     removeEntry,
@@ -27,6 +30,21 @@ const AcademicProfile = () => {
     closeNotification,
     setEditingEntry,
   } = useAcademicProfile();
+
+  const { isFutureReady } = useAcademicProfile();
+
+  if (!isFutureReady) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-lg text-gray-600 mt-4">
+            Loading your academic profile...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

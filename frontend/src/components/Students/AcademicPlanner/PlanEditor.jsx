@@ -40,23 +40,64 @@ const PlanEditor = ({
       : programPlans.find((p) => p.id === planId);
     if (isCreatingNew) delete payload.id;
 
+    const totalSemesters = payload.years.reduce(
+      (total, year) => total + year.semesters.length,
+      0
+    );
+    const totalCredits = payload.years.reduce(
+      (total, year) =>
+        total +
+        year.semesters.reduce(
+          (sum, semester) =>
+            sum +
+            semester.courses.reduce(
+              (courseSum, course) => courseSum + (course?.credit || 0),
+              0
+            ),
+          0
+        ),
+      0
+    );
+
+    // Update payload with calculated values
+    const updatedPayload = {
+      ...payload,
+      semesters: totalSemesters,
+      credits: totalCredits,
+    };
+
     const endpoint = isCreatingNew
       ? `/academic-plans/students/${studentId}/plans`
       : `/academic-plans/plans/${planId}`;
     const method = isCreatingNew ? "post" : "put";
     try {
-      const response = await axiosClient[method](endpoint, payload, {
+      const response = await axiosClient[method](endpoint, updatedPayload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const saved = response.data.data;
 
       if (isCreatingNew) {
-        setProgramPlans([...programPlans, { ...saved, id: saved.identifier }]);
+        setProgramPlans([
+          ...programPlans,
+          {
+            ...saved,
+            id: saved.identifier,
+            semesters: totalSemesters,
+            credits: totalCredits,
+          },
+        ]);
       } else {
         setProgramPlans(
           programPlans.map((p) =>
-            p.id === editingPlan ? { ...saved, id: saved.identifier } : p
+            p.id === editingPlan
+              ? {
+                  ...saved,
+                  id: saved.identifier,
+                  semesters: totalSemesters,
+                  credits: totalCredits,
+                }
+              : p
           )
         );
       }

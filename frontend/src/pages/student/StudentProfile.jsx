@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import Notification from "../../components/Students/Notification";
 import {
   Eye,
   EyeOff,
@@ -13,6 +14,16 @@ import {
   User,
 } from "lucide-react";
 import axiosClient from "../../api/axiosClient";
+
+const computeSemesterNumber = (intYear, intSem, curYear, curSem) => {
+  const startY = +intYear.split("/")[0];
+  const nowY = +curYear.split("/")[0];
+  const yearDiff = nowY - startY; // years elapsed
+  const iIdx = +intSem.split(" ")[1]; // 1 or 2
+  const cIdx = +curSem.split(" ")[1]; // 1 or 2
+  // each full year = 2 semesters; adjust for intake semester
+  return yearDiff * 2 - (iIdx - 1) + cIdx;
+};
 
 const getInitials = (username) => {
   const match = username.match(/[a-zA-Z]/g) || [];
@@ -34,13 +45,15 @@ const StudentProfile = () => {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
+  const [notification, setNotification] = useState(null);
+
   const [username] = useState("jwyn0803");
-  const [name, setName] = useState("James Wong Yi Ngie");
+  const [fullName, setFullName] = useState("");
   const [email] = useState("22004837@siswa.um.edu.my");
   const [studentId] = useState("22004837");
   const [intake, setIntake] = useState("-");
-  const [phone, setPhone] = useState("011-10592288");
-  const [address, setAddress] = useState("Pacific 63, Jalan 13/6");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [programme, setProgramme] = useState("-");
   const [department, setDepartment] = useState("-");
   const [status] = useState("Active");
@@ -57,23 +70,34 @@ const StudentProfile = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [showProfilePicOptions, setShowProfilePicOptions] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [removeProfilePic, setRemoveProfilePic] = useState(false);
 
-  const storedYear = parseInt(localStorage.getItem("studentYear")) || 1;
-  const storedSemester = parseInt(localStorage.getItem("studentSemester")) || 1;
   const storedCgpa = parseFloat(localStorage.getItem("studentCGPA")) || 0.0;
 
-  const [semester] = useState(storedYear * storedSemester);
+  const [intakeYear, setIntakeYear] = useState(null);
+  const [intakeSemester, setIntakeSemester] = useState(null);
+  const [currentYear, setCurrentYear] = useState(null);
+  const [currentSemester, setCurrentSemester] = useState(null);
+  const [semesterNumber, setSemesterNumber] = useState(null);
   const [cgpa] = useState(storedCgpa);
 
   const handleSetDefaultProfile = (color) => {
     setBgColor(color);
     setProfilePic(null);
+    setSelectedFile(null);
+    setRemoveProfilePic(true);
     setShowProfilePicOptions(false);
   };
 
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setRemoveProfilePic(false);
+      // store the File for upload later…
+      setSelectedFile(file);
+
+      // …and also read it for a preview
       const reader = new FileReader();
       reader.onload = (event) => {
         setProfilePic(event.target.result);
@@ -112,31 +136,46 @@ const StudentProfile = () => {
       return;
     }
 
-    // Reset form and close modal
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setPasswordError("");
-    setShowPasswordModal(false);
+    if (newPassword === currentPassword) {
+      setPasswordError("New password must differ from current password");
+      return;
+    }
 
-    // Show success message
-    alert("Password changed successfully!");
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        await axiosClient.put(
+          "/user/change-password",
+          { currentPassword, newPassword },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // 3) On success, reset & close
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setPasswordError("");
+        setShowPasswordModal(false);
+        setNotification({
+          message: "Password changed successfully!",
+          type: "success",
+        });
+      } catch (error) {
+        // 4) Surface any server-side error message
+        const msg =
+          error.response?.data?.message ||
+          "Error changing password. Please try again.";
+        setPasswordError(msg);
+      }
+    })();
   };
 
   useEffect(() => {
     const fetchStudentProfile = async () => {
       try {
         const token = localStorage.getItem("token");
-        const user = JSON.parse(localStorage.getItem("user")); // { username, role }
         const decoded = JSON.parse(atob(token.split(".")[1]));
         const userId = decoded.user_id;
-
-        console.log("📦 Token:", token);
-        console.log("👤 Decoded userId:", userId);
-        console.log(
-          "📤 Sending request to: ",
-          `/user/student-profile/${userId}`
-        );
 
         const res = await axiosClient.get(`/user/student-profile/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -145,9 +184,32 @@ const StudentProfile = () => {
         const data = res.data;
         console.log("✅ Received student profile:", data);
 
+        setIntakeYear(data.intakeYear);
+        setIntakeSemester(data.intakeSemester);
+        setFullName(data.fullName || "");
+        setPhone(data.phone || "");
+        setAddress(data.address || "");
+        setBgColor(data.profileColor || DEFAULT_COLORS[0]);
+        if (data.profilePicture) {
+          // blockBlobClient.url is already a full public URL
+          setProfilePic(data.profilePicture);
+        }
         setProgramme(data.programme);
         setDepartment(data.department);
         setIntake(data.intake);
+        const curRes = await axiosClient.get(`/academic-sessions/current`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCurrentYear(curRes.data.year);
+        setCurrentSemester(curRes.data.semester);
+
+        const n = computeSemesterNumber(
+          data.intakeYear,
+          data.intakeSemester,
+          curRes.data.year,
+          curRes.data.semester
+        );
+        setSemesterNumber(n);
       } catch (error) {
         console.error("❌ Failed to load student profile:", error);
         if (error.response) {
@@ -163,8 +225,57 @@ const StudentProfile = () => {
     fetchStudentProfile();
   }, []);
 
+  const handleSaveChanges = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const decoded = JSON.parse(atob(token.split(".")[1]));
+      const userId = decoded.user_id;
+
+      const formData = new FormData();
+      formData.append("fullName", fullName);
+      formData.append("phone", phone);
+      formData.append("address", address);
+      formData.append("profileColor", bgColor);
+
+      if (removeProfilePic) {
+        formData.append("removeProfilePic", "true");
+      }
+      // if user uploaded an image file, include it
+      if (selectedFile) {
+        formData.append("profilePic", selectedFile);
+      }
+
+      await axiosClient.put(`/user/student-profile/${userId}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // feedback & exit edit mode
+      setNotification({
+        message: "Profile updated successfully!",
+        type: "success",
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      setNotification({
+        message: "Error updating profile. Please try again.",
+        type: "success",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-6 bg-gray-50">
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
       <div className="p-4 md:p-8 max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200">
         {/* Password Change Modal */}
         {showPasswordModal && (
@@ -393,7 +504,7 @@ const StudentProfile = () => {
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">{name}</h1>
+              <h1 className="text-2xl font-bold text-gray-800">{fullName}</h1>
               <p className="text-gray-600">{email}</p>
               <p className="text-sm text-gray-500 mt-1">
                 Student ID: {studentId}
@@ -422,7 +533,10 @@ const StudentProfile = () => {
               )}
             </button>
             {isEditing && (
-              <button className="px-4 py-2 bg-[#1E3A8A] hover:bg-[#172B58] text-white rounded-lg transition-colors flex items-center gap-2">
+              <button
+                onClick={handleSaveChanges}
+                className="px-4 py-2 bg-[#1E3A8A] hover:bg-[#172B58] text-white rounded-lg transition-colors flex items-center gap-2"
+              >
                 <Save className="w-4 h-4" />
                 Save Changes
               </button>
@@ -451,12 +565,12 @@ const StudentProfile = () => {
               {isEditing ? (
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                 />
               ) : (
-                <p className="text-gray-900 font-medium">{name}</p>
+                <p className="text-gray-900 font-medium">{fullName}</p>
               )}
             </div>
 
@@ -526,7 +640,9 @@ const StudentProfile = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Current Semester
               </label>
-              <p className="text-gray-900 font-medium">Semester {semester}</p>
+              <p className="text-gray-900 font-medium">
+                Semester {semesterNumber}
+              </p>
             </div>
 
             <div>

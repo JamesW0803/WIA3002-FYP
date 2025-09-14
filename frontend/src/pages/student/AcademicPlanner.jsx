@@ -2,13 +2,20 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import ProgramPlansSection from "../../components/Students/AcademicPlanner/ProgramPlansSection";
 import GPAPlannerSection from "../../components/Students/AcademicPlanner/GPAPlannerSection";
-import { Plus, CheckCircle2, XCircle, LoaderCircle } from "lucide-react";
+import {
+  Plus,
+  CheckCircle2,
+  XCircle,
+  LoaderCircle,
+  ChevronDown,
+} from "lucide-react";
 import {
   canAddNewPlan,
   findLastCompletedSemester,
   generateNewPlanFromStartingPoint,
 } from "../../components/Students/AcademicPlanner/utils/planHelpers";
 import axiosClient from "../../api/axiosClient";
+import { AnimatePresence, motion } from "framer-motion";
 
 const AcademicPlanner = () => {
   const [activeTab, setActiveTab] = useState("program");
@@ -102,21 +109,19 @@ const AcademicPlanner = () => {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await axiosClient.get("/courses", {
+        const response = await axiosClient.get("/courses?minimal=true", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         // Validate and transform the courses data
-        const validatedCourses = response.data
-          .map((course) => ({
-            _id: course._id,
-            code: course.course_code || course.code || "",
-            name: course.course_name || course.name || "",
-            credit: course.credit_hours || course.credit || 0,
-            prerequisites: course.prerequisites || [],
-            offered_semester: course.offered_semester || [],
-          }))
-          .filter((course) => course.code && course.name); // Remove invalid entries
+        const validatedCourses = response.data.map((course) => ({
+          _id: course._id,
+          code: course.code || course.course_code || "",
+          name: course.name || course.course_name || "",
+          credit: course.credit || course.credit_hours || 0,
+          prerequisites: course.prerequisites || [], // Already in code format from backend
+          offered_semester: course.offered_semester || [],
+        }));
 
         console.log("Fetched courses:", validatedCourses); // Debug log
         setAllCourses(validatedCourses);
@@ -287,71 +292,85 @@ const AcademicPlanner = () => {
                         </span>
                       </div>
 
-                      {!isCollapsed && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
-                          {["Semester 1", "Semester 2"].map((sem) => (
-                            <div key={sem}>
-                              <div className="flex justify-between items-center mb-2">
-                                <h5 className="text-md font-medium text-gray-600">
-                                  {sem}
-                                </h5>
-                                <span className="text-sm text-green-600 font-medium">
-                                  {semesters[sem]?.reduce(
-                                    (sum, c) => sum + c.credit,
-                                    0
-                                  ) || 0}{" "}
-                                  credits
-                                </span>
-                              </div>
+                      <AnimatePresence initial={false}>
+                        {!isCollapsed && (
+                          <motion.div
+                            key="content"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{
+                              duration: 0.3,
+                              ease: [0.22, 1, 0.36, 1],
+                            }}
+                            style={{ overflow: "hidden" }}
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
+                              {["Semester 1", "Semester 2"].map((sem) => (
+                                <div key={sem}>
+                                  <div className="flex justify-between items-center mb-2">
+                                    <h5 className="text-md font-medium text-gray-600">
+                                      {sem}
+                                    </h5>
+                                    <span className="text-sm text-green-600 font-medium">
+                                      {semesters[sem]?.reduce(
+                                        (sum, c) => sum + c.credit,
+                                        0
+                                      ) || 0}{" "}
+                                      credits
+                                    </span>
+                                  </div>
 
-                              {semesters[sem]?.length ? (
-                                <div className="space-y-3">
-                                  {semesters[sem].map((course, index) => (
-                                    <div
-                                      key={index}
-                                      className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100"
-                                    >
-                                      <div
-                                        className={`p-2 rounded-full mr-3 ${getStatusColor(
-                                          course.status
-                                        )}`}
-                                      >
-                                        {course.status === "Failed" ? (
-                                          <XCircle className="h-4 w-4 text-red-600" />
-                                        ) : course.status === "Ongoing" ? (
-                                          <LoaderCircle className="h-4 w-4 text-yellow-600 animate-spin" />
-                                        ) : (
-                                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                        )}
-                                      </div>
-                                      <div>
-                                        <div className="font-medium text-gray-900">
-                                          {course.code} - {course.name}
+                                  {semesters[sem]?.length ? (
+                                    <div className="space-y-3">
+                                      {semesters[sem].map((course, index) => (
+                                        <div
+                                          key={index}
+                                          className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100"
+                                        >
+                                          <div
+                                            className={`p-2 rounded-full mr-3 ${getStatusColor(
+                                              course.status
+                                            )}`}
+                                          >
+                                            {course.status === "Failed" ? (
+                                              <XCircle className="h-4 w-4 text-red-600" />
+                                            ) : course.status === "Ongoing" ? (
+                                              <LoaderCircle className="h-4 w-4 text-yellow-600 animate-spin" />
+                                            ) : (
+                                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                            )}
+                                          </div>
+                                          <div>
+                                            <div className="font-medium text-gray-900">
+                                              {course.code} - {course.name}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                              {course.credit} credits
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-1 capitalize">
+                                              {course.type.replace(/_/g, " ")}
+                                              {course.isRetake && (
+                                                <span className="ml-2 inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
+                                                  Retake
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
-                                        <div className="text-sm text-gray-600">
-                                          {course.credit} credits
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 capitalize">
-                                          {course.type.replace(/_/g, " ")}
-                                          {course.isRetake && (
-                                            <span className="ml-2 inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
-                                              Retake
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
+                                      ))}
                                     </div>
-                                  ))}
+                                  ) : (
+                                    <p className="text-sm text-gray-400">
+                                      No courses
+                                    </p>
+                                  )}
                                 </div>
-                              ) : (
-                                <p className="text-sm text-gray-400">
-                                  No courses
-                                </p>
-                              )}
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 }
@@ -383,7 +402,10 @@ const AcademicPlanner = () => {
           />
         </>
       ) : (
-        <GPAPlannerSection completedCoursesByYear={completedCoursesByYear} />
+        <GPAPlannerSection
+          completedCoursesByYear={completedCoursesByYear}
+          programPlans={programPlans}
+        />
       )}
     </div>
   );
