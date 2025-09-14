@@ -1,5 +1,4 @@
 const AcademicPlan = require("../models/StudentAcademicPlan");
-const Student = require("../models/Student");
 const mongoose = require("mongoose");
 
 // Helper (already in your file)
@@ -19,11 +18,14 @@ exports.createPlan = async (req, res) => {
       });
     }
 
-    // 2) Verify that student exists
-    if (req.user.role !== "student") {
+    // 2) Only students can create, and only for themselves
+    if (
+      req.user.role !== "student" ||
+      String(studentId) !== String(req.user.user_id)
+    ) {
       return res.status(403).json({
         success: false,
-        message: "Only students can create academic plans",
+        message: "Only the student can create their own academic plans",
       });
     }
 
@@ -44,6 +46,12 @@ exports.createPlan = async (req, res) => {
         success: false,
         message: "Plan name is required",
       });
+    }
+
+    if (!Array.isArray(years) || years.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Years are required" });
     }
 
     // 5) Compute total semesters
@@ -89,6 +97,17 @@ exports.getUserPlans = async (req, res) => {
       });
     }
 
+    // Security: students can only list their own plans
+    if (
+      req.user.role === "student" &&
+      String(studentId) !== String(req.user.user_id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden",
+      });
+    }
+
     // Fetch all plans (could be zero)
     const plans = await AcademicPlan.find({ student: studentId })
       .sort({ isDefault: -1, createdAt: -1 })
@@ -112,13 +131,19 @@ exports.getUserPlans = async (req, res) => {
 // Get a single plan by ID
 exports.getPlanById = async (req, res) => {
   try {
-    const planId = req.params.planId;
-    const studentId = req.user.user_id || req.user._id;
-    const plan = await AcademicPlan.findOne({
-      identifier: planId,
-      student: studentId,
-    }).lean();
+    const { planId } = req.params;
+    const me = String(req.user.user_id || req.user._id || "");
+    const isAdmin = req.user.role === "admin";
 
+    // Students: must own the plan
+    // Admins: can read any plan by identifier
+    const filter = isAdmin
+      ? { identifier: planId }
+      : { identifier: planId, student: me };
+
+    const plan = await AcademicPlan.findOne(filter).lean();
+
+    // Return 404 in both "not found" and "not authorized" cases (prevents identifier enumeration)
     if (!plan) {
       return res.status(404).json({
         success: false,
@@ -152,6 +177,12 @@ exports.updatePlan = async (req, res) => {
         success: false,
         message: "Plan name is required",
       });
+    }
+
+    if (!Array.isArray(years) || years.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Years are required" });
     }
 
     const semesters = calculateTotalSemesters(years);
@@ -189,6 +220,12 @@ exports.updatePlan = async (req, res) => {
         message: "Validation error",
         errors: Object.values(error.errors).map((val) => val.message),
       });
+    }
+
+    if (!Array.isArray(years) || years.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Years are required" });
     }
 
     return res.status(500).json({
@@ -267,7 +304,7 @@ exports.setDefaultPlan = async (req, res) => {
     try {
       // Unset all other default plans
       await AcademicPlan.updateMany(
-        { student: studentId, _id: { $ne: planId } },
+        { student: studentId, identifier: { $ne: planId } },
         { $set: { isDefault: false } },
         { session }
       );

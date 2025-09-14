@@ -6,6 +6,6 @@
 
 @layer components {
   .action-button {
-    @apply bg-primary hover:bg-blue-900 text-white px-4 py-2 rounded-xl text-center transition;
+    @apply bg-brand hover:bg-blue-900 text-white px-4 py-2 rounded-xl text-center transition;
   }
 }

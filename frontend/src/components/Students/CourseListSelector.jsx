@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axiosClient from "../../api/axiosClient";
 
-const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
+const CourseListSelector = ({
+  selectedCode,
+  selectedLabel = "",
+  onChange,
+  disabledCodes = [],
+  targetSemester,
+}) => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,6 +33,7 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
           name: course.course_name,
           credit: course.credit_hours,
           prerequisites: course.prerequisites || [],
+          offered_semester: course.offered_semester || [],
         }));
         setCourses(formattedCourses);
       } catch (error) {
@@ -56,6 +63,15 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
     }
   }, [courses, disabledCodes]);
 
+  useEffect(() => {
+    if (selectedCode) {
+      const label = selectedLabel || selectedCode;
+      setSearchTerm(label);
+    } else {
+      // when no selection, keep whatever the user is typing
+    }
+  }, [selectedCode, selectedLabel]);
+
   const handleSelectCourse = (course) => {
     if (disabledCodes.includes(course.code)) return;
 
@@ -64,8 +80,21 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
     setShowDropdown(false);
   };
 
+  const isOfferedIn = (offeredArr = [], semNum) => {
+    if (!semNum) return true;
+    const norm = offeredArr.map((s) => String(s).toLowerCase());
+    return (
+      norm.includes(`semester ${semNum}`) ||
+      norm.includes("both") ||
+      norm.includes("all") ||
+      norm.includes("any")
+    );
+  };
+
   const renderCourseItem = (course) => {
-    const isDisabled = disabledCodes.includes(course.code);
+    const notOffered =
+      targetSemester && !isOfferedIn(course.offered_semester, targetSemester);
+    const isDisabled = disabledCodes.includes(course.code) || notOffered;
     const hasPrerequisites =
       course.prerequisites && course.prerequisites.length > 0;
 
@@ -88,10 +117,12 @@ const CourseListSelector = ({ selectedCode, onChange, disabledCodes = [] }) => {
                 {course.prerequisites.map((p) => p.course_code).join(", ")}
               </div>
             )}
+            {course.offered_semester?.length > 0 && (
+              <div className="text-[11px] text-gray-500 mt-1">
+                Offered: {course.offered_semester.join(", ")}
+              </div>
+            )}
           </div>
-          {isDisabled && (
-            <span className="text-xs text-red-500 ml-2">Already taken</span>
-          )}
         </div>
       </div>
     );

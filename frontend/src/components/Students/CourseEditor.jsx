@@ -16,9 +16,30 @@ const CourseEditor = ({
   currentYear,
   currentSemester,
   entries,
+  targetSemester,
 }) => {
+  const { isFutureSemester } = useAcademicProfile();
   const year = editingEntry?.year;
   const semester = editingEntry?.semester;
+
+  const selectedFromList = useMemo(
+    () => availableCourses.find((c) => c.code === editingEntry?.code),
+    [editingEntry?.code, availableCourses]
+  );
+  const isOfferedIn = (offeredArr = [], semNum) => {
+    const norm = (offeredArr || []).map((s) => String(s).toLowerCase());
+    return (
+      norm.includes(`semester ${semNum}`) ||
+      norm.includes("both") ||
+      norm.includes("all") ||
+      norm.includes("any")
+    );
+  };
+
+  const isOffered =
+    !selectedFromList ||
+    isOfferedIn(selectedFromList.offered_semester, semester);
+
   const [isCheckingPrerequisites, setIsCheckingPrerequisites] = useState(false);
   const { checkCoursePrerequisites, showNotification } = useAcademicProfile();
 
@@ -147,6 +168,18 @@ const CourseEditor = ({
   };
 
   const handleSave = async () => {
+    if (!isOffered) {
+      showNotification(
+        `${editingEntry.code} is not offered in Semester ${semester}.`,
+        "error"
+      );
+      return;
+    }
+    // 1️⃣ Block future‐semester entries immediately
+    if (isFutureSemester(year, semester)) {
+      showNotification("Cannot add courses for future semesters.", "error");
+      return;
+    }
     const unmet = getUnmetLocalPrereqs();
     if (unmet.length > 0) {
       showNotification(
@@ -294,8 +327,41 @@ const CourseEditor = ({
     return null;
   };
 
+  const AlertBox = ({ variant = "warning", title, children }) => {
+    const base = "mt-2 p-2 border rounded";
+    const styles =
+      variant === "error"
+        ? "bg-red-50 border-red-200"
+        : "bg-yellow-50 border-yellow-200";
+    const titleColor = variant === "error" ? "text-red-800" : "text-yellow-800";
+    const textColor = variant === "error" ? "text-red-700" : "text-yellow-700";
+    return (
+      <div className={`${base} ${styles}`}>
+        {title && (
+          <p className={`${titleColor} text-sm font-medium flex items-center`}>
+            <TriangleAlert className="h-4 w-4 mr-1" />
+            {title}
+          </p>
+        )}
+        {children && (
+          <div className={`text-xs mt-1 ${textColor}`}>{children}</div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200">
+      {isFutureSemester(editingEntry.year, editingEntry.semester) && (
+        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+          <p className="text-red-800 text-sm font-medium">
+            Warning: This is a future semester
+          </p>
+          <p className="text-red-700 text-xs mt-1">
+            Courses cannot be added to future semesters
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
         <div className="md:col-span-2 row-span-2 md:row-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -303,14 +369,17 @@ const CourseEditor = ({
           </label>
           <CourseListSelector
             selectedCode={editingEntry.code}
+            selectedLabel={
+              editingEntry.code
+                ? `${editingEntry.code}${
+                    editingEntry.name ? " - " + editingEntry.name : ""
+                  }`
+                : ""
+            }
             onChange={handleCourseSelect}
             disabledCodes={disabledCourseCodes}
+            targetSemester={semester}
           />
-          {isCourseAlreadyAdded(editingEntry.code, editingEntry?.id) && (
-            <p className="text-red-500 text-xs mt-1">
-              This course has already been taken in another semester/year
-            </p>
-          )}
         </div>
 
         <div>
@@ -373,6 +442,8 @@ const CourseEditor = ({
             type="button"
             onClick={handleSave}
             disabled={
+              isFutureSemester(editingEntry.year, editingEntry.semester) ||
+              !isOffered ||
               !prerequisiteCheck.allPrerequisitesMet ||
               isCheckingPrerequisites ||
               !editingEntry.code ||
@@ -407,6 +478,21 @@ const CourseEditor = ({
         </div>
       </div>
       <div className="md:col-span-6 max-w-[385px]">
+        {/* Duplicate course */}
+        {isCourseAlreadyAdded(editingEntry.code, editingEntry?.id) && (
+          <AlertBox variant="error" title="Duplicate Course">
+            This course has already been taken in another semester/year.
+          </AlertBox>
+        )}
+
+        {/* Not offered this semester */}
+        {!isOffered && editingEntry.code && (
+          <AlertBox variant="error" title="Not Offered This Semester">
+            {editingEntry.code} is not offered in Semester {semester}. Please
+            choose a course offered in this semester.
+          </AlertBox>
+        )}
+        {/* Prerequisite status (existing logic) */}
         {renderPrerequisiteStatus()}
       </div>
     </div>

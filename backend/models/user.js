@@ -5,11 +5,14 @@ const userBaseSchema = new mongoose.Schema(
     username: {
       type: String,
       required: true,
+      trim: true,
     },
     email: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      lowercase: true,
     },
     password: {
       type: String,
@@ -18,11 +21,18 @@ const userBaseSchema = new mongoose.Schema(
     contact: {
       type: String,
       required: true,
+      trim: true,
+    },
+    role: {
+      type: String,
+      required: true,
+      enum: ["student", "admin"],
     },
   },
   {
     discriminatorKey: "role",
     collection: "users",
+    timestamps: true,
   }
 );
 

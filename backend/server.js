@@ -3,18 +3,26 @@ const express = require("express");
 const cors = require("cors");
 const database = require("./config/database");
 const routes = require("./routes/routes");
+const http = require("http");
+const chatRoutes = require("./routes/chatRoutes");
+const initSocket = require("./socket");
 
 const app = express();
 const port = process.env.PORT;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 app.use("/api", routes);
+app.use("/api/chat", chatRoutes);
+
+const server = http.createServer(app);
+initSocket(server);
 
 // Connect to MongoDB
 database.connectToMongoDB();
 
-app.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
+server.listen(port || 5000, () => {
+  console.log(`Server is listening on port ${port || 5000}`);
 });

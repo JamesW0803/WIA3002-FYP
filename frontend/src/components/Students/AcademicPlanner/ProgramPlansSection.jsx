@@ -48,7 +48,7 @@ const ProgramPlansSection = ({
     setUnsavedPlan(newPlan);
     setEditingPlan(newPlan.id);
     setIsCreatingNew(true);
-    setTempPlans([...tempPlans, newPlan._id]);
+    setTempPlans([...tempPlans, newPlan.id]);
     scrollToEditSection();
   };
 
@@ -57,10 +57,36 @@ const ProgramPlansSection = ({
       const token = localStorage.getItem("token");
       const planId = editingPlan;
 
+      const totalSemesters = updatedPlanData.years.reduce(
+        (total, year) => total + year.semesters.length,
+        0
+      );
+      const totalCredits = updatedPlanData.years.reduce(
+        (total, year) =>
+          total +
+          year.semesters.reduce(
+            (sum, semester) =>
+              sum +
+              semester.courses.reduce(
+                (courseSum, course) => courseSum + (course?.credit || 0),
+                0
+              ),
+            0
+          ),
+        0
+      );
+
+      // Update the plan data with recalculated values
+      const payload = {
+        ...updatedPlanData,
+        semesters: totalSemesters,
+        credits: totalCredits,
+      };
+
       // Send PUT to /academic-plans/plans/:planId
       const res = await axiosClient.put(
         `/academic-plans/plans/${planId}`,
-        updatedPlanData,
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -69,7 +95,14 @@ const ProgramPlansSection = ({
       // Merge updated plan into state
       setProgramPlans((prev) =>
         prev.map((p) =>
-          p.id === planId ? { ...saved, id: saved.identifier } : p
+          p.id === planId
+            ? {
+                ...saved,
+                id: saved.identifier,
+                semesters: totalSemesters,
+                credits: totalCredits,
+              }
+            : p
         )
       );
     } catch (err) {

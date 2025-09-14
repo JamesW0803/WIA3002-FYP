@@ -13,6 +13,7 @@ import Logo from "../../assets/logo.svg";
 import SignUpModal from "./SignUpModal";
 import axiosClient from "../../api/axiosClient";
 import Notification from "../../components/Students/Notification";
+import mongoose from "mongoose";
 
 export default function SignUpStudentPage() {
   const [formData, setFormData] = useState({
@@ -262,6 +263,12 @@ export default function SignUpStudentPage() {
       return;
     }
 
+    const programmeId = formData.programme;
+    if (!mongoose.Types.ObjectId.isValid(programmeId)) {
+      showNotification("Invalid programme selected", "error");
+      return;
+    }
+
     const payload = {
       name: formData.username,
       email: fullEmail,
@@ -269,56 +276,47 @@ export default function SignUpStudentPage() {
       role: "student",
       faculty: "Faculty of Computer Science and Information Technology",
       department: formData.department,
-      programme: formData.programme,
+      programme: programmeId,
       contact: formData.contact,
       academicSession: formData.academicSession,
       semester: selectedSession.semester,
     };
 
     try {
-      const response = await fetch("http://localhost:5000/api/user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await axiosClient.post("/user", payload);
 
-      const result = await response.json();
-
-      if (response.ok) {
+      if (response.status === 201) {
         setIsSuccess(true);
         showNotification("Registration successful!", "success");
-      } else {
-        console.error("Registration failed:", result.message || result.error);
-        setIsSuccess(false);
+        setShowModal(true);
+      }
+    } catch (err) {
+      console.error("Registration failed:", err);
+      setIsSuccess(false);
 
-        // Handle specific field errors
-        if (result.field === "username") {
-          showNotification(
-            `Username '${formData.username}' is already taken`,
-            "error"
-          );
-          setValidationErrors((prev) => ({
-            ...prev,
-            username: "This username is already taken",
-          }));
-        } else if (result.field === "email") {
-          showNotification(
-            `Email '${formData.email}' is already registered`,
-            "error"
-          );
+      // Handle duplicate email/username errors
+      if (err.response?.data?.message === "Email or username already exists") {
+        if (err.response.data.error.email) {
+          showNotification("This email is already registered", "error");
           setValidationErrors((prev) => ({
             ...prev,
             email: "This email is already registered",
           }));
-        } else {
-          showNotification(result.message || "Registration failed", "error");
         }
+        if (err.response.data.error.username) {
+          showNotification("This username is already taken", "error");
+          setValidationErrors((prev) => ({
+            ...prev,
+            username: "This username is already taken",
+          }));
+        }
+      } else {
+        showNotification(
+          err.response?.data?.message || "Registration failed",
+          "error"
+        );
       }
-    } catch (err) {
-      console.error("Fetch or network error:", err);
-      setIsSuccess(false);
-      showNotification("Network error. Please try again.", "error");
-    } finally {
+
       setShowModal(true);
     }
   };

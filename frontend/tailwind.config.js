@@ -7,7 +7,7 @@ module.exports = {
         sans: ["Montserrat", "sans-serif"],
       },
       colors: {
-        primary: "#1E3A8A",
+        brand: "#1E3A8A",
       },
       animation: {
         slideIn: "slideIn 0.3s ease-out",

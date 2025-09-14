@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
+const Student = require("./Student");
 
 const semesterSchema = new mongoose.Schema({
   id: {
@@ -94,30 +95,55 @@ const academicPlanSchema = new mongoose.Schema(
 );
 
 // Calculate total credits before saving
+// Calculate total credits before saving
 academicPlanSchema.pre("save", function (next) {
-  this.credits = this.years.reduce((total, year) => {
-    return year.semesters.reduce((semTotal, semester) => {
-      const semesterCredits = semester.courses.reduce(
-        (courseTotal, course) => courseTotal + (course.credit || 0),
-        0
-      );
-      return semTotal + semesterCredits;
-    }, total);
-  }, 0);
-  next();
+  try {
+    let totalCredits = 0;
+    let totalSemesters = 0;
+
+    for (const y of this.years || []) {
+      totalSemesters += (y.semesters || []).length;
+      for (const s of y.semesters || []) {
+        for (const c of s.courses || []) {
+          totalCredits += Number(c.credit || 0);
+        }
+      }
+    }
+
+    this.credits = totalCredits;
+    // if client sent an explicit semesters count, trust recompute instead
+    this.semesters = totalSemesters;
+    next();
+  } catch (e) {
+    next(e);
+  }
 });
 
 academicPlanSchema.post("save", async function (doc) {
-  await mongoose.model("Student").findByIdAndUpdate(doc.student, {
-    $addToSet: { academic_plans: doc._id },
-  });
+  try {
+    await Student.findByIdAndUpdate(doc.student, {
+      $addToSet: { academic_plans: doc._id },
+    });
+  } catch (e) {
+    console.error("Post-save hook failed to link plan to student:", e);
+  }
 });
 
 academicPlanSchema.pre("remove", async function (next) {
-  await mongoose.model("Student").findByIdAndUpdate(this.student, {
-    $pull: { academic_plans: this._id },
-  });
-  next();
+  try {
+    await Student.findByIdAndUpdate(this.student, {
+      $pull: { academic_plans: this._id },
+    });
+    next();
+  } catch (e) {
+    next(e);
+  }
 });
+
+// One default per student (enforced only when isDefault=true)
+academicPlanSchema.index(
+  { student: 1, isDefault: 1 },
+  { unique: true, partialFilterExpression: { isDefault: true } }
+);
 
 module.exports = mongoose.model("StudentAcademicPlan", academicPlanSchema);

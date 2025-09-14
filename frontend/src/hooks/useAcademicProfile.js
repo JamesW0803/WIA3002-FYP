@@ -4,6 +4,8 @@ import { getUserIdFromStorage } from "../utils/getUserIdFromStorage";
 
 export const useAcademicProfile = () => {
   const userId = getUserIdFromStorage();
+  const [editingBackup, setEditingBackup] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState(null);
   const [availableCourses, setAvailableCourses] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -12,6 +14,10 @@ export const useAcademicProfile = () => {
   const [currentSemester, setCurrentSemester] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasAddedFirstCourse, setHasAddedFirstCourse] = useState(false);
+  const [intakeYear, setIntakeYear] = useState(null);
+  const [intakeSemester, setIntakeSemester] = useState(null);
+  const [studentYear, setStudentYear] = useState(null);
+  const [studentSemester, setStudentSemester] = useState(null);
   const [notification, setNotification] = useState({
     show: false,
     message: "",
@@ -19,9 +25,37 @@ export const useAcademicProfile = () => {
     isClosing: false,
   });
 
+  const isFutureReady = useMemo(() => {
+    return !sessionLoading && studentYear != null && studentSemester != null;
+  }, [sessionLoading, studentYear, studentSemester]);
+
   const gradeOptions = {
     passed: ["A+", "A", "A-", "B+", "B", "B-", "C+", "C"],
     failed: ["C-", "D+", "D", "F"],
+  };
+
+  const computeSemesterNumber = (
+    intakeYear,
+    intakeSem,
+    targetYear,
+    targetSem
+  ) => {
+    // intakeYear is a string like "2022/2023"
+    const startYear = parseInt(intakeYear.split("/")[0], 10);
+    const yearDiff = targetYear - startYear;
+    // two semesters per year, and intakeSem is 1 or 2:
+    //   e.g. if intakeSem=1, then Semester 1 is ordinal 1, Semester 2 is ordinal 2, etc.
+    return yearDiff * 2 + targetSem - (intakeSem - 1);
+  };
+
+  const isFutureSemester = (year, sem) => {
+    if (sessionLoading) return false;
+    if (studentYear == null || studentSemester == null) return true;
+
+    const targetOrd = (year - 1) * 2 + sem;
+    const currentOrd = (studentYear - 1) * 2 + studentSemester;
+
+    return targetOrd > currentOrd;
   };
 
   //Fetching the profile
@@ -32,9 +66,9 @@ export const useAcademicProfile = () => {
     }
     const fetchAcademicProfile = async () => {
       try {
-        const res = await axiosClient.get(`/academic-profile/${userId}`); // userId = logged-in student's id
+        const res = await axiosClient.get(`/academic-profile/${userId}`);
         const loadedEntries = res.data.entries.map((entry) => ({
-          id: entry._id, // or Date.now() if none
+          id: entry._id,
           code: entry.course.course_code,
           name: entry.course.course_name,
           credit: entry.course.credit_hours,
@@ -68,14 +102,75 @@ export const useAcademicProfile = () => {
     setHasAddedFirstCourse(firstCourseFlag === "true");
   }, []);
 
-  // Get current year and semester from localStorage on component mount
   useEffect(() => {
-    const savedYear = localStorage.getItem("studentYear");
-    const savedSemester = localStorage.getItem("studentSemester");
-    if (savedYear && savedSemester) {
-      setCurrentYear(parseInt(savedYear));
-      setCurrentSemester(parseInt(savedSemester));
-    }
+    const fetchIntakeAndSession = async () => {
+      try {
+        // grab token + userId
+        const token = localStorage.getItem("token");
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        const userId = decoded.user_id;
+
+        const [profileRes, sessionRes] = await Promise.all([
+          axiosClient.get(`/user/student-profile/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axiosClient.get(`/academic-sessions/current`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        // 1) intake stays the same (intakeYear is a "YYYY/YYYY" string,
+        //    intakeSemester hopefully already a number)
+        const { intakeYear: iY, intakeSemester: iS } = profileRes.data;
+        // parse "Semester 1" → 1
+        const intakeSemNum =
+          typeof iS === "string" ? parseInt(iS.replace(/\D/g, ""), 10) : iS;
+        setIntakeYear(iY);
+        setIntakeSemester(intakeSemNum);
+
+        // 2) parse the session payload into numbers:
+        const rawYear = sessionRes.data.year; // e.g. "2025/2026"
+        const rawSem = sessionRes.data.semester; // e.g. "Semester 1"
+
+        const parsedYear =
+          typeof rawYear === "string"
+            ? parseInt(rawYear.split("/")[0], 10)
+            : Number(rawYear);
+
+        const parsedSem =
+          typeof rawSem === "string"
+            ? parseInt(rawSem.replace(/\D/g, ""), 10)
+            : Number(rawSem);
+
+        setCurrentYear(parsedYear);
+        setCurrentSemester(parsedSem);
+
+        // 3) now your existing computeSemesterNumber will work
+        const totalSemesters = computeSemesterNumber(
+          iY, // intakeYear string
+          intakeSemNum, // intakeSem number
+          parsedYear, // now a number
+          parsedSem // now a number
+        );
+
+        // 4) derive relative progress
+        const relYear = Math.ceil(totalSemesters / 2);
+        const relSem = totalSemesters % 2 === 0 ? 2 : 1;
+
+        setStudentYear(relYear);
+        setStudentSemester(relSem);
+        setSessionLoading(false);
+      } catch (err) {
+        console.error("❌ Failed to load intake or session:", err);
+        showNotification(
+          "Failed to load academic intake/session info",
+          "error"
+        );
+        setSessionLoading(false);
+      }
+    };
+
+    fetchIntakeAndSession();
   }, []);
 
   useEffect(() => {
@@ -89,6 +184,7 @@ export const useAcademicProfile = () => {
           name: course.name,
           credit: course.credit,
           prerequisites: course.prerequisites,
+          offered_semester: course.offered_semester,
         }));
         setAvailableCourses(formattedCourses);
       } catch (error) {
@@ -133,6 +229,10 @@ export const useAcademicProfile = () => {
   };
 
   const cancelEditing = () => {
+    if (editingBackup) {
+      setEntries((prev) => [...prev, editingBackup]);
+      setEditingBackup(null);
+    }
     setEditingEntry(null);
   };
 
@@ -141,6 +241,7 @@ export const useAcademicProfile = () => {
     if (editingEntry?.id === id) {
       setEditingEntry(null);
     }
+    if (editingBackup?.id === id) setEditingBackup(null);
   };
 
   const saveEntry = async () => {
@@ -151,37 +252,23 @@ export const useAcademicProfile = () => {
       return;
     }
 
-    const selectedCourse = availableCourses.find(
-      (c) => c.code === editingEntry.code
-    );
+    // helper: is term A earlier than term B?
+    const isEarlierTerm = (a, b) =>
+      a.year < b.year || (a.year === b.year && a.semester < b.semester);
 
-    // Find all previous attempts of this course
-    const previousAttempts = entries.filter(
-      (entry) =>
-        entry.code === editingEntry.code && entry.id !== editingEntry.id
-    );
-
-    // Check if there are any passed or ongoing attempts
-    const hasPassedOrOngoingAttempts = previousAttempts.some(
-      (attempt) => attempt.status === "Passed" || attempt.status === "Ongoing"
-    );
-
-    // If there are passed or ongoing attempts, don't allow adding
-    if (hasPassedOrOngoingAttempts) {
-      showNotification(
-        "This course has already been passed or is ongoing in another semester/year",
-        "error"
-      );
-      return;
-    }
-
-    // If there are failed attempts, mark this as a retake
-    const isRetake = entries.some(
+    // Look for an earlier failed attempt of the same course
+    const earlierFailed = entries.some(
       (e) =>
         e.code === editingEntry.code &&
         e.status === "Failed" &&
-        e.id !== editingEntry.id
+        isEarlierTerm(
+          { year: e.year, semester: e.semester },
+          { year: editingEntry.year, semester: editingEntry.semester }
+        )
     );
+
+    // If there are failed attempts, mark this as a retake
+    const isRetake = earlierFailed && editingEntry.status !== "Failed";
 
     if (!isRetake) {
       const prerequisiteCheck = await checkCoursePrerequisites(
@@ -202,7 +289,7 @@ export const useAcademicProfile = () => {
 
     const entryToSave = {
       ...editingEntry,
-      isRetake: isRetake,
+      isRetake,
     };
 
     const isPast = isPastSemester(editingEntry.year, editingEntry.semester);
@@ -237,6 +324,7 @@ export const useAcademicProfile = () => {
     const isFirstCourse = entries.length === 0;
     setEntries([...entries, entryToSave]);
     setEditingEntry(null);
+    setEditingBackup(null);
 
     if (isFirstCourse && !hasAddedFirstCourse) {
       setHasAddedFirstCourse(true);
@@ -249,11 +337,7 @@ export const useAcademicProfile = () => {
   };
 
   const addNewEntry = (year, semester) => {
-    if (
-      !isPastSemester(year, semester) &&
-      (year > currentYear ||
-        (year === currentYear && semester > currentSemester))
-    ) {
+    if (isFutureSemester(year, semester)) {
       showNotification("You cannot add courses for future semesters.", "error");
       return;
     }
@@ -273,6 +357,16 @@ export const useAcademicProfile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (
+      entries.some(({ year, semester }) => isFutureSemester(year, semester))
+    ) {
+      showNotification(
+        "Cannot save profile. Please remove courses for future semesters first.",
+        "error"
+      );
+      return;
+    }
 
     // Step 1: Sort entries by year and semester
     const sortedEntries = [...entries].sort((a, b) => {
@@ -391,6 +485,7 @@ export const useAcademicProfile = () => {
 
   return {
     editingEntry,
+    sessionLoading,
     availableCourses,
     entries,
     years,
@@ -402,6 +497,8 @@ export const useAcademicProfile = () => {
     entriesByYearSemester,
     isCourseAlreadyAdded,
     isPastSemester,
+    isFutureSemester,
+    isFutureReady,
     startEditing,
     cancelEditing,
     removeEntry,

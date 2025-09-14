@@ -57,12 +57,26 @@ export const validateCourseAddition = (
   allCourses,
   completedCourses = []
 ) => {
+  console.log("--- Validating Course Addition ---");
+  console.log("Course:", course.code);
+  console.log("Prerequisites:", course.prerequisites);
+  console.log("Completed Courses:", completedCourses);
   if (!course) {
+    console.log("Validation failed: Course not found");
     return { isValid: false, message: "Course not found" };
+  }
+
+  if (!semester || !semester.courses) {
+    return { isValid: false, message: "Semester information missing" };
+  }
+
+  if (!course.code) {
+    return { isValid: false, message: "Invalid course code" };
   }
 
   // Check if course is already in this semester
   if (semester.courses.some((c) => c.code === course.code)) {
+    console.log("Validation failed: Course already in semester");
     return {
       isValid: false,
       message: "Course already exists in this semester",
@@ -71,6 +85,7 @@ export const validateCourseAddition = (
 
   // Check if course is already completed (in any semester)
   if (completedCourses.includes(course.code)) {
+    console.log("Validation failed: Course already completed");
     return {
       isValid: false,
       message: "Course has already been completed",
@@ -79,14 +94,23 @@ export const validateCourseAddition = (
 
   // Check prerequisites
   const prereqs = course.prerequisites || [];
+  console.log("Prerequisites to check:", prereqs);
   const missingPrereqs = prereqs.filter(
     (prereq) => !completedCourses.includes(prereq)
   );
+  console.log("Missing prerequisites:", missingPrereqs);
 
   if (missingPrereqs.length > 0) {
+    console.log("Validation failed: Missing prerequisites");
+    // Get course names for better error message
+    const missingNames = missingPrereqs.map((code) => {
+      const c = allCourses.find((c) => c.code === code);
+      return c ? `${code} - ${c.name}` : code;
+    });
+
     return {
       isValid: false,
-      message: `Missing prerequisites: ${missingPrereqs.join(", ")}`,
+      message: `Missing prerequisites: ${missingNames.join(", ")}`,
     };
   }
 
@@ -95,14 +119,17 @@ export const validateCourseAddition = (
   const isOfferedThisSemester = course.offered_semester?.some((sem) =>
     sem.includes(semesterNum)
   );
+  console.log("Offered this semester?", isOfferedThisSemester);
 
   if (!isOfferedThisSemester) {
+    console.log("Validation failed: Not offered this semester");
     return {
       isValid: false,
       message: `Course is not offered in ${semester.name}`,
     };
   }
 
+  console.log("Validation passed!");
   return { isValid: true, message: "" };
 };
 
@@ -180,6 +207,7 @@ export const canAddCourseToSemester = (
 export const generateNewPlanFromStartingPoint = (index, startPoint) => {
   const years = [];
   const totalYears = 4; // Assuming 4-year program
+  let semesterCount = 0;
 
   // Start from the determined starting point
   for (let year = startPoint.year; year <= totalYears; year++) {
@@ -195,6 +223,7 @@ export const generateNewPlanFromStartingPoint = (index, startPoint) => {
         courses: [],
         completed: false,
       });
+      semesterCount++;
     }
 
     years.push({
@@ -204,27 +233,22 @@ export const generateNewPlanFromStartingPoint = (index, startPoint) => {
   }
 
   return {
-    id: Date.now(), // ADD THIS
+    id: Date.now(),
     name: `Plan ${String.fromCharCode(65 + index)}`,
     created: new Date().toISOString().split("T")[0],
-    semesters: years.reduce((total, year) => total + year.semesters.length, 0),
+    semesters: semesterCount,
     credits: 0,
     notes: "",
     years,
   };
 };
 
+// Strict: returns the last semester that has any entries (attempts)
 export const findLastCompletedSemester = (entries) => {
-  if (!entries || entries.length === 0) {
-    console.log("No entries found, defaulting to Year 1 Semester 1");
-    return { year: 1, semester: 1 };
-  }
-
-  // Find the highest year and semester with completed courses
-  let maxYear = 1;
-  let maxSemester = 1;
-
-  entries.forEach((entry) => {
+  if (!entries || entries.length === 0) return null;
+  let maxYear = 0,
+    maxSemester = 0;
+  for (const entry of entries) {
     if (
       entry.year > maxYear ||
       (entry.year === maxYear && entry.semester > maxSemester)
@@ -232,12 +256,15 @@ export const findLastCompletedSemester = (entries) => {
       maxYear = entry.year;
       maxSemester = entry.semester;
     }
-  });
+  }
+  return { year: maxYear || 1, semester: maxSemester || 1 };
+};
 
-  // Return the next semester to plan
-  const nextSemester =
-    maxSemester === 2
-      ? { year: maxYear + 1, semester: 1 }
-      : { year: maxYear, semester: maxSemester + 1 };
-  return nextSemester;
+// Friendly: returns the next semester to plan after the last completed/attempted one
+export const findNextSemesterToPlan = (entries) => {
+  const last = findLastCompletedSemester(entries);
+  if (!last) return { year: 1, semester: 1 };
+  return last.semester === 2
+    ? { year: last.year + 1, semester: 1 }
+    : { year: last.year, semester: last.semester + 1 };
 };

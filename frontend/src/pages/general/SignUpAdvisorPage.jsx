@@ -197,7 +197,6 @@ export default function SignUpAdvisorPage() {
         onClose={() => navigate("/")}
         onRetry={() => setShowModal(false)}
       />
-      ;
     </div>
   );
 }

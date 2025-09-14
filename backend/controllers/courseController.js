@@ -21,7 +21,7 @@ const getAllCourses = async (req, res) => {
 
     const courses = await Course.find(query).populate({
       path: "prerequisites",
-      select: "course_code course_name credit_hours", // Only include necessary fields
+      select: "course_code course_name credit_hours offered_semester", // Only include necessary fields
     });
 
     // Return minimal data if requested (for dropdowns, etc.)
@@ -31,6 +31,7 @@ const getAllCourses = async (req, res) => {
         name: course.course_name,
         credit: course.credit_hours,
         prerequisites: course.prerequisites.map((p) => p.course_code),
+        offered_semester: course.offered_semester,
       }));
       return res.status(200).json(minimalCourses);
     }
