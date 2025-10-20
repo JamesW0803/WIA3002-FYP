@@ -2,13 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import ProgramPlansSection from "../../components/Students/AcademicPlanner/ProgramPlansSection";
 import GPAPlannerSection from "../../components/Students/AcademicPlanner/GPAPlannerSection";
-import {
-  Plus,
-  CheckCircle2,
-  XCircle,
-  LoaderCircle,
-  ChevronDown,
-} from "lucide-react";
+import { Plus, CheckCircle2, XCircle, LoaderCircle } from "lucide-react";
 import {
   canAddNewPlan,
   findLastCompletedSemester,
