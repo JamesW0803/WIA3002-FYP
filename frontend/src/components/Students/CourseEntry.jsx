@@ -4,7 +4,6 @@ const CourseEntry = ({
   entry,
   startEditing,
   removeEntry,
-  isPastSemester,
   currentYear,
   currentSemester,
 }) => {
@@ -12,30 +11,14 @@ const CourseEntry = ({
     entry.year === currentYear && entry.semester === currentSemester;
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md mb-4 flex items-center min-w-full">
-      <div className="w-full flex items-center">
-        <div className="flex-1 grid grid-cols-12 gap-4 items-center">
-          <div className="col-span-5">
-            <p className="font-medium text-lg">{entry.code}</p>
-            <p className="text-md text-gray-600">{entry.name}</p>
-            {entry.isRetake && (
-              <span className="inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded ml-2">
-                Retake
-              </span>
-            )}
-          </div>
-          <div className="col-span-2">
-            <p className="text-md">Credit: {entry.credit}</p>
-          </div>
-          <div className="col-span-2 flex items-center">
-            {(entry.status === "Passed" || entry.status === "Failed") &&
-              entry.grade && (
-                <span className="text-md">Grade: {entry.grade}</span>
-              )}
-          </div>
-          <div className="col-span-2">
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center">
+        {/* Left: title & meta */}
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-base sm:text-lg">{entry.code}</p>
             <span
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-2 py-0.5 rounded-full text-xs sm:text-sm ${
                 entry.status === "Passed"
                   ? "bg-green-100 text-green-800"
                   : entry.status === "Failed"
@@ -45,20 +28,36 @@ const CourseEntry = ({
             >
               {entry.status}
             </span>
+            {entry.isRetake && (
+              <span className="inline-block bg-yellow-200 text-yellow-800 text-[11px] font-semibold px-2 py-0.5 rounded">
+                Retake
+              </span>
+            )}
+          </div>
+          <p className="text-sm sm:text-base text-gray-700 mt-0.5">
+            {entry.name}
+          </p>
+
+          <div className="flex flex-wrap gap-3 text-xs sm:text-sm text-gray-600 mt-2">
+            <span>Credit: {entry.credit}</span>
+            {(entry.status === "Passed" || entry.status === "Failed") &&
+              entry.grade && <span>Grade: {entry.grade}</span>}
           </div>
         </div>
-        <div className="flex gap-4 ml-8">
+
+        {/* Right: actions */}
+        <div className="flex gap-3 sm:gap-4 sm:ml-6">
           <button
             type="button"
             onClick={() => startEditing(entry.id)}
-            className="text-blue-600 hover:text-blue-800 whitespace-nowrap"
+            className="text-blue-600 hover:text-blue-800 text-sm sm:text-base"
           >
             Edit
           </button>
           <button
             type="button"
             onClick={() => removeEntry(entry.id)}
-            className="text-red-600 hover:text-red-800 whitespace-nowrap"
+            className="text-red-600 hover:text-red-800 text-sm sm:text-base"
           >
             Delete
           </button>
