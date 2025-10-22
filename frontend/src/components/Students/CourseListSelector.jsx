@@ -49,15 +49,12 @@ const CourseListSelector = ({
 
   useEffect(() => {
     if (courses.length > 0) {
-      // Separate enabled and disabled courses
       const enabledCourses = courses.filter(
         (course) => !disabledCodes.includes(course.code)
       );
       const disabledCourses = courses.filter((course) =>
         disabledCodes.includes(course.code)
       );
-
-      // Combine with disabled courses at the end
       const sortedCourses = [...enabledCourses, ...disabledCourses];
       setFilteredCourses(sortedCourses);
     }
@@ -67,14 +64,11 @@ const CourseListSelector = ({
     if (selectedCode) {
       const label = selectedLabel || selectedCode;
       setSearchTerm(label);
-    } else {
-      // when no selection, keep whatever the user is typing
     }
   }, [selectedCode, selectedLabel]);
 
   const handleSelectCourse = (course) => {
     if (disabledCodes.includes(course.code)) return;
-
     onChange(course.code);
     setSearchTerm(`${course.code} - ${course.name}`);
     setShowDropdown(false);
@@ -102,17 +96,17 @@ const CourseListSelector = ({
       <div
         key={course.code}
         onClick={() => !isDisabled && handleSelectCourse(course)}
-        className={`p-2 hover:bg-gray-100 cursor-pointer ${
+        className={`p-3 hover:bg-gray-100 cursor-pointer ${
           isDisabled ? "opacity-50 cursor-not-allowed" : ""
         }`}
       >
         <div className="flex justify-between items-start">
           <div>
-            <div className="font-medium">
+            <div className="font-medium text-sm sm:text-base">
               {course.code} - {course.name} ({course.credit} credits)
             </div>
             {hasPrerequisites && (
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-[11px] sm:text-xs text-gray-500 mt-1">
                 Prerequisites:{" "}
                 {course.prerequisites.map((p) => p.course_code).join(", ")}
               </div>
@@ -140,16 +134,21 @@ const CourseListSelector = ({
         }}
         onFocus={() => setShowDropdown(true)}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-        className="border rounded p-2 w-full"
+        className="border rounded p-2 w-full text-sm sm:text-base"
       />
 
       {showDropdown &&
         (searchTerm.length > 0 || filteredCourses.length > 0) && (
-          <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow-lg max-h-60 overflow-auto">
+          <div
+            className="
+            absolute z-10 mt-1 w-full bg-white border rounded shadow-lg
+            max-h-64 sm:max-h-80 overflow-auto
+          "
+          >
             {isLoading ? (
-              <div className="p-2 text-gray-500">Loading...</div>
+              <div className="p-2 text-gray-500 text-sm">Loading...</div>
             ) : filteredCourses.length === 0 ? (
-              <div className="p-2 text-gray-500">
+              <div className="p-2 text-gray-500 text-sm">
                 {searchTerm.length < 2
                   ? "Type at least 2 characters"
                   : "No courses found"}

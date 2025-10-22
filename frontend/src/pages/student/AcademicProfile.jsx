@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useAcademicProfile } from "../../hooks/useAcademicProfile";
 import Onboarding from "../../components/Students/Onboarding";
 import YearSection from "../../components/Students/YearSection";
@@ -35,10 +35,10 @@ const AcademicProfile = () => {
 
   if (!isFutureReady) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-[60vh] sm:min-h-screen px-4">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-lg text-gray-600 mt-4">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-base sm:text-lg text-gray-600 mt-4">
             Loading your academic profile...
           </p>
         </div>
@@ -48,8 +48,8 @@ const AcademicProfile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        <h2 className="text-2xl font-bold text-[#1E3A8A] mb-6">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1E3A8A] mb-4 sm:mb-6">
           Academic Profile
         </h2>
 
@@ -79,10 +79,10 @@ const AcademicProfile = () => {
               />
             ))}
 
-            <div className="mt-6">
+            <div className="mt-4 sm:mt-6">
               <button
                 type="submit"
-                className="bg-[#1E3A8A] text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
+                className="w-full sm:w-auto bg-[#1E3A8A] text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
               >
                 Save All Changes
               </button>
@@ -90,6 +90,7 @@ const AcademicProfile = () => {
           </form>
         )}
       </div>
+
       {notification.show && (
         <Notification
           message={notification.message}
