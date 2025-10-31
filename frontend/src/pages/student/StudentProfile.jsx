@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import Notification from "../../components/Students/Notification";
+import Notification from "../../components/Students/AcademicProfile/Notification";
 import {
   Eye,
   EyeOff,

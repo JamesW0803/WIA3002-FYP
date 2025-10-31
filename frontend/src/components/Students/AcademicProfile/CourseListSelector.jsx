@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosClient from "../../api/axiosClient";
+import axiosClient from "../../../api/axiosClient";
 
 const CourseListSelector = ({
   selectedCode,
@@ -96,24 +96,39 @@ const CourseListSelector = ({
       <div
         key={course.code}
         onClick={() => !isDisabled && handleSelectCourse(course)}
-        className={`p-3 hover:bg-gray-100 cursor-pointer ${
-          isDisabled ? "opacity-50 cursor-not-allowed" : ""
+        className={`p-3 border-b border-gray-100 last:border-b-0 transition-colors ${
+          isDisabled
+            ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+            : "hover:bg-blue-50 cursor-pointer bg-white"
         }`}
       >
         <div className="flex justify-between items-start">
-          <div>
-            <div className="font-medium text-sm sm:text-base">
-              {course.code} - {course.name} ({course.credit} credits)
+          <div className="flex-1">
+            <div className="font-medium text-sm text-gray-900">
+              {course.code} - {course.name}
+            </div>
+            <div className="text-xs text-gray-600 mt-1">
+              {course.credit} credits
             </div>
             {hasPrerequisites && (
-              <div className="text-[11px] sm:text-xs text-gray-500 mt-1">
+              <div className="text-xs text-gray-500 mt-1">
                 Prerequisites:{" "}
                 {course.prerequisites.map((p) => p.course_code).join(", ")}
               </div>
             )}
             {course.offered_semester?.length > 0 && (
-              <div className="text-[11px] text-gray-500 mt-1">
+              <div className="text-xs text-blue-600 mt-1">
                 Offered: {course.offered_semester.join(", ")}
+              </div>
+            )}
+            {notOffered && (
+              <div className="text-xs text-red-500 mt-1 font-medium">
+                Not offered in Semester {targetSemester}
+              </div>
+            )}
+            {disabledCodes.includes(course.code) && (
+              <div className="text-xs text-red-500 mt-1 font-medium">
+                Already taken
               </div>
             )}
           </div>
@@ -134,27 +149,35 @@ const CourseListSelector = ({
         }}
         onFocus={() => setShowDropdown(true)}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-        className="border rounded p-2 w-full text-sm sm:text-base"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-colors text-sm bg-white"
       />
 
       {showDropdown &&
         (searchTerm.length > 0 || filteredCourses.length > 0) && (
-          <div
-            className="
-            absolute z-10 mt-1 w-full bg-white border rounded shadow-lg
-            max-h-64 sm:max-h-80 overflow-auto
-          "
-          >
+          <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-auto">
             {isLoading ? (
-              <div className="p-2 text-gray-500 text-sm">Loading...</div>
+              <div className="p-4 text-center text-gray-500 text-sm">
+                <div className="flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-[#1E3A8A] border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Loading courses...
+                </div>
+              </div>
             ) : filteredCourses.length === 0 ? (
-              <div className="p-2 text-gray-500 text-sm">
+              <div className="p-4 text-center text-gray-500 text-sm">
                 {searchTerm.length < 2
-                  ? "Type at least 2 characters"
+                  ? "Type at least 2 characters to search"
                   : "No courses found"}
               </div>
             ) : (
-              filteredCourses.map(renderCourseItem)
+              <div>
+                <div className="p-2 bg-gray-50 border-b border-gray-200">
+                  <div className="text-xs font-medium text-gray-600">
+                    {filteredCourses.length} course
+                    {filteredCourses.length !== 1 ? "s" : ""} found
+                  </div>
+                </div>
+                {filteredCourses.map(renderCourseItem)}
+              </div>
             )}
           </div>
         )}

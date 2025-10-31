@@ -1,8 +1,8 @@
 import React from "react";
 import { useAcademicProfile } from "../../hooks/useAcademicProfile";
-import Onboarding from "../../components/Students/Onboarding";
-import YearSection from "../../components/Students/YearSection";
-import Notification from "../../components/Students/Notification";
+import Onboarding from "../../components/Students/AcademicProfile/Onboarding";
+import YearSection from "../../components/Students/AcademicProfile/YearSection";
+import Notification from "../../components/Students/AcademicProfile/Notification";
 
 const AcademicProfile = () => {
   const {
@@ -13,6 +13,8 @@ const AcademicProfile = () => {
     years,
     currentYear,
     currentSemester,
+    studentYear,
+    studentSemester,
     showOnboarding,
     notification,
     gradeOptions,
@@ -72,8 +74,8 @@ const AcademicProfile = () => {
                 isCourseAlreadyAdded={isCourseAlreadyAdded}
                 gradeOptions={gradeOptions}
                 isPastSemester={isPastSemester}
-                currentYear={currentYear}
-                currentSemester={currentSemester}
+                currentYear={studentYear}
+                currentSemester={studentSemester}
                 setEditingEntry={setEditingEntry}
                 entries={entries}
               />
