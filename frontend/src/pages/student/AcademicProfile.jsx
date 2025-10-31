@@ -3,6 +3,7 @@ import { useAcademicProfile } from "../../hooks/useAcademicProfile";
 import Onboarding from "../../components/Students/AcademicProfile/Onboarding";
 import YearSection from "../../components/Students/AcademicProfile/YearSection";
 import Notification from "../../components/Students/AcademicProfile/Notification";
+import PageHeader from "../../components/Students/PageHeader";
 
 const AcademicProfile = () => {
   const {
@@ -50,11 +51,9 @@ const AcademicProfile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1E3A8A] mb-4 sm:mb-6">
-          Academic Profile
-        </h2>
+      <PageHeader title="Academic Profile" />
 
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
         {showOnboarding ? (
           <Onboarding completeOnboarding={completeOnboarding} />
         ) : (

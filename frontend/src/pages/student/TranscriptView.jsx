@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { usePDF } from "react-to-pdf";
 import axiosClient from "../../api/axiosClient";
+import PageHeader from "../../components/Students/PageHeader";
 
 const TranscriptView = () => {
   const [entries, setEntries] = useState([]);
@@ -98,28 +99,24 @@ const TranscriptView = () => {
     return totalCredits ? (totalPoints / totalCredits).toFixed(2) : "-";
   };
 
+  // Latest attempts only (same behavior as your original)
   const latestAttemptsMap = {};
   entries.forEach((entry) => {
     const point = gradeToPoint(entry.grade);
     if (point !== null) {
-      // Assumes entries are chronological (later items overwrite earlier ones).
-      // If not guaranteed, sort entries first by (year, semester) or by a timestamp.
       latestAttemptsMap[entry.code] = entry;
     }
   });
-
   const latestAttempts = Object.values(latestAttemptsMap);
 
   const totalCredits = latestAttempts.reduce(
     (sum, e) => sum + (gradeToPoint(e.grade) > 0 ? e.credit || 0 : 0),
     0
   );
-
   const totalPoints = latestAttempts.reduce(
     (sum, e) => sum + (gradeToPoint(e.grade) || 0) * (e.credit || 0),
     0
   );
-
   const cgpa = totalCredits ? (totalPoints / totalCredits).toFixed(2) : "-";
 
   useEffect(() => {
@@ -134,84 +131,210 @@ const TranscriptView = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-[#1E3A8A]">Transcript View</h2>
+      <PageHeader
+        title="Transcript"
+        subtitle="Your academic history, GPA by semester, and overall CGPA."
+        actions={
           <button
             onClick={() => toPDF()}
-            className="px-4 py-2 bg-[#1E3A8A] text-white rounded-md hover:bg-white hover:text-[#1E3A8A] border border-[#1E3A8A] transition-colors duration-300"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-md border border-[#1E3A8A] bg-[#1E3A8A] text-white hover:bg-white hover:text-[#1E3A8A] transition-colors"
           >
-            Download as PDF
+            Download PDF
           </button>
+        }
+      />
+
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <p className="text-xs text-gray-500">Total Credits (Passed)</p>
+            <p className="text-2xl font-semibold text-gray-800 mt-1">
+              {allPassedCredits}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <p className="text-xs text-gray-500">Total Courses Count</p>
+            <p className="text-2xl font-semibold text-gray-800 mt-1">
+              {entries.length}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <p className="text-xs text-gray-500">CGPA</p>
+            <p className="text-2xl font-semibold text-gray-800 mt-1">{cgpa}</p>
+          </div>
         </div>
 
-        <div ref={targetRef} className="p-6 bg-white rounded-lg shadow-sm">
-          {Object.keys(grouped).length === 0 ? (
-            <p className="text-gray-500 text-center">
-              No transcript data available.
-            </p>
-          ) : (
-            Object.entries(grouped).map(([year, semesters]) => (
-              <div key={year} className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-700 mb-4">
-                  {year}
-                </h3>
-                {Object.entries(semesters).map(([semester, courses]) => {
-                  const semesterGPA = calculateSemesterGPA(courses);
-                  return (
-                    <div key={semester} className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-lg font-medium text-gray-600">
-                          {semester}
-                        </h4>
-                        <span className="text-gray-700 font-medium">
-                          Semester GPA: {semesterGPA}
-                        </span>
-                      </div>
-
-                      <table className="w-full bg-white shadow-md rounded-xl overflow-hidden mb-4">
-                        <thead className="bg-gray-100 text-left">
-                          <tr>
-                            <th className="px-4 py-2 w-1/5">Course Code</th>
-                            <th className="px-4 py-2 w-2/5">Course Name</th>
-                            <th className="px-4 py-2 w-1/5">Credit</th>
-                            <th className="px-4 py-2 w-1/5">Grade</th>
-                            <th className="px-4 py-2 w-1/5">Grade Point</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {courses.map((entry, idx) => (
-                            <tr key={idx} className="border-t">
-                              <td className="px-4 py-2">
-                                {entry.code}
-                                {entry.isRetake && (
-                                  <span className="ml-2 inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
-                                    Retake
-                                  </span>
-                                )}
-                              </td>
-
-                              <td className="px-4 py-2">{entry.name || "-"}</td>
-                              <td className="px-4 py-2">
-                                {entry.credit || "-"}
-                              </td>
-                              <td className="px-4 py-2">{entry.grade}</td>
-                              <td className="px-4 py-2">
-                                {calculateGradePoint(entry)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })}
+        {/* Printable area */}
+        <div
+          ref={targetRef}
+          className="bg-white rounded-xl shadow-sm border border-gray-200"
+        >
+          <div className="p-4 sm:p-6">
+            {Object.keys(grouped).length === 0 ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 w-10 h-10 rounded-full border-4 border-gray-200"></div>
+                  <p className="text-gray-500">
+                    No transcript data available yet.
+                  </p>
+                </div>
               </div>
-            ))
-          )}
+            ) : (
+              Object.entries(grouped).map(([year, semesters]) => (
+                <div key={year} className="mb-8 last:mb-0">
+                  {/* Year header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
+                      {year}
+                    </h3>
+                  </div>
 
-          <div className="text-right text-lg font-semibold text-gray-700 mt-6">
-            Total Credits: {allPassedCredits} | CGPA: {cgpa}
+                  {Object.entries(semesters).map(([semester, courses]) => {
+                    const semesterGPA = calculateSemesterGPA(courses);
+
+                    return (
+                      <section
+                        key={semester}
+                        className="mb-6 last:mb-0 rounded-lg border border-gray-200"
+                      >
+                        {/* Semester header */}
+                        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 bg-gray-50 border-b border-gray-200">
+                          <h4 className="text-base sm:text-lg font-medium text-gray-700">
+                            {semester}
+                          </h4>
+                          <div className="inline-flex items-center gap-2">
+                            <span className="text-sm text-gray-600">GPA</span>
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                              {semesterGPA}
+                            </span>
+                          </div>
+                        </header>
+
+                        {/* Desktop / Tablet table */}
+                        <div className="hidden md:block">
+                          <table className="w-full">
+                            <thead className="bg-white">
+                              <tr className="text-left text-sm text-gray-600 border-b">
+                                <th className="px-5 py-3 w-1/5">Course Code</th>
+                                <th className="px-5 py-3 w-2/5">Course Name</th>
+                                <th className="px-5 py-3 w-1/5">Credit</th>
+                                <th className="px-5 py-3 w-1/5">Grade</th>
+                                <th className="px-5 py-3 w-1/5">Grade Point</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {courses.map((entry, idx) => (
+                                <tr
+                                  key={idx}
+                                  className="border-t text-sm text-gray-800"
+                                >
+                                  <td className="px-5 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold">
+                                        {entry.code}
+                                      </span>
+                                      {entry.isRetake && (
+                                        <span className="inline-block bg-yellow-100 text-yellow-800 text-[11px] font-semibold px-2 py-0.5 rounded">
+                                          Retake
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    {entry.name || "-"}
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    {entry.credit || "-"}
+                                  </td>
+                                  <td className="px-5 py-3">{entry.grade}</td>
+                                  <td className="px-5 py-3">
+                                    {calculateGradePoint(entry)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile cards */}
+                        <div className="md:hidden divide-y">
+                          {courses.map((entry, idx) => (
+                            <div key={idx} className="px-4 py-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-gray-800">
+                                      {entry.code}
+                                    </p>
+                                    {entry.isRetake && (
+                                      <span className="inline-block bg-yellow-100 text-yellow-800 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                                        Retake
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-gray-600 text-sm mt-0.5">
+                                    {entry.name || "-"}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-xs ${
+                                      entry.status === "Passed"
+                                        ? "bg-green-100 text-green-800"
+                                        : entry.status === "Failed"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-yellow-100 text-yellow-800"
+                                    }`}
+                                  >
+                                    {entry.status}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 mt-3 text-sm">
+                                <div className="bg-gray-50 border border-gray-200 rounded-md p-2">
+                                  <p className="text-[11px] text-gray-500">
+                                    Credit
+                                  </p>
+                                  <p className="font-medium">
+                                    {entry.credit || "-"}
+                                  </p>
+                                </div>
+                                <div className="bg-gray-50 border border-gray-200 rounded-md p-2">
+                                  <p className="text-[11px] text-gray-500">
+                                    Grade
+                                  </p>
+                                  <p className="font-medium">{entry.grade}</p>
+                                </div>
+                                <div className="bg-gray-50 border border-gray-200 rounded-md p-2">
+                                  <p className="text-[11px] text-gray-500">
+                                    Grade Point
+                                  </p>
+                                  <p className="font-medium">
+                                    {calculateGradePoint(entry)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer summary (prints nicely) */}
+          <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="text-sm text-gray-600">
+              Showing latest attempts per course for CGPA computation.
+            </div>
+            <div className="text-right sm:text-base font-semibold text-gray-800">
+              Total Credits: {allPassedCredits} &nbsp;|&nbsp; CGPA: {cgpa}
+            </div>
           </div>
         </div>
       </div>
