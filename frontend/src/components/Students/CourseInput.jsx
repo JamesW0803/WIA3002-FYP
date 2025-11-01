@@ -21,10 +21,18 @@ const CourseInput = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Memoize the course status getter
+  useEffect(() => {
+    const handler = () =>
+      setIsMobile(window.matchMedia("(max-width: 640px)").matches);
+    handler();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
   const getCourseStatus = useCallback(
     (courseCode) => {
       const attempts = [];
@@ -51,12 +59,9 @@ const CourseInput = ({
     [completedCoursesByYear]
   );
 
-  // Memoize the filtered courses
   const filteredCourses = useMemo(() => {
     if (!searchTerm.trim()) return [];
-
-    // Filter courses that match search term
-    const matchedCourses = allCourses.filter((course) => {
+    const matched = allCourses.filter((course) => {
       if (!course?.code || !course?.name) return false;
       return (
         course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -64,47 +69,34 @@ const CourseInput = ({
       );
     });
 
-    // Categorize courses
     const available = [];
     const failed = [];
     const taken = [];
-
-    matchedCourses.forEach((course) => {
+    matched.forEach((course) => {
       const status = getCourseStatus(course.code);
-      if (!status) {
-        available.push(course);
-      } else if (status === "Failed") {
-        failed.push(course);
-      } else {
-        taken.push(course);
-      }
+      if (!status) available.push(course);
+      else if (status === "Failed") failed.push(course);
+      else taken.push(course);
     });
-
     return [...available, ...failed, ...taken];
   }, [searchTerm, allCourses, getCourseStatus]);
 
-  // After filteredCourses is defined…
   const enrichedCourses = useMemo(() => {
     if (!semester) return [];
     return filteredCourses.map((course) => {
-      const completedCoursesArray = Array.isArray(passedCourses)
+      const completedArray = Array.isArray(passedCourses)
         ? passedCourses
         : Array.from(passedCourses || []);
       const { isValid, message } = validateCourseAddition(
         course,
         semester,
         allCourses,
-        completedCoursesArray
+        completedArray
       );
-      return {
-        ...course,
-        _canAdd: isValid,
-        _reason: message,
-      };
+      return { ...course, _canAdd: isValid, _reason: message };
     });
   }, [filteredCourses, semester, allCourses, passedCourses]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -116,34 +108,105 @@ const CourseInput = ({
         setShowDropdown(false);
       }
     };
+    if (!isMobile) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isMobile]);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  useEffect(() => {
+    if (isMobile && showDropdown) {
+      const originalStyle = document.body.style.overflow;
+      const originalTouch = document.body.style.touchAction;
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+
+      return () => {
+        document.body.style.overflow = originalStyle;
+        document.body.style.touchAction = originalTouch;
+      };
+    }
+  }, [isMobile, showDropdown]);
+
+  const handlePick = (course) => {
+    if (!course._canAdd) return;
+    setSelectedCourse(course);
+    setSearchTerm(`${course.code} - ${course.name}`);
+    setShowDropdown(false);
+  };
 
   const handleAdd = () => {
     if (!selectedCourse) return;
-
-    // Final validation check before adding
     const validation = validateCourseAddition(
       selectedCourse,
       semester,
       allCourses,
       passedCourses
     );
-
     if (!validation.isValid) {
       alert(`Cannot add course: ${validation.message}`);
       return;
     }
-
     onAdd(selectedCourse.code);
     setSearchTerm("");
     setSelectedCourse(null);
     setShowDropdown(false);
   };
+
+  const list = (
+    <div
+      ref={dropdownRef}
+      className={`bg-white border border-gray-200 rounded-t-2xl sm:rounded-md shadow-xl max-h-[65vh] sm:max-h-60 overflow-y-auto`}
+    >
+      {enrichedCourses.length > 0 ? (
+        <div className="divide-y">
+          {enrichedCourses.map((course) => {
+            const disabled = !course._canAdd;
+            const status = getCourseStatus(course.code);
+            const failed = status === "Failed";
+            const taken = status && status !== "Failed";
+            return (
+              <div
+                key={course.code}
+                className={`p-3 cursor-pointer ${
+                  disabled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-gray-50"
+                } ${failed ? "bg-yellow-50" : ""} ${taken ? "bg-gray-50" : ""}`}
+                onClick={() => !disabled && handlePick(course)}
+              >
+                <div className="font-medium">{course.code}</div>
+                <div className="text-sm">
+                  {course.name}
+                  {failed && (
+                    <span className="text-yellow-700 ml-1">
+                      (Failed – can retake)
+                    </span>
+                  )}
+                  {taken && (
+                    <span className="text-gray-600 ml-1">({status})</span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {course.credit || 0} credits
+                </div>
+                {disabled && course._reason && (
+                  <div className="text-xs text-red-500 mt-1">
+                    {course._reason}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-3 text-sm text-gray-500">
+          {searchTerm ? "No matching courses found" : "Type to search courses"}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="relative w-full">
@@ -151,7 +214,7 @@ const CourseInput = ({
         <div className="relative flex-1">
           <Input
             ref={inputRef}
-            placeholder="Search courses..."
+            placeholder="Search courses…"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -160,13 +223,14 @@ const CourseInput = ({
             onFocus={() => setShowDropdown(true)}
           />
 
-          {showDropdown &&
+          {/* Desktop/Tablet dropdown (portal near input) */}
+          {!isMobile &&
+            showDropdown &&
             searchTerm &&
             inputRef.current &&
             ReactDOM.createPortal(
               <div
-                ref={dropdownRef}
-                className="absolute z-[9999] mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                className="absolute z-[9999] mt-1"
                 style={{
                   position: "absolute",
                   width: inputRef.current.offsetWidth,
@@ -177,116 +241,59 @@ const CourseInput = ({
                     "px",
                 }}
               >
-                {enrichedCourses.length > 0 ? (
-                  <>
-                    {/* Available courses */}
-                    {enrichedCourses
-                      .filter((course) => !getCourseStatus(course.code))
-                      .map((course) => (
-                        <div
-                          key={course.code}
-                          className={`p-2 hover:bg-gray-100 cursor-pointer ${
-                            !course._canAdd
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            if (!course._canAdd) return;
-                            setSelectedCourse(course);
-                            setSearchTerm(`${course.code} - ${course.name}`);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          <div className="font-medium">{course.code}</div>
-                          <div className="text-sm">{course.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {course.credit || 0} credits
-                          </div>
-                          {!course._canAdd && (
-                            <div className="text-xs text-red-500 mt-1">
-                              {course._reason}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-
-                    {/* Failed courses */}
-                    {filteredCourses
-                      .filter(
-                        (course) => getCourseStatus(course.code) === "Failed"
-                      )
-                      .map((course) => (
-                        <div
-                          key={course.code}
-                          className="p-2 hover:bg-gray-100 cursor-pointer bg-yellow-50"
-                          onClick={() => {
-                            setSelectedCourse(course);
-                            setSearchTerm(`${course.code} - ${course.name}`);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          <div className="font-medium">{course.code}</div>
-                          <div className="text-sm">
-                            {course.name}
-                            <span className="text-yellow-600 ml-1">
-                              (Failed - can retake)
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {course.credit || 0} credits
-                          </div>
-                        </div>
-                      ))}
-
-                    {/* Taken courses */}
-                    {filteredCourses
-                      .filter((course) => {
-                        const status = getCourseStatus(course.code);
-                        return status && status !== "Failed";
-                      })
-                      .map((course) => {
-                        const status = getCourseStatus(course.code);
-                        return (
-                          <div
-                            key={course.code}
-                            className="p-2 opacity-50 cursor-not-allowed"
-                            title={`Course already ${status.toLowerCase()}`}
-                          >
-                            <div className="font-medium">{course.code}</div>
-                            <div className="text-sm">
-                              {course.name}{" "}
-                              <span
-                                className={
-                                  status === "Passed"
-                                    ? "text-green-600"
-                                    : "text-yellow-600"
-                                }
-                              >
-                                ({status})
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {course.credit || 0} credits
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </>
-                ) : (
-                  <div className="p-2 text-sm text-gray-500">
-                    {searchTerm
-                      ? "No matching courses found"
-                      : "Type to search courses"}
-                  </div>
-                )}
+                {list}
               </div>,
               document.body
             )}
         </div>
+
         <Button onClick={handleAdd} disabled={!selectedCourse}>
           Add
         </Button>
       </div>
+
+      {/* Mobile bottom sheet */}
+      {isMobile &&
+        showDropdown &&
+        ReactDOM.createPortal(
+          <div className="fixed inset-0 z-[10000] flex flex-col">
+            {/* backdrop */}
+            <div
+              className="flex-1 bg-black/40"
+              onClick={() => setShowDropdown(false)}
+            />
+
+            {/* sheet */}
+            <div className="bg-white rounded-t-2xl shadow-2xl p-3">
+              <div className="h-1.5 w-10 bg-gray-300 rounded-full mx-auto mb-3" />
+
+              {/* ✅ real input living INSIDE the sheet */}
+              <div className="mb-3">
+                <Input
+                  // separate ref so we can focus when the sheet opens
+                  autoFocus
+                  placeholder="Search courses…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {/* your results list */}
+              {list}
+
+              <div className="pt-3 pb-safe">
+                <Button
+                  className="w-full"
+                  disabled={!selectedCourse}
+                  onClick={handleAdd}
+                >
+                  Add Selected Course
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

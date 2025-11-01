@@ -15,32 +15,39 @@ const CourseList = ({
         return (
           <div
             key={index}
-            className={`flex justify-between items-center p-3 rounded-lg ${
+            className={`flex justify-between items-start sm:items-center gap-3 p-3 rounded-lg flex-wrap ${
               isCompleted
                 ? "bg-green-50 border border-green-100"
                 : "bg-gray-50 border border-gray-100"
             }`}
           >
-            <div className="flex items-center gap-3">
+            {/* left */}
+            <div className="flex items-start gap-3 min-w-0">
               {isCompleted ? (
-                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
               ) : (
                 <div className="h-4 w-4 flex-shrink-0" />
               )}
-              <div>
-                <div className="font-medium text-gray-900">{course.code}</div>
-                <div className="text-sm text-gray-600">{course.name}</div>
+              <div className="min-w-0">
+                <div className="font-medium text-gray-900 truncate">
+                  {course.code}
+                </div>
+                <div className="text-sm text-gray-600 break-words">
+                  {course.name}
+                </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {course.credit} credits
                 </div>
               </div>
             </div>
+
+            {/* right */}
             {!isViewMode && removeCourse && !isCompleted && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeCourse(index)}
-                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                className="text-red-600 hover:text-red-800 hover:bg-red-50 ml-auto"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

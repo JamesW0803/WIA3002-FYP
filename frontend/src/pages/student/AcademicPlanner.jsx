@@ -232,28 +232,28 @@ const AcademicPlanner = () => {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-8 bg-gray-100 p-1 rounded-lg max-w-md">
-        <Button
-          variant={activeTab === "program" ? "default" : "ghost"}
-          className={`flex-1 ${
-            activeTab !== "program" ? "hover:bg-gray-50 text-gray-700" : ""
-          }`}
-          onClick={() => setActiveTab("program")}
-        >
-          Program Plans
-        </Button>
-        <Button
-          variant={activeTab === "gpa" ? "default" : "ghost"}
-          className={`flex-1 ${
-            activeTab !== "gpa" ? "hover:bg-gray-50 text-gray-700" : ""
-          }`}
-          onClick={() => setActiveTab("gpa")}
-        >
-          GPA Forecasts
-        </Button>
+      <div className="mb-8">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg max-w-md overflow-x-auto no-scrollbar">
+          <Button
+            variant={activeTab === "program" ? "default" : "ghost"}
+            className={`flex-1 whitespace-nowrap ${
+              activeTab !== "program" ? "hover:bg-gray-50 text-gray-700" : ""
+            }`}
+            onClick={() => setActiveTab("program")}
+          >
+            Program Plans
+          </Button>
+          <Button
+            variant={activeTab === "gpa" ? "default" : "ghost"}
+            className={`flex-1 whitespace-nowrap ${
+              activeTab !== "gpa" ? "hover:bg-gray-50 text-gray-700" : ""
+            }`}
+            onClick={() => setActiveTab("gpa")}
+          >
+            GPA Forecasts
+          </Button>
+        </div>
       </div>
-
       {activeTab === "program" ? (
         <>
           <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

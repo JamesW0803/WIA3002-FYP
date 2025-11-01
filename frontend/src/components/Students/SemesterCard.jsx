@@ -206,18 +206,18 @@ const SemesterCard = ({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-visible relative z-0">
-      <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
-        <h4 className="font-medium text-gray-800 text-sm uppercase tracking-wide">
+    <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden relative z-0">
+      <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border-b">
+        <h4 className="font-medium text-gray-800 text-sm sm:text-base uppercase tracking-wide truncate">
           {actualSemester?.name || "Semester"}
         </h4>
-        <span className="text-sm font-medium text-gray-600 bg-white px-2 py-1 rounded-full border">
+        <span className="text-xs sm:text-sm font-medium text-gray-600 bg-white px-2 py-1 rounded-full border">
           {currentCredits}/{MAX_CREDITS} credits
         </span>
       </div>
 
-      <div className="p-4 relative z-0 overflow-visible">
-        <div className="space-y-3 mb-4">
+      <div className="p-3 sm:p-4 relative z-0 overflow-visible">
+        <div className="space-y-3 mb-4 min-w-0 overflow-x-auto">
           <CourseList
             courses={actualSemester?.courses || []}
             removeCourse={removeCourse}
