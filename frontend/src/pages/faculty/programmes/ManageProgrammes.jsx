@@ -26,6 +26,9 @@ const ManageProgrammes = () => {
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedProgrammeCodeToDelete, setSelectedProgrammeCodeToDelete] = useState(null);
 
+    const [searchKeywords, setSearchKeywords] = useState("");
+
+
     const header = ["Programme Code", "Programme Name", "Department", "Faculty"]
     const order = ["programme_code", "programme_name", "department", "faculty"]
 
@@ -57,6 +60,37 @@ const ManageProgrammes = () => {
         })
         setItems(latestItem);
     }, [programmes])
+
+    useEffect( () => {
+        if(searchKeywords === ""){
+            const fetchProgrammes = async () => {
+                try {
+                    const response = await axiosClient.get("/programmes");
+                    const programmes = response.data;
+                    setProgrammes(programmes);
+                } catch (error) {
+                    console.error("Error fetching programmes: ", error);
+                }
+            };
+            fetchProgrammes();
+        }else{
+            const fetchProgrammes = async () => {
+                try {
+                    const response = await axiosClient.get("/programmes");
+                    const programmes = response.data;
+                    const lowerSearch = searchKeywords.toLowerCase();
+                    const filteredProgrammes = programmes.filter( programmes => 
+                        programmes.programme_name.toLowerCase().includes(lowerSearch) ||
+                        programmes.programme_code.toLowerCase().includes(lowerSearch)
+                    )
+                    setProgrammes(filteredProgrammes);
+                } catch (error) {
+                    console.error("Error fetching programmes: ", error);
+                }
+            };
+            fetchProgrammes();
+        }
+    }, [searchKeywords])
 
     const handleProgrammeOnClick = (programme_code) => {
         navigate(`/admin/programmes/${programme_code}`, { state : { programme_code , editMode : false }})
@@ -138,11 +172,20 @@ const ManageProgrammes = () => {
         }));
     };
 
+    const handleSearchKeywordsChange = (e) => {
+        setSearchKeywords(e.target.value)
+    }
+
     return (
         <div className="programmesPage">
             <Title>Programmes</Title>
             <Divider sx={{ marginX: 5 }} />
             <ToolBar
+                searchBar = {{
+                    searchKeywords : searchKeywords,
+                    onChange : handleSearchKeywordsChange
+                }}
+
                 button = {{
                     title : "Add Programme",
                     onClick : handleButtonAddProgrammeOnClick

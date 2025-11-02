@@ -16,6 +16,8 @@ const ManageProgrammeEnrollment = () => {
 
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedProgrammeIntakeCodeToDelete, setSelectedProgrammeIntakeCodeToDelete] = useState(null);
+        
+    const [searchKeywords, setSearchKeywords] = useState("");
 
     const header = ["Programme Enrollment Code", "Programme Name", "Enrollment Year", "Enrollment Semester"]
     const order = ["programme_intake_code", "programme_name", "year", "semester"]
@@ -53,6 +55,37 @@ const ManageProgrammeEnrollment = () => {
         })
         setItems(latestItem);
     }, [programmeEnrollments])
+
+    useEffect( () => {
+        if(searchKeywords === ""){
+            const fetchProgrammeEnrollments = async () => {
+                try {
+                    const response = await axiosClient.get("/programme-intakes");
+                    const programmeEnrollments = response.data;
+                    setProgrammeEnrollments(programmeEnrollments)
+                } catch (error) {
+                    console.error("Error fetching programme enrollment: ", error);
+                }
+            };
+            fetchProgrammeEnrollments();
+        }else{
+            const fetchProgrammeEnrollments = async () => {
+                try {
+                    const response = await axiosClient.get("/programme-intakes");
+                    const programmeEnrollments = response.data;
+                    const lowerSearch = searchKeywords.toLowerCase();
+                    const filteredProgrammeEnrollments = programmeEnrollments.filter( programmeEnrollment => 
+                        programmeEnrollment.programme_intake_code.toLowerCase().includes(lowerSearch) ||
+                        programmeEnrollment.programme_name.toLowerCase().includes(lowerSearch)
+                    )
+                    setProgrammeEnrollments(filteredProgrammeEnrollments);
+                } catch (error) {
+                    console.error("Error fetching programme enrollment: ", error);
+                }
+            };
+            fetchProgrammeEnrollments();
+        }
+    }, [searchKeywords])
     
     const handleProgrammeEnrollmentOnClick = (programme_intake_code) => {
         // navigate to course page
@@ -97,11 +130,20 @@ const ManageProgrammeEnrollment = () => {
         }
     }
 
+    const handleSearchKeywordsChange = (e) => {
+        setSearchKeywords(e.target.value)
+    }
+
     return (
         <div className="programme-enrollments-page">
             <Title>Programme Enrollment</Title>
             <Divider sx={{ marginX: 5 }} />
             <ToolBar
+                searchBar = {{
+                    searchKeywords : searchKeywords,
+                    onChange : handleSearchKeywordsChange
+                }}
+
                 button = {{
                     title : "Add programme enrollment",
                     onClick : handleButtonAddProgrammeEnrollmentOnClick
