@@ -3,13 +3,13 @@ import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
 
 
-const SearchBar = () => {
+const SearchBar = ({ value , onChange}) => {
     return (
         <TextField
             variant="outlined"
             placeholder="Search"
-            // value={value}
-            // onChange={onChange}
+            value={value}
+            onChange={onChange}
             size="small"
             slotProps={{
                 input: {
