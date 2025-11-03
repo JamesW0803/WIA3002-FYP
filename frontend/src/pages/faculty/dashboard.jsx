@@ -11,7 +11,9 @@ const Dashboard = () => {
 
     const [students, setStudents] = useState([]);
     const [items, setItems] = useState([]);
-    const [clickableItems, setClickableItems] = useState(["username"])
+    // const [clickableItems, setClickableItems] = useState(["username"])
+    const [clickableItems, setClickableItems] = useState([""]) // just for bypass purpose for now
+    
 
     const [searchKeywords, setSearchKeywords] = useState("");
 
@@ -24,6 +26,7 @@ const Dashboard = () => {
                 const response = await axiosClient.get("/students");
                 const students = response.data;
                 setStudents(students);
+                console.log("Fetched students: ", students);
             }catch(error){
                 console.error("Error fetching students.")
             }
