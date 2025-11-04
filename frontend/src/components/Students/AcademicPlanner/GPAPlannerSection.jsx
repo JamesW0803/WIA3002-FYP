@@ -30,6 +30,7 @@ const TipsPanel = () => (
     </summary>
 
     <div className="mt-3 rounded-lg border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-700">
+      {/* unchanged tips body */}
       <ol className="space-y-2 list-decimal pl-5">
         <li>
           <span className="font-semibold text-gray-800">
@@ -114,7 +115,7 @@ const ensurePDFLibs = async () => {
   }
   if (!autoTable) {
     const at = await import("jspdf-autotable");
-    autoTable = at.default || at; // different bundlers export differently
+    autoTable = at.default || at;
   }
 };
 
@@ -122,21 +123,21 @@ const GPAPlannerSection = ({
   completedCoursesByYear = {},
   programPlans = [],
 }) => {
-  const [entries, setEntries] = useState([]); // transcript rows
+  const [entries, setEntries] = useState([]);
   const [currentGPA, setCurrentGPA] = useState(0);
   const [completedCredits, setCompletedCredits] = useState(0);
 
   const [selectedPlanId, setSelectedPlanId] = useState("");
-  const [multiTermCount, setMultiTermCount] = useState(1); // 1..4
+  const [multiTermCount, setMultiTermCount] = useState(1);
 
-  const [upcomingTerms, setUpcomingTerms] = useState([]); // [{label, courses: [{code,name,credit,_key}], credits}]
+  const [upcomingTerms, setUpcomingTerms] = useState([]);
   const [targetCGPA, setTargetCGPA] = useState("");
 
-  const [biasStrength, setBiasStrength] = useState(0.2); // 0..0.5
-  const [weightsMap, setWeightsMap] = useState({}); // key -> weight (0.5..2)
+  const [biasStrength, setBiasStrength] = useState(0.2);
+  const [weightsMap, setWeightsMap] = useState({});
 
   const [requiredAvgForSelection, setRequiredAvgForSelection] = useState(null);
-  const [perTermTargets, setPerTermTargets] = useState([]); // [[]] parallel to upcomingTerms
+  const [perTermTargets, setPerTermTargets] = useState([]);
 
   const [retakeCourse, setRetakeCourse] = useState("");
   const [retakeNewGrade, setRetakeNewGrade] = useState("");
@@ -149,7 +150,7 @@ const GPAPlannerSection = ({
   });
   const [thresholdNotes, setThresholdNotes] = useState([]);
 
-  // 1) Load transcript once
+  // 1) Load transcript
   useEffect(() => {
     const run = async () => {
       const token = localStorage.getItem("token");
@@ -210,7 +211,6 @@ const GPAPlannerSection = ({
             code: c.code,
             name: c.name,
             credit: c.credit || c.credit_hours || 0,
-            // Stable key for weightsMap; includes position to avoid collisions
             _key: `${yi}-${si}-${idx}-${c.code || c.name || "UNK"}`,
           })) || [];
         result.push({
@@ -234,7 +234,6 @@ const GPAPlannerSection = ({
     const terms = getNextNSemesters(plan, multiTermCount);
     setUpcomingTerms(terms);
 
-    // Initialize missing weights to 1
     const nextWeights = { ...weightsMap };
     terms.forEach((t) =>
       t.courses.forEach((c) => {
@@ -244,7 +243,7 @@ const GPAPlannerSection = ({
     setWeightsMap(nextWeights);
   }, [selectedPlanId, multiTermCount, programPlans, getNextNSemesters]); // eslint-disable-line
 
-  // 3) Recompute multi-term requirement & per-course targets
+  // 3) Recompute requirement & per-course targets
   useEffect(() => {
     const upCreditsArr = upcomingTerms.map((t) => t.credits);
     const sumUp = upCreditsArr.reduce((s, x) => s + x, 0);
@@ -280,7 +279,7 @@ const GPAPlannerSection = ({
     biasStrength,
   ]);
 
-  // 4) Threshold notes (uses last term GPA if available)
+  // 4) Threshold notes
   useEffect(() => {
     const lastTermGPA =
       transcriptView.terms.length > 0
@@ -362,7 +361,7 @@ const GPAPlannerSection = ({
       body: rows,
       startY: 38,
       styles: { fontSize: 9 },
-      headStyles: { fillColor: undefined }, // keep default theme
+      headStyles: { fillColor: undefined },
     });
 
     const file = `grade-goals-${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -370,18 +369,18 @@ const GPAPlannerSection = ({
   };
 
   return (
-    <section className="bg-white p-6 rounded-xl shadow-sm border border-[#1E3A8A]/20 space-y-8">
-      <h3 className="text-xl font-semibold text-[#1E3A8A]">
+    <section className="bg-white px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 rounded-xl shadow-sm border border-[#1E3A8A]/20 space-y-6 sm:space-y-8">
+      <h3 className="text-lg sm:text-xl font-semibold text-[#1E3A8A]">
         GPA Simulator & Planner
       </h3>
 
       <TipsPanel />
 
       {/* Snapshot */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-gray-50 p-4 rounded-lg border">
           <p className="text-sm text-gray-600">Cumulative GPA</p>
-          <p className="text-2xl font-bold text-[#1E3A8A]">
+          <p className="text-2xl sm:text-3xl font-bold text-[#1E3A8A]">
             {(transcriptView.cgpa || 0).toFixed(2)}
           </p>
           <p className="text-xs text-gray-500 mt-1">
@@ -390,7 +389,7 @@ const GPAPlannerSection = ({
         </div>
         <div className="lg:col-span-2 bg-gray-50 p-4 rounded-lg border">
           <p className="font-medium text-[#1E3A8A] mb-3">Per-Semester GPA</p>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {transcriptView.terms.length === 0 && (
               <span className="text-sm text-gray-500">No transcript data.</span>
             )}
@@ -407,7 +406,8 @@ const GPAPlannerSection = ({
       </div>
 
       {/* Plan-linked what-if */}
-      <div className="bg-gray-50 p-4 rounded-lg border space-y-4">
+      <div className="bg-gray-50 p-4 sm:p-5 rounded-lg border space-y-4">
+        {/* Controls: stack on mobile, grid on md+ */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:items-end">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -461,20 +461,20 @@ const GPAPlannerSection = ({
 
         {/* Required average summary */}
         <div
-          className={`mt-1 p-3 rounded border ${
+          className={`mt-1 p-3 rounded border text-sm ${
             requiredAvgForSelection && requiredAvgForSelection > 4
               ? "bg-red-50 border-red-200"
               : "bg-white"
           }`}
         >
           {requiredAvgForSelection == null ? (
-            <p className="text-sm text-gray-600">
+            <p className="text-gray-600">
               Choose a plan, number of terms, and set a Target CGPA to see
               requirements and course-level targets.
             </p>
           ) : (
             <>
-              <p className="text-sm text-gray-700">
+              <p className="text-gray-700">
                 To reach{" "}
                 <span className="font-medium">
                   {parseFloat(targetCGPA).toFixed(2)}
@@ -509,7 +509,7 @@ const GPAPlannerSection = ({
             <p className="font-medium text-sm text-[#1E3A8A] mb-2">
               Difficulty/Priority Weights
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
               <label className="text-sm text-gray-700">Bias Strength</label>
               <input
                 type="range"
@@ -518,7 +518,7 @@ const GPAPlannerSection = ({
                 step="0.05"
                 value={biasStrength}
                 onChange={(e) => setBiasStrength(parseFloat(e.target.value))}
-                className="accent-[#1E3A8A]"
+                className="accent-[#1E3A8A] w-full sm:max-w-xs"
               />
               <span className="text-xs text-gray-600">
                 {biasStrength.toFixed(2)}
@@ -533,7 +533,7 @@ const GPAPlannerSection = ({
             <p className="font-medium text-sm text-[#1E3A8A] mb-2">
               Thresholds
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
                 <label className="block text-xs text-gray-600">
                   Dean’s List GPA
@@ -619,15 +619,18 @@ const GPAPlannerSection = ({
             upcomingTerms.map((term, tIdx) => {
               const targets = perTermTargets[tIdx] || [];
               const rows = targets.length ? targets : term.courses;
+
               return (
                 <div key={tIdx} className="bg-white border rounded">
-                  <div className="flex items-center justify-between p-3 border-b">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 border-b">
                     <p className="font-medium text-gray-800">{term.label}</p>
                     <p className="text-sm text-gray-600">
                       {term.credits} credits
                     </p>
                   </div>
-                  <div className="overflow-x-auto">
+
+                  {/* Desktop/tablet table */}
+                  <div className="hidden lg:block overflow-x-auto">
                     <table className="min-w-full bg-white">
                       <thead>
                         <tr className="bg-gray-100 text-left text-sm">
@@ -643,7 +646,9 @@ const GPAPlannerSection = ({
                           const key = c._key || `${tIdx}|${c.code}|${idx}`;
                           return (
                             <tr key={key} className="text-sm">
-                              <td className="p-2 border">{c.code}</td>
+                              <td className="p-2 border whitespace-nowrap">
+                                {c.code}
+                              </td>
                               <td className="p-2 border">{c.name}</td>
                               <td className="p-2 border">{c.credit}</td>
                               <td className="p-2 border">
@@ -668,6 +673,55 @@ const GPAPlannerSection = ({
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile / small-tablet cards */}
+                  <div className="lg:hidden divide-y">
+                    {rows.map((c, idx) => {
+                      const key = c._key || `${tIdx}|${c.code}|${idx}`;
+                      return (
+                        <div key={key} className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="font-semibold text-gray-900">
+                              {c.code}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {c.credit} cr
+                            </div>
+                          </div>
+                          <div className="text-sm text-gray-700 mt-1">
+                            {c.name}
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-3 items-end">
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">
+                                Weight (0.5–2)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0.5"
+                                max="2"
+                                value={weightsMap[key] ?? 1}
+                                onChange={(e) =>
+                                  handleWeightChange(key, e.target.value)
+                                }
+                                className="w-full border rounded px-2 py-2"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">
+                                Suggested Min Grade
+                              </label>
+                              <div className="px-3 py-2 border rounded font-semibold">
+                                {c.target || "—"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })
@@ -675,19 +729,20 @@ const GPAPlannerSection = ({
         </div>
 
         {/* Export */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button
             variant="default"
             onClick={exportGoalsPDF}
             disabled={!upcomingTerms[0]}
+            className="w-full sm:w-auto"
           >
             Export “My Grade Goals (Next Term)” as PDF
           </Button>
         </div>
       </div>
 
-      {/* Retake impact simulator (unchanged UI, kept for completeness) */}
-      <div className="bg-gray-50 p-4 rounded-lg border space-y-3">
+      {/* Retake impact simulator */}
+      <div className="bg-gray-50 p-4 sm:p-5 rounded-lg border space-y-3">
         <p className="font-medium text-[#1E3A8A]">Retake Impact</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
