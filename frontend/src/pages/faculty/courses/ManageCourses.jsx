@@ -18,6 +18,7 @@ const ManageCourses = () => {
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedCourseCodeToDelete, setSelectedCourseCodeToDelete] = useState(null);
 
+    const [searchKeywords, setSearchKeywords] = useState("");
 
     const header = ["Course Code", "Course Name", "Credit Hour", "Type", "Offered In"]
     const order = ["course_code", "course_name", "credit_hours", "type", "offered_semester"]
@@ -58,6 +59,37 @@ const ManageCourses = () => {
         })
         setItems(latestItem);
     }, [courses])
+
+    useEffect( () => {
+        if(searchKeywords === ""){
+            const fetchCourses = async () => {
+                try {
+                    const response = await axiosClient.get("/courses");
+                    const courses = response.data;
+                    setCourses(courses);
+                } catch (error) {
+                    console.error("Error fetching courses: ", error);
+                }
+            };
+            fetchCourses();
+        }else{
+            const fetchCourses = async () => {
+                try {
+                    const response = await axiosClient.get("/courses");
+                    const courses = response.data;
+                    const lowerSearch = searchKeywords.toLowerCase();
+                    const filteredCourses = courses.filter( course => 
+                        course.course_code.toLowerCase().includes(lowerSearch) ||
+                        course.course_name.toLowerCase().includes(lowerSearch)
+                    )
+                    setCourses(filteredCourses);
+                } catch (error) {
+                    console.error("Error fetching courses: ", error);
+                }
+            };
+            fetchCourses();
+        }
+    }, [searchKeywords])
     
     const handleCourseOnClick = (course_code) => {
         // navigate to course page
@@ -102,11 +134,20 @@ const ManageCourses = () => {
         }
     }
 
+    const handleSearchKeywordsChange = (e) => {
+        setSearchKeywords(e.target.value)
+    }
+
     return (
         <div className="coursesPage">
             <Title>Courses</Title>
             <Divider sx={{ marginX: 5 }} />
             <ToolBar
+                searchBar = {{
+                    searchKeywords : searchKeywords,
+                    onChange : handleSearchKeywordsChange
+                }}
+
                 button = {{
                     title : "Add Course",
                     onClick : handleButtonAddCourseOnClick

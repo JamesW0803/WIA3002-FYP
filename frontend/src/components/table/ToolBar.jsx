@@ -8,9 +8,12 @@ const ToolBar = ({searchBar, filter, button, addButton = true}) => {
 
     return (
         <div id="tool-bar" className="flex flex-row justify-between mx-10 mt-10">
-            <SearchBar/>
+            <SearchBar
+                value = {searchBar.searchKeywords}
+                onChange = {searchBar.onChange}
+            />
             <div id="tool-bar-right-session">
-                <Filter/>
+                {/* <Filter/> */}
                 {addButton && 
                     <CustomButton
                         title = {button.title}

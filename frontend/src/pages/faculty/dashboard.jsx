@@ -11,7 +11,11 @@ const Dashboard = () => {
 
     const [students, setStudents] = useState([]);
     const [items, setItems] = useState([]);
-    const [clickableItems, setClickableItems] = useState(["username"])
+    // const [clickableItems, setClickableItems] = useState(["username"])
+    const [clickableItems, setClickableItems] = useState([""]) // just for bypass purpose for now
+    
+
+    const [searchKeywords, setSearchKeywords] = useState("");
 
     const header = ["Name", "Programme", "Current Semester", "Expected Graduation", "Progress", "Status"]
     const order = ["username", "programme_name", "currentSemester", "expectedGraduation", "progress", "status"]
@@ -22,6 +26,7 @@ const Dashboard = () => {
                 const response = await axiosClient.get("/students");
                 const students = response.data;
                 setStudents(students);
+                console.log("Fetched students: ", students);
             }catch(error){
                 console.error("Error fetching students.")
             }
@@ -45,6 +50,37 @@ const Dashboard = () => {
         setItems(latestItem);
     }, [students])
 
+    useEffect( () => {
+        if(searchKeywords === ""){
+            const fetchStudents = async () =>{
+                try {
+                    const response = await axiosClient.get("/students");
+                    const students = response.data;
+                    setStudents(students);
+                }catch(error){
+                    console.error("Error fetching students.")
+                }
+            }
+            fetchStudents();
+        }else{
+            const fetchStudents = async () =>{
+                try {
+                    const response = await axiosClient.get("/students");
+                    const students = response.data;
+                    const lowerSearch = searchKeywords.toLowerCase();
+                    const filteredStudents = students.filter( student => 
+                        student.username.toLowerCase().includes(lowerSearch) 
+                        // || student.course_name.toLowerCase().includes(lowerSearch)
+                    )
+                    setStudents(filteredStudents);
+                }catch(error){
+                    console.error("Error fetching students.")
+                }
+            }
+            fetchStudents();
+        }
+    }, [searchKeywords])
+
     const handleStudentOnClick = ( student_name ) => {
         // navigate to student details page
         navigate(`/admin/student-progress/${student_name}`, { state : { student_name }})
@@ -58,12 +94,21 @@ const Dashboard = () => {
         deleteButton : null
     }
 
-
+    const handleSearchKeywordsChange = (e) => {
+        setSearchKeywords(e.target.value)
+    }
+    
     return (
         <div className="dashboard">
             <Title>Students' Progress</Title>
             <Divider sx={{ marginX: 5 }} />
-            <ToolBar addButton={false}/>
+            <ToolBar 
+                searchBar = {{
+                    searchKeywords : searchKeywords,
+                    onChange : handleSearchKeywordsChange
+                }}
+            
+                addButton={false}/>
             <Table
                 header={header}
                 items={items}
