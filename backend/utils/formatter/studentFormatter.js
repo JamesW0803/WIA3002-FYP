@@ -39,7 +39,7 @@ const formatStudent = async (student) => {
         expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",
         progress : studentProgress.percentage,
         status : studentProgress.status ,
-        programmeIntake
+        programme_intake_id : programmeIntake ? programmeIntake._id : null
     }
 }
 

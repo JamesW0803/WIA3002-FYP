@@ -129,8 +129,9 @@ const addProgrammeIntake = async (req, res) => {
 const getProgrammeIntakeById = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("Fetching programme intake with ID:", id);
 
-    const programmeIntake = await ProgrammeIntake.findOne({programme_intake_code : id})
+    const programmeIntake = await ProgrammeIntake.findById(id)
       .populate("graduation_requirements")
       .populate("programme_id")
       .populate("academic_session_id")
