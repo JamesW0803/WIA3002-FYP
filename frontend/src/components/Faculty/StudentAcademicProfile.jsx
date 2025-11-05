@@ -1,4 +1,6 @@
-import React from 'react';
+import { useState , useEffect } from 'react';
+import { useOutletContext } from "react-router-dom";
+import { READABLE_COURSE_TYPES } from "../../constants/courseType";
 import {
   Accordion,
   AccordionSummary,
@@ -14,61 +16,6 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
-const coursePlan = [
-  {
-    year: 'Year 1',
-    semesters: [
-      {
-        name: 'Semester 1',
-        courses: [
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    year: 'Year 2',
-    semesters: [
-      {
-        name: 'Semester 1',
-        courses: [
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    year: 'Year 3',
-    semesters: [],
-  },
-  {
-    year: 'Year 4',
-    semesters: [],
-  },
-];
-
 const CourseTable = ({ courses }) => (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
@@ -81,20 +28,50 @@ const CourseTable = ({ courses }) => (
         </TableRow>
       </TableHead>
       <TableBody>
-        {courses.map((course, index) => (
+        {courses.map((courseObj, index) => {
+          const course = courseObj.course;
+          return (
           <TableRow key={index}>
-            <TableCell>{course.code}</TableCell>
-            <TableCell>{course.name}</TableCell>
-            <TableCell>{course.credit}</TableCell>
-            <TableCell>{course.type}</TableCell>
+            <TableCell>{course.course_code}</TableCell>
+            <TableCell>{course.course_name}</TableCell>
+            <TableCell>{course.credit_hours}</TableCell>
+            <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
           </TableRow>
-        ))}
+          )
+        })}
       </TableBody>
     </Table>
   </TableContainer>
 );
 
 const StudentAcademicProfile = () => {
+  const { academicProfile } = useOutletContext();
+  const [ academicProfileSortedByYear , setAcademicProfileSortedByYear ] = useState([]);
+
+  useEffect( () => {
+    if(academicProfile && academicProfile.entries.length>0){
+      const coursesTaken = academicProfile.entries;
+      const sortedEntries = coursesTaken.reduce( (acc,courseObj) => {
+        const year = courseObj.year;
+        const semester = courseObj.semester;
+
+        if(!acc[year-1]){
+          acc[year-1] = [];
+        }
+        
+        if(!acc[year-1][semester-1]){
+          acc[year-1][semester-1] = [];
+        }
+
+        acc[year-1][semester-1].push(courseObj);
+        return acc;
+
+      }, []); 
+      setAcademicProfileSortedByYear(sortedEntries);
+    }
+
+  }, [academicProfile]);
+
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>
@@ -102,19 +79,19 @@ const StudentAcademicProfile = () => {
         (Software Engineering) session 2022/2023 Semester 1
       </Typography>
 
-      {coursePlan.map((yearItem, yearIdx) => (
+      {academicProfileSortedByYear.map((yearItem, yearIdx) => (
         <Accordion key={yearIdx} defaultExpanded={yearIdx === 0}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography fontWeight="bold">{yearItem.year}</Typography>
+            <Typography fontWeight="bold">{"Year " + (yearIdx+1)}</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            {yearItem.semesters.length > 0 ? (
-              yearItem.semesters.map((semester, semIdx) => (
+            {yearItem.length > 0 ? (
+              yearItem.map((semesterCourses, semIdx) => (
                 <div key={semIdx}>
                   <Typography variant="subtitle1" gutterBottom>
-                    {semester.name}
+                    {"Semester " + (semIdx + 1)}
                   </Typography>
-                  <CourseTable courses={semester.courses} />
+                  <CourseTable courses={semesterCourses} />
                 </div>
               ))
             ) : (

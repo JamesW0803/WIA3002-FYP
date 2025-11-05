@@ -36,7 +36,7 @@ const formatStudent = async (student) => {
         faculty: faculty,
 
         currentSemester : await getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession) ?? "-",
-        expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(0,4) : "-",
+        expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",
         progress : studentProgress.percentage,
         status : studentProgress.status ,
         programmeIntake
@@ -63,7 +63,7 @@ const getExpectedGraduation = async ( programmeIntake ) => {
     const minSemester = programmeIntake ? programmeIntake.min_semester : 0;
 
     let expectedGraduationSession = await AcademicSession.findById(programmeIntake.academic_session_id);
-    for(let i=0; i< minSemester; i++){
+    for(let i=1; i< minSemester; i++){
         if(expectedGraduationSession.next == null){
             break;
         }

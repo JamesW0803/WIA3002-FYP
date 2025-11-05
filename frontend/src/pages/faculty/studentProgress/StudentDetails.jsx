@@ -69,7 +69,7 @@ const StudentDetails = () => {
                 editMode={editMode}
             />
             <NavTab/>
-            <ChildrenContent/>   
+            <ChildrenContent academicProfile={student.academicProfile}/>   
             <ActionBar button1={backButton} button2={null}/>
         </div> 
     )
@@ -117,10 +117,10 @@ const NavTab = () => {
     )
 }
 
-const ChildrenContent = () => {
+const ChildrenContent = ({ academicProfile }) => {
     return (
       <div className="p-4">
-        <Outlet />
+        <Outlet context={{ academicProfile }}/>
       </div>
     )
 }
