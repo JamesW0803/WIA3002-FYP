@@ -1,5 +1,5 @@
 import React from "react";
-import { useAcademicProfile } from "../../hooks/useAcademicProfile";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 import CourseEntry from "./CourseEntry";
 import CourseEditor from "./CourseEditor";
 
@@ -28,8 +28,18 @@ const SemesterSection = ({
     (entry) => entry.year === year && entry.semester === semester
   );
 
+  const isEditingHere =
+    editingEntry?.year === year && editingEntry?.semester === semester;
   return (
-    <div key={semester} className="mb-4 sm:mb-6 sm:ml-4">
+    <div
+      key={semester}
+      className={`mb-4 sm:mb-6 sm:ml-4 relative ${
+        isEditingHere ? "z-30" : "z-0"
+      } ${
+        // a little extra space so the dropdown never gets covered on small screens
+        isEditingHere ? "pb-8" : ""
+      }`}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
         <h4 className="text-base sm:text-lg font-medium">
           Semester {semester}

@@ -80,15 +80,21 @@ const PlanCard = ({
   return (
     <Card className="bg-white shadow-md overflow-visible relative z-0">
       <CardContent className="p-6 space-y-6 overflow-visible relative z-0">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="text-xl font-semibold">{plan.name}</h3>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <h3 className="text-lg sm:text-xl font-semibold truncate">
+              {plan.name}
+            </h3>
             <p className="text-sm text-gray-600">
               Total Credits: {totalCredits}
             </p>
           </div>
           {!isViewMode && plan.years.length < 4 && (
-            <Button variant="outline" onClick={addYear} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={addYear}
+              className="gap-2 w-full sm:w-auto"
+            >
               <Plus className="w-4 h-4" />
               Add Year
             </Button>

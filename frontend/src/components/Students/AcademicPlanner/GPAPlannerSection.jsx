@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useReducer, useCallback } from "react";
 import axiosClient from "../../../api/axiosClient";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
@@ -12,6 +12,33 @@ import {
   safeNum,
   checkThresholds,
 } from "./utils/gpaUtils";
+
+let jsPDF, autoTable;
+const ensurePDFLibs = async () => {
+  if (!jsPDF) jsPDF = (await import("jspdf")).default;
+  if (!autoTable) {
+    const at = await import("jspdf-autotable");
+    autoTable = at.default || at;
+  }
+};
+
+const Panel = ({ title, children, footer, className = "" }) => (
+  <div
+    className={`bg-gray-50 p-4 sm:p-5 rounded-lg border space-y-3 ${className}`}
+  >
+    {title ? <p className="font-medium text-[#1E3A8A]">{title}</p> : null}
+    {children}
+    {footer}
+  </div>
+);
+
+const Metric = ({ label, value, sub }) => (
+  <div className="bg-gray-50 p-4 rounded-lg border">
+    <p className="text-sm text-gray-600">{label}</p>
+    <p className="text-2xl sm:text-3xl font-bold text-[#1E3A8A]">{value}</p>
+    {sub ? <p className="text-xs text-gray-500 mt-1">{sub}</p> : null}
+  </div>
+);
 
 const TipsPanel = () => (
   <details className="group">
@@ -32,126 +59,81 @@ const TipsPanel = () => (
     <div className="mt-3 rounded-lg border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-700">
       <ol className="space-y-2 list-decimal pl-5">
         <li>
-          <span className="font-semibold text-gray-800">
-            Check your snapshot:
-          </span>{" "}
-          See your current CGPA and past term GPAs at the top. This sets your
-          starting point.
+          <span className="font-semibold">Check your snapshot</span>…
         </li>
         <li>
-          <span className="font-semibold text-gray-800">Select a Plan</span> and
-          choose <span className="font-semibold">Include Upcoming Terms</span>{" "}
-          (1–4). We’ll automatically pull the next N semesters from that plan.
+          <span className="font-semibold">Select a Plan</span>…
         </li>
         <li>
-          Set a <span className="font-semibold">Target CGPA</span>. The planner
-          computes the <span className="font-semibold">required average</span>{" "}
-          across your selected terms. If it’s{" "}
-          <span className="font-semibold text-red-600">&gt; 4.00</span>, that’s
-          impossible—add more terms, adjust credits, or lower the target.
+          Set a <span className="font-semibold">Target CGPA</span>…
         </li>
         <li>
-          Tune per-course <span className="font-semibold">Weights (0.5–2)</span>{" "}
-          to mark difficulty/priority. Use the blue{" "}
-          <span className="font-semibold">Bias Strength</span> slider to “nudge”
-          suggestions: higher-weighted courses will get slightly higher
-          suggested grades while keeping the overall average correct.
+          Tune <span className="font-semibold">Weights</span> and{" "}
+          <span className="font-semibold">Bias</span>…
         </li>
         <li>
-          Use <span className="font-semibold">Thresholds</span> (Dean’s List GPA
-          & minimum credits; probation CGPA) to get warnings if your plan risks
-          missing them. Adjust credits/weights/terms until warnings clear.
+          Use <span className="font-semibold">Thresholds</span>…
         </li>
         <li>
-          Review each term’s table. The{" "}
-          <span className="font-semibold">Suggested Min Grade</span> is a
-          planning target—not a guarantee. You can tweak weights to better match
-          your strategy.
+          Review <span className="font-semibold">Suggested Min Grade</span>…
         </li>
+        <li>Export the PDF summary…</li>
         <li>
-          Click{" "}
-          <span className="font-semibold">
-            Export “My Grade Goals (Next Term)”
-          </span>{" "}
-          to save a PDF summary of your next term’s targets for quick reference.
-        </li>
-        <li>
-          Use <span className="font-semibold">Retake Impact</span> to simulate
-          how replacing a failed course with a new grade could improve your
-          CGPA. (Assumption: the retake adds new passed credits and the original
-          F doesn’t count toward CGPA—adjust if your university differs.)
+          Use <span className="font-semibold">Retake Impact</span>…
         </li>
       </ol>
-
-      <div className="mt-3 rounded-md bg-gray-50 p-3 text-xs text-gray-600">
-        <p className="mb-1 font-semibold text-gray-700">Pro tips</p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>
-            Want Dean’s List? Set the threshold and aim for per-course targets
-            that keep the required average at or above that GPA with enough
-            credits.
-          </li>
-          <li>
-            If a term looks tight, increase credits this term or spread targets
-            over more terms (multi-term mode).
-          </li>
-          <li>
-            Bias Strength is capped to prevent extreme targets; it’s meant to
-            guide effort, not replace study strategy.
-          </li>
-        </ul>
-      </div>
     </div>
   </details>
 );
 
-// Lazy import for smaller bundle; requires: npm i jspdf jspdf-autotable
-let jsPDF, autoTable;
-const ensurePDFLibs = async () => {
-  if (!jsPDF) {
-    const mod = await import("jspdf");
-    jsPDF = mod.default;
-  }
-  if (!autoTable) {
-    const at = await import("jspdf-autotable");
-    autoTable = at.default || at; // different bundlers export differently
-  }
+const initialState = {
+  selectedPlanId: "",
+  multiTermCount: 1,
+  targetCGPA: "",
+  biasStrength: 0.2,
+  thresholds: { deansListGPA: 3.7, deansMinCredits: 16, probationGPA: 2.0 },
+  weightsMap: {},
+
+  // retake controls
+  retakeCourse: "",
+  retakeNewGrade: "",
 };
 
+function reducer(state, action) {
+  switch (action.type) {
+    case "plan/set":
+      return { ...state, selectedPlanId: action.id };
+    case "terms/setCount":
+      return { ...state, multiTermCount: action.n };
+    case "target/set":
+      return { ...state, targetCGPA: action.value };
+    case "bias/set":
+      return { ...state, biasStrength: action.value };
+    case "thresholds/set":
+      return { ...state, thresholds: { ...state.thresholds, ...action.patch } };
+    case "weights/setOne":
+      return {
+        ...state,
+        weightsMap: { ...state.weightsMap, [action.key]: action.value },
+      };
+    case "retake/setCourse":
+      return { ...state, retakeCourse: action.value };
+    case "retake/setGrade":
+      return { ...state, retakeNewGrade: action.value };
+    default:
+      return state;
+  }
+}
+
+// --- Main ---
 const GPAPlannerSection = ({
   completedCoursesByYear = {},
   programPlans = [],
 }) => {
-  const [entries, setEntries] = useState([]); // transcript rows
-  const [currentGPA, setCurrentGPA] = useState(0);
-  const [completedCredits, setCompletedCredits] = useState(0);
-
-  const [selectedPlanId, setSelectedPlanId] = useState("");
-  const [multiTermCount, setMultiTermCount] = useState(1); // 1..4
-
-  const [upcomingTerms, setUpcomingTerms] = useState([]); // [{label, courses: [{code,name,credit,_key}], credits}]
-  const [targetCGPA, setTargetCGPA] = useState("");
-
-  const [biasStrength, setBiasStrength] = useState(0.2); // 0..0.5
-  const [weightsMap, setWeightsMap] = useState({}); // key -> weight (0.5..2)
-
-  const [requiredAvgForSelection, setRequiredAvgForSelection] = useState(null);
-  const [perTermTargets, setPerTermTargets] = useState([]); // [[]] parallel to upcomingTerms
-
-  const [retakeCourse, setRetakeCourse] = useState("");
-  const [retakeNewGrade, setRetakeNewGrade] = useState("");
-  const [retakeResult, setRetakeResult] = useState(null);
-
-  const [thresholds, setThresholds] = useState({
-    deansListGPA: 3.7,
-    deansMinCredits: 16,
-    probationGPA: 2.0,
-  });
-  const [thresholdNotes, setThresholdNotes] = useState([]);
-
-  // 1) Load transcript once
+  // Transcript entries loaded once
+  const [entries, setEntries] = React.useState([]);
   useEffect(() => {
-    const run = async () => {
+    (async () => {
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
       if (!token || !userId) return;
@@ -159,179 +141,154 @@ const GPAPlannerSection = ({
         const res = await axiosClient.get(`/academic-profile/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const es = res.data.entries || [];
-        setEntries(es);
-
-        const { cgpa, totalCredits } = computeTermAndCumulative(es);
-        setCurrentGPA(Number(cgpa.toFixed(2)));
-        setCompletedCredits(totalCredits);
+        setEntries(res.data.entries || []);
       } catch (e) {
         console.error("Failed to load transcript", e);
       }
-    };
-    run();
+    })();
   }, []);
 
-  // Transcript views
-  const transcriptView = useMemo(
+  // Derived transcript view (single source of truth)
+  const transcript = useMemo(
     () => computeTermAndCumulative(entries),
     [entries]
   );
+  const completedCredits = transcript.totalCredits || 0;
+  const currentGPA = transcript.cgpa || 0;
 
-  // Build retake candidates (Failed only)
+  // Retake candidates (derived)
   const failedList = useMemo(() => {
-    const set = new Map();
-    entries.forEach((e) => {
+    const map = new Map();
+    for (const e of entries) {
       if (e.status === "Failed") {
-        const code = e.course?.course_code || e.course?.code;
-        const key = code || `${e.year}-${e.semester}-${e.course?._id}`;
-        set.set(key, {
-          code: code || "UNK",
-          name: e.course?.course_name || e.course?.name || "Course",
-          credit: e.course?.credit_hours || e.course?.credit || 0,
-        });
+        const code = e.course?.course_code || e.course?.code || "UNK";
+        if (!map.has(code)) {
+          map.set(code, {
+            code,
+            name: e.course?.course_name || e.course?.name || "Course",
+            credit: e.course?.credit_hours || e.course?.credit || 0,
+          });
+        }
       }
-    });
-    return Array.from(set.values());
+    }
+    return Array.from(map.values());
   }, [entries]);
 
-  // Helper: Extract next N semesters from selected plan
-  const getNextNSemesters = useCallback((plan, n) => {
+  // Planner inputs/state
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  // Next N semesters from selected plan (derived)
+  const upcomingTerms = useMemo(() => {
+    if (!state.selectedPlanId) return [];
+    const plan = programPlans.find((p) => p.id === state.selectedPlanId);
     if (!plan) return [];
-    const result = [];
+    const out = [];
     let count = 0;
-    for (let yi = 0; yi < (plan.years || []).length && count < n; yi++) {
-      const y = plan.years[yi];
-      for (let si = 0; si < (y.semesters || []).length && count < n; si++) {
-        const s = y.semesters[si];
-        const label = `Year ${y.year || yi + 1} • Sem ${s.semester || si + 1}`;
-        const courses =
-          (s.courses || []).map((c, idx) => ({
-            code: c.code,
-            name: c.name,
-            credit: c.credit || c.credit_hours || 0,
-            // Stable key for weightsMap; includes position to avoid collisions
-            _key: `${yi}-${si}-${idx}-${c.code || c.name || "UNK"}`,
-          })) || [];
-        result.push({
-          label,
+    for (const [yi, y] of (plan.years || []).entries()) {
+      for (const [si, s] of (y.semesters || []).entries()) {
+        if (count >= state.multiTermCount) break;
+        const courses = (s.courses || []).map((c, idx) => ({
+          code: c.code,
+          name: c.name,
+          credit: c.credit || c.credit_hours || 0,
+          _key: `${yi}-${si}-${idx}-${c.code || c.name || "UNK"}`,
+        }));
+        out.push({
+          label: `Year ${y.year || yi + 1} • Sem ${s.semester || si + 1}`,
           courses,
           credits: courses.reduce((sum, c) => sum + safeNum(c.credit), 0),
         });
         count++;
       }
+      if (count >= state.multiTermCount) break;
     }
-    return result;
-  }, []);
+    return out;
+  }, [state.selectedPlanId, state.multiTermCount, programPlans]);
 
-  // 2) Update terms when plan or multiTermCount changes
-  useEffect(() => {
-    if (!selectedPlanId) {
-      setUpcomingTerms([]);
-      return;
-    }
-    const plan = programPlans.find((p) => p.id === selectedPlanId);
-    const terms = getNextNSemesters(plan, multiTermCount);
-    setUpcomingTerms(terms);
+  // Auto-seed weights for any new course keys
+  const weightsMap = useMemo(() => {
+    const next = { ...state.weightsMap };
+    for (const t of upcomingTerms)
+      for (const c of t.courses) {
+        if (next[c._key] == null) next[c._key] = 1;
+      }
+    return next;
+  }, [state.weightsMap, upcomingTerms]);
 
-    // Initialize missing weights to 1
-    const nextWeights = { ...weightsMap };
-    terms.forEach((t) =>
-      t.courses.forEach((c) => {
-        if (nextWeights[c._key] == null) nextWeights[c._key] = 1;
-      })
-    );
-    setWeightsMap(nextWeights);
-  }, [selectedPlanId, multiTermCount, programPlans, getNextNSemesters]); // eslint-disable-line
-
-  // 3) Recompute multi-term requirement & per-course targets
-  useEffect(() => {
-    const upCreditsArr = upcomingTerms.map((t) => t.credits);
-    const sumUp = upCreditsArr.reduce((s, x) => s + x, 0);
-
-    if (!targetCGPA || sumUp <= 0) {
-      setRequiredAvgForSelection(null);
-      setPerTermTargets([]);
-      return;
-    }
-
-    const req = requiredMultiTermGPAForTarget(
+  // Requirement + per-course suggestions (derived)
+  const requiredAvgForSelection = useMemo(() => {
+    const creditsArr = upcomingTerms.map((t) => t.credits);
+    const sum = creditsArr.reduce((s, x) => s + x, 0);
+    if (!state.targetCGPA || sum <= 0) return null;
+    return requiredMultiTermGPAForTarget(
       currentGPA,
       completedCredits,
-      parseFloat(targetCGPA),
-      upCreditsArr
+      parseFloat(state.targetCGPA),
+      creditsArr
     );
-    setRequiredAvgForSelection(req);
+  }, [state.targetCGPA, upcomingTerms, currentGPA, completedCredits]);
 
-    if (req != null) {
-      const targets = upcomingTerms.map((t) =>
-        suggestPerCourseGradesWeighted(t.courses, req, weightsMap, biasStrength)
-      );
-      setPerTermTargets(targets);
-    } else {
-      setPerTermTargets([]);
-    }
-  }, [
-    targetCGPA,
-    upcomingTerms,
-    currentGPA,
-    completedCredits,
-    weightsMap,
-    biasStrength,
-  ]);
+  const perTermTargets = useMemo(() => {
+    if (requiredAvgForSelection == null) return [];
+    return upcomingTerms.map((t) =>
+      suggestPerCourseGradesWeighted(
+        t.courses,
+        requiredAvgForSelection,
+        weightsMap,
+        state.biasStrength
+      )
+    );
+  }, [upcomingTerms, requiredAvgForSelection, weightsMap, state.biasStrength]);
 
-  // 4) Threshold notes (uses last term GPA if available)
-  useEffect(() => {
-    const lastTermGPA =
-      transcriptView.terms.length > 0
-        ? transcriptView.terms[transcriptView.terms.length - 1].gpa
-        : null;
+  // Threshold notes (derived)
+  const thresholdNotes = useMemo(() => {
+    const lastTermGPA = transcript.terms.length
+      ? transcript.terms[transcript.terms.length - 1].gpa
+      : null;
     const firstTermCredits = upcomingTerms[0]?.credits || 0;
-
-    const notes = checkThresholds({
+    return checkThresholds({
       termGPARequired: requiredAvgForSelection,
       termCreditsPlanned: firstTermCredits,
       cgpaNow: currentGPA,
       lastTermGPA,
-      thresholds,
+      thresholds: state.thresholds,
     });
-    setThresholdNotes(notes);
   }, [
     requiredAvgForSelection,
     upcomingTerms,
     currentGPA,
-    transcriptView.terms,
-    thresholds,
+    transcript.terms,
+    state.thresholds,
   ]);
 
-  const handleWeightChange = (key, val) => {
-    const v = Math.max(0.5, Math.min(2, parseFloat(val) || 1));
-    setWeightsMap((prev) => ({ ...prev, [key]: v }));
-  };
-
-  const handleSimulateRetake = () => {
+  // Retake preview (derived)
+  const retakeResult = useMemo(() => {
+    const picked = failedList.find((f) => f.code === state.retakeCourse);
+    if (!picked || !state.retakeNewGrade) return null;
     const curPts = currentGPA * completedCredits;
-    const picked = failedList.find((f) => f.code === retakeCourse);
-    if (!picked || !retakeNewGrade) {
-      setRetakeResult(null);
-      return;
-    }
     const { newCGPA } = simulateRetake(
       curPts,
       completedCredits,
       picked.credit,
-      retakeNewGrade
+      state.retakeNewGrade
     );
-    setRetakeResult({ from: currentGPA, to: Number(newCGPA.toFixed(2)) });
-  };
+    return { from: currentGPA, to: Number(newCGPA.toFixed(2)) };
+  }, [
+    failedList,
+    state.retakeCourse,
+    state.retakeNewGrade,
+    currentGPA,
+    completedCredits,
+  ]);
 
-  const exportGoalsPDF = async () => {
+  // PDF export (unchanged function, just uses derived data)
+  const exportGoalsPDF = useCallback(async () => {
     if (!upcomingTerms[0]) return;
     await ensurePDFLibs();
 
     const doc = new jsPDF();
     const planName =
-      programPlans.find((p) => p.id === selectedPlanId)?.name ||
+      programPlans.find((p) => p.id === state.selectedPlanId)?.name ||
       "Selected Plan";
 
     doc.setFontSize(14);
@@ -339,7 +296,7 @@ const GPAPlannerSection = ({
     doc.setFontSize(10);
     doc.text(`Plan: ${planName}`, 14, 22);
     doc.text(
-      `Target CGPA: ${targetCGPA || "—"}   Required Term Avg: ${
+      `Target CGPA: ${state.targetCGPA || "—"}   Required Term Avg: ${
         requiredAvgForSelection != null
           ? requiredAvgForSelection.toFixed(2)
           : "—"
@@ -349,52 +306,55 @@ const GPAPlannerSection = ({
     );
     doc.text(`Term: ${upcomingTerms[0].label}`, 14, 34);
 
-    const rows =
-      (perTermTargets[0] || upcomingTerms[0].courses).map((c) => [
-        c.code || "",
-        c.name || "",
-        String(c.credit),
-        (c.target || "—").toString(),
-      ]) || [];
+    const rows = (perTermTargets[0] || upcomingTerms[0].courses).map((c) => [
+      c.code || "",
+      c.name || "",
+      String(c.credit),
+      (c.target || "—").toString(),
+    ]);
 
     autoTable(doc, {
       head: [["Code", "Name", "Credits", "Suggested Min Grade"]],
       body: rows,
       startY: 38,
       styles: { fontSize: 9 },
-      headStyles: { fillColor: undefined }, // keep default theme
+      headStyles: { fillColor: undefined },
     });
 
     const file = `grade-goals-${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(file);
-  };
+  }, [
+    upcomingTerms,
+    perTermTargets,
+    programPlans,
+    state.selectedPlanId,
+    state.targetCGPA,
+    requiredAvgForSelection,
+  ]);
 
+  // --- Render ---
   return (
-    <section className="bg-white p-6 rounded-xl shadow-sm border border-[#1E3A8A]/20 space-y-8">
-      <h3 className="text-xl font-semibold text-[#1E3A8A]">
+    <section className="bg-white px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 rounded-xl shadow-sm border border-[#1E3A8A]/20 space-y-6 sm:space-y-8">
+      <h3 className="text-lg sm:text-xl font-semibold text-[#1E3A8A]">
         GPA Simulator & Planner
       </h3>
 
       <TipsPanel />
 
       {/* Snapshot */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-gray-50 p-4 rounded-lg border">
-          <p className="text-sm text-gray-600">Cumulative GPA</p>
-          <p className="text-2xl font-bold text-[#1E3A8A]">
-            {(transcriptView.cgpa || 0).toFixed(2)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Completed Credits: {completedCredits}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <Metric
+          label="Cumulative GPA"
+          value={(transcript.cgpa || 0).toFixed(2)}
+          sub={`Completed Credits: ${completedCredits}`}
+        />
         <div className="lg:col-span-2 bg-gray-50 p-4 rounded-lg border">
           <p className="font-medium text-[#1E3A8A] mb-3">Per-Semester GPA</p>
-          <div className="flex flex-wrap gap-3">
-            {transcriptView.terms.length === 0 && (
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            {!transcript.terms.length && (
               <span className="text-sm text-gray-500">No transcript data.</span>
             )}
-            {transcriptView.terms.map((t, i) => (
+            {transcript.terms.map((t, i) => (
               <div key={i} className="px-3 py-2 rounded border bg-white">
                 <div className="text-xs text-gray-600">{t.label}</div>
                 <div className="font-semibold">
@@ -406,8 +366,8 @@ const GPAPlannerSection = ({
         </div>
       </div>
 
-      {/* Plan-linked what-if */}
-      <div className="bg-gray-50 p-4 rounded-lg border space-y-4">
+      {/* Controls + Summary */}
+      <Panel>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:items-end">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -415,8 +375,10 @@ const GPAPlannerSection = ({
             </label>
             <select
               className="w-full border rounded px-3 py-2"
-              value={selectedPlanId}
-              onChange={(e) => setSelectedPlanId(e.target.value)}
+              value={state.selectedPlanId}
+              onChange={(e) =>
+                dispatch({ type: "plan/set", id: e.target.value })
+              }
             >
               <option value="">— Choose a saved plan —</option>
               {programPlans.map((p) => (
@@ -435,8 +397,10 @@ const GPAPlannerSection = ({
               min="0"
               max="4"
               step="0.01"
-              value={targetCGPA}
-              onChange={(e) => setTargetCGPA(e.target.value)}
+              value={state.targetCGPA}
+              onChange={(e) =>
+                dispatch({ type: "target/set", value: e.target.value })
+              }
               placeholder="e.g., 3.60"
             />
           </div>
@@ -446,9 +410,14 @@ const GPAPlannerSection = ({
             </label>
             <select
               className="w-full border rounded px-3 py-2"
-              value={multiTermCount}
-              onChange={(e) => setMultiTermCount(parseInt(e.target.value || 1))}
-              disabled={!selectedPlanId}
+              value={state.multiTermCount}
+              onChange={(e) =>
+                dispatch({
+                  type: "terms/setCount",
+                  n: parseInt(e.target.value || 1),
+                })
+              }
+              disabled={!state.selectedPlanId}
             >
               {[1, 2, 3, 4].map((n) => (
                 <option key={n} value={n}>
@@ -459,29 +428,30 @@ const GPAPlannerSection = ({
           </div>
         </div>
 
-        {/* Required average summary */}
+        {/* Requirement banner */}
         <div
-          className={`mt-1 p-3 rounded border ${
+          className={`mt-1 p-3 rounded border text-sm ${
             requiredAvgForSelection && requiredAvgForSelection > 4
               ? "bg-red-50 border-red-200"
               : "bg-white"
           }`}
         >
           {requiredAvgForSelection == null ? (
-            <p className="text-sm text-gray-600">
+            <p className="text-gray-600">
               Choose a plan, number of terms, and set a Target CGPA to see
               requirements and course-level targets.
             </p>
           ) : (
             <>
-              <p className="text-sm text-gray-700">
+              <p className="text-gray-700">
                 To reach{" "}
                 <span className="font-medium">
-                  {parseFloat(targetCGPA).toFixed(2)}
+                  {parseFloat(state.targetCGPA).toFixed(2)}
                 </span>{" "}
                 after the next{" "}
-                <span className="font-medium">{multiTermCount}</span>{" "}
-                {multiTermCount === 1 ? "term" : "terms"}, you need an average{" "}
+                <span className="font-medium">{state.multiTermCount}</span>{" "}
+                {state.multiTermCount === 1 ? "term" : "terms"}, you need an
+                average{" "}
                 <span
                   className={`font-bold ${
                     requiredAvgForSelection > 4
@@ -503,37 +473,43 @@ const GPAPlannerSection = ({
           )}
         </div>
 
-        {/* Bias + thresholds controls */}
+        {/* Weights + thresholds */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-white border rounded p-3">
             <p className="font-medium text-sm text-[#1E3A8A] mb-2">
               Difficulty/Priority Weights
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
               <label className="text-sm text-gray-700">Bias Strength</label>
               <input
                 type="range"
                 min="0"
                 max="0.5"
                 step="0.05"
-                value={biasStrength}
-                onChange={(e) => setBiasStrength(parseFloat(e.target.value))}
-                className="accent-[#1E3A8A]"
+                value={state.biasStrength}
+                onChange={(e) =>
+                  dispatch({
+                    type: "bias/set",
+                    value: parseFloat(e.target.value),
+                  })
+                }
+                className="accent-[#1E3A8A] w-full sm:max-w-xs"
               />
               <span className="text-xs text-gray-600">
-                {biasStrength.toFixed(2)}
+                {state.biasStrength.toFixed(2)}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Higher bias nudges tougher courses towards higher suggested grades
+              Higher bias nudges tougher courses toward higher suggested grades
               while keeping the overall requirement balanced.
             </p>
           </div>
+
           <div className="bg-white border rounded p-3">
             <p className="font-medium text-sm text-[#1E3A8A] mb-2">
               Thresholds
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
                 <label className="block text-xs text-gray-600">
                   Dean’s List GPA
@@ -543,12 +519,12 @@ const GPAPlannerSection = ({
                   min="0"
                   max="4"
                   step="0.01"
-                  value={thresholds.deansListGPA}
+                  value={state.thresholds.deansListGPA}
                   onChange={(e) =>
-                    setThresholds((t) => ({
-                      ...t,
-                      deansListGPA: parseFloat(e.target.value || 0),
-                    }))
+                    dispatch({
+                      type: "thresholds/set",
+                      patch: { deansListGPA: parseFloat(e.target.value || 0) },
+                    })
                   }
                 />
               </div>
@@ -560,12 +536,12 @@ const GPAPlannerSection = ({
                   type="number"
                   min="0"
                   step="1"
-                  value={thresholds.deansMinCredits}
+                  value={state.thresholds.deansMinCredits}
                   onChange={(e) =>
-                    setThresholds((t) => ({
-                      ...t,
-                      deansMinCredits: parseInt(e.target.value || 0),
-                    }))
+                    dispatch({
+                      type: "thresholds/set",
+                      patch: { deansMinCredits: parseInt(e.target.value || 0) },
+                    })
                   }
                 />
               </div>
@@ -578,12 +554,12 @@ const GPAPlannerSection = ({
                   min="0"
                   max="4"
                   step="0.01"
-                  value={thresholds.probationGPA}
+                  value={state.thresholds.probationGPA}
                   onChange={(e) =>
-                    setThresholds((t) => ({
-                      ...t,
-                      probationGPA: parseFloat(e.target.value || 0),
-                    }))
+                    dispatch({
+                      type: "thresholds/set",
+                      patch: { probationGPA: parseFloat(e.target.value || 0) },
+                    })
                   }
                 />
               </div>
@@ -608,25 +584,28 @@ const GPAPlannerSection = ({
             )}
           </div>
         </div>
+      </Panel>
 
-        {/* Multi-term tables + weights */}
-        <div className="space-y-6">
-          {upcomingTerms.length === 0 ? (
-            <div className="text-sm text-gray-500">
-              No upcoming courses detected from the selected plan.
-            </div>
-          ) : (
-            upcomingTerms.map((term, tIdx) => {
+      {/* Terms & Weights (compact) */}
+      <Panel title="Upcoming Terms">
+        {upcomingTerms.length === 0 ? (
+          <div className="text-sm text-gray-500">
+            No upcoming courses detected from the selected plan.
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {upcomingTerms.map((term, tIdx) => {
               const targets = perTermTargets[tIdx] || [];
               const rows = targets.length ? targets : term.courses;
               return (
                 <div key={tIdx} className="bg-white border rounded">
-                  <div className="flex items-center justify-between p-3 border-b">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 border-b">
                     <p className="font-medium text-gray-800">{term.label}</p>
                     <p className="text-sm text-gray-600">
                       {term.credits} credits
                     </p>
                   </div>
+
                   <div className="overflow-x-auto">
                     <table className="min-w-full bg-white">
                       <thead>
@@ -640,10 +619,12 @@ const GPAPlannerSection = ({
                       </thead>
                       <tbody>
                         {rows.map((c, idx) => {
-                          const key = c._key || `${tIdx}|${c.code}|${idx}`;
+                          const key = c._key;
                           return (
                             <tr key={key} className="text-sm">
-                              <td className="p-2 border">{c.code}</td>
+                              <td className="p-2 border whitespace-nowrap">
+                                {c.code}
+                              </td>
                               <td className="p-2 border">{c.name}</td>
                               <td className="p-2 border">{c.credit}</td>
                               <td className="p-2 border">
@@ -653,14 +634,30 @@ const GPAPlannerSection = ({
                                   min="0.5"
                                   max="2"
                                   value={weightsMap[key] ?? 1}
-                                  onChange={(e) =>
-                                    handleWeightChange(key, e.target.value)
-                                  }
+                                  onChange={(e) => {
+                                    const v = Math.max(
+                                      0.5,
+                                      Math.min(
+                                        2,
+                                        parseFloat(e.target.value) || 1
+                                      )
+                                    );
+                                    dispatch({
+                                      type: "weights/setOne",
+                                      key,
+                                      value: v,
+                                    });
+                                  }}
                                   className="w-24 border rounded px-2 py-1"
                                 />
                               </td>
                               <td className="p-2 border font-semibold">
                                 {c.target || "—"}
+                                {typeof c._gp === "number" && (
+                                  <div className="text-xs text-gray-500">
+                                    ≈ {c._gp.toFixed(2)}
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           );
@@ -670,25 +667,24 @@ const GPAPlannerSection = ({
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
 
-        {/* Export */}
-        <div className="flex flex-wrap gap-2">
+        <div className="pt-2">
           <Button
             variant="default"
             onClick={exportGoalsPDF}
             disabled={!upcomingTerms[0]}
+            className="w-full sm:w-auto"
           >
             Export “My Grade Goals (Next Term)” as PDF
           </Button>
         </div>
-      </div>
+      </Panel>
 
-      {/* Retake impact simulator (unchanged UI, kept for completeness) */}
-      <div className="bg-gray-50 p-4 rounded-lg border space-y-3">
-        <p className="font-medium text-[#1E3A8A]">Retake Impact</p>
+      {/* Retake Impact */}
+      <Panel title="Retake Impact">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="block text-sm text-gray-700 mb-1">
@@ -696,8 +692,10 @@ const GPAPlannerSection = ({
             </label>
             <select
               className="w-full border rounded px-3 py-2"
-              value={retakeCourse}
-              onChange={(e) => setRetakeCourse(e.target.value)}
+              value={state.retakeCourse}
+              onChange={(e) =>
+                dispatch({ type: "retake/setCourse", value: e.target.value })
+              }
             >
               <option value="">—</option>
               {failedList.map((f) => (
@@ -713,8 +711,10 @@ const GPAPlannerSection = ({
             </label>
             <select
               className="w-full border rounded px-3 py-2"
-              value={retakeNewGrade}
-              onChange={(e) => setRetakeNewGrade(e.target.value)}
+              value={state.retakeNewGrade}
+              onChange={(e) =>
+                dispatch({ type: "retake/setGrade", value: e.target.value })
+              }
             >
               <option value="">—</option>
               {Object.keys(gradePointsMap).map((g) => (
@@ -727,13 +727,13 @@ const GPAPlannerSection = ({
           <div className="flex items-end">
             <Button
               className="w-full"
-              onClick={handleSimulateRetake}
-              disabled={!retakeCourse || !retakeNewGrade}
+              disabled={!state.retakeCourse || !state.retakeNewGrade}
             >
               Simulate
             </Button>
           </div>
         </div>
+
         {retakeResult && (
           <div className="text-sm">
             CGPA change:{" "}
@@ -746,12 +746,13 @@ const GPAPlannerSection = ({
             </span>
           </div>
         )}
+
         <p className="text-xs text-gray-500">
           Assumption: retake adds a new Passed attempt to CGPA and the original
-          Failed doesn’t add credits (typical policy). Adjust to your
-          university’s rules if needed.
+          Failed doesn’t add credits. Adjust for your university’s policy if
+          needed.
         </p>
-      </div>
+      </Panel>
     </section>
   );
 };

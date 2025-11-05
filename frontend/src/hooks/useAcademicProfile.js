@@ -212,12 +212,10 @@ export const useAcademicProfile = () => {
   };
 
   const isPastSemester = (year, semester) => {
-    if (!currentYear || !currentSemester) return false;
-
-    if (year < currentYear) return true;
-    if (year === currentYear && semester < currentSemester) return true;
-
-    return false;
+    if (studentYear == null || studentSemester == null) return false;
+    const targetOrd = (year - 1) * 2 + semester;
+    const currentOrd = (studentYear - 1) * 2 + studentSemester;
+    return targetOrd < currentOrd;
   };
 
   const startEditing = (id) => {
@@ -491,6 +489,8 @@ export const useAcademicProfile = () => {
     years,
     currentYear,
     currentSemester,
+    studentYear,
+    studentSemester,
     showOnboarding,
     notification,
     gradeOptions,

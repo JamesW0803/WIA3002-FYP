@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CourseListSelector from "./CourseListSelector";
 import CourseStatusSelector from "./CourseStatusSelector";
-import { CheckCircle, TriangleAlert } from "lucide-react";
-import { useAcademicProfile } from "../../hooks/useAcademicProfile";
+import { TriangleAlert } from "lucide-react";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
+import GradeSelector from "./GradeSelector";
 
 const CourseEditor = (props) => {
   const {
@@ -271,7 +272,7 @@ const CourseEditor = (props) => {
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200">
+    <div className="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200 overflow-visible relative z-40">
       {isFutureSemester(editingEntry.year, editingEntry.semester) && (
         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
           <p className="text-red-800 text-sm font-medium">
@@ -304,7 +305,7 @@ const CourseEditor = (props) => {
           />
         </div>
 
-        <div>
+        <div className="relative z-20">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Status
           </label>
@@ -332,35 +333,17 @@ const CourseEditor = (props) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Grade
             </label>
-            <select
-              value={editingEntry.grade}
-              onChange={(e) =>
-                setEditingEntry({
-                  ...editingEntry,
-                  grade: e.target.value,
-                })
-              }
-              className="border rounded p-2 w-full"
-              required
-            >
-              <option value="">Select grade</option>
-              {editingEntry.status === "Passed"
-                ? gradeOptions.passed.map((grade) => (
-                    <option key={grade} value={grade}>
-                      {grade}
-                    </option>
-                  ))
-                : gradeOptions.failed.map((grade) => (
-                    <option key={grade} value={grade}>
-                      {grade}
-                    </option>
-                  ))}
-            </select>
+            <GradeSelector
+              status={editingEntry.status}
+              grade={editingEntry.grade}
+              gradeOptions={gradeOptions}
+              onChange={(g) => setEditingEntry({ ...editingEntry, grade: g })}
+            />
           </div>
         )}
 
         {/* Buttons: full width on mobile; side-by-side from md+ */}
-        <div className="lg:col-span-2 flex flex-col sm:flex-row gap-2 w-full">
+        <div className="lg:col-span-2 flex flex-col sm:flex-row gap-2 w-full relative z-10">
           <button
             type="button"
             onClick={handleSave}

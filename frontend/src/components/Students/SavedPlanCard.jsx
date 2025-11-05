@@ -67,7 +67,7 @@ const SavedPlanCard = ({ plan, type, onEdit, onDelete, onView }) => {
       </div>
 
       <div className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-lg">
-        <div className="flex justify-between space-x-2">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:justify-between">
           {[
             {
               icon: <Eye className="w-4 h-4" />,

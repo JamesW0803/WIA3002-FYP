@@ -11,10 +11,11 @@ const YearCard = ({
   completedCoursesByYear,
   isViewMode = false,
 }) => {
+  // YearCard.jsx (replace the return block)
   return (
     <Card className="bg-gray-50 overflow-visible relative z-0">
       <CardContent className="p-4 relative z-0 overflow-visible">
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {yearData.semesters.map((semester, index) => {
             const previousSemesters = yearData.semesters.slice(0, index).concat(
               plans

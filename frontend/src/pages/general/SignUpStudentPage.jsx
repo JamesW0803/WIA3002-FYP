@@ -12,7 +12,7 @@ import {
 import Logo from "../../assets/logo.svg";
 import SignUpModal from "./SignUpModal";
 import axiosClient from "../../api/axiosClient";
-import Notification from "../../components/Students/Notification";
+import Notification from "../../components/Students/AcademicProfile/Notification";
 import mongoose from "mongoose";
 
 export default function SignUpStudentPage() {

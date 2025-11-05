@@ -265,3 +265,7 @@
   transform: translateY(-100%);
   opacity: 0;
 }
+
+.scroll-margin-fix {
+  scroll-margin-top: 100px;
+}
