@@ -31,7 +31,6 @@ const ProgrammeEnrollmentDetails = () => {
             setFormData(currentProgrammeEnrollment); // initial form data
             setGraduationRequirements(currentProgrammeEnrollment.graduation_requirements)
             setProgrammePlan(currentProgrammeEnrollment.programme_plan)
-            console.log("Programme Plan : ", currentProgrammeEnrollment.programme_plan)
         }
         fetchProgrammeEnrollment()
     }, [programme_intake_code])

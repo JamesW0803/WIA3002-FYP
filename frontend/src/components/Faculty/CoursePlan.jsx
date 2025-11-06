@@ -44,8 +44,8 @@ const CourseTable = ({ courses }) => (
   </TableContainer>
 );
 
-const StudentAcademicProfile = () => {
-  const { programmePlan } = useOutletContext();
+const CoursePlan = () => {
+  const { programmeEnrollment , programmePlan } = useOutletContext();
   const [ completeProgrammePlan, setCompleteProgrammePlan ] = useState({});
   
   useEffect(() => {
@@ -53,11 +53,13 @@ const StudentAcademicProfile = () => {
       try{
         const response = await axiosClient.get(`/programme-plans/${programmePlan._id}`);
         setCompleteProgrammePlan(response.data);
-        console.log("Fetched Programme Plan: ", response.data);
       }catch(error){
         console.error("Error fetching programme plan: ", error);
       }
     }
+    console.log("ProgrammeEnrollemt: ", programmeEnrollment);
+    console.log("Year: ", programmeEnrollment.year);
+
     fetchProgrammePlan();
   }, [programmePlan]);
 
@@ -72,8 +74,7 @@ const StudentAcademicProfile = () => {
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>
-        Reference course plan for students enrolled in Bachelor of Computer Science
-        (Software Engineering) session 2022/2023 Semester 1
+        Reference course plan for students enrolled in {programmeEnrollment.programme_name} session {programmeEnrollment.year} {programmeEnrollment.semester}
       </Typography>
 
       {yearGroups.map((yearSemesters, yearIndex) => (
@@ -108,4 +109,4 @@ const StudentAcademicProfile = () => {
   );
 };
 
-export default StudentAcademicProfile;
+export default CoursePlan;
