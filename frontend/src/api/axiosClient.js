@@ -1,8 +1,15 @@
 import axios from "axios";
 
+const hostname = window.location.hostname; //for hosting purpose
+
+const API_URL =
+  hostname === "localhost"
+    ? process.env.REACT_APP_BASE_URL
+    : `http://${hostname}:5000/api`;
+
 // Create an axios instance
 const axiosClient = axios.create({
-  baseURL: process.env.REACT_APP_BASE_URL,
+  baseURL: API_URL,
 });
 
 // Intercept requests

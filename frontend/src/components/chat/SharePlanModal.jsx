@@ -1,36 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import useChatStore from "../../stores/useChatStore";
-import { X, FileText, Send, Loader2, Download, Printer } from "lucide-react";
+import { X, FileText, Send, Loader2, Printer } from "lucide-react";
 import PlanViewerModal from "./PlanViewerModal";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
-
-function csvSafe(v) {
-  const s = v == null ? "" : String(v);
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
 
 function PlanPreviewTable({ plan }) {
   if (!plan) {
     return <div className="text-sm text-gray-500">No plan selected.</div>;
   }
-
-  // flatten all courses to support CSV export from parent
-  const flat = [];
-  (plan.years || []).forEach((y) => {
-    (y.semesters || []).forEach((s) => {
-      (s.courses || []).forEach((c) => {
-        flat.push({
-          year: y.year,
-          semesterId: s.id,
-          semesterName: s.name,
-          ...c,
-        });
-      });
-    });
-  });
 
   return (
     <div className="space-y-6">
@@ -151,64 +130,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
 
   const previewRef = useState(null)[0];
 
-  const exportCSV = () => {
-    const plan = selectedPlan;
-    if (!plan) return;
-
-    const flat = [];
-    (plan.years || []).forEach((y) => {
-      (y.semesters || []).forEach((s) => {
-        (s.courses || []).forEach((c) => {
-          flat.push({
-            planName: plan.name,
-            identifier: plan.identifier || "",
-            year: y.year,
-            semesterName: s.name,
-            ...c,
-          });
-        });
-      });
-    });
-
-    const cols = [
-      "Plan Name",
-      "Identifier",
-      "Year",
-      "Semester",
-      "Course Code",
-      "Course Name",
-      "Credit",
-      "Prerequisites",
-      "Offered",
-    ];
-    const lines = [cols.join(",")];
-    flat.forEach((c) => {
-      const row = [
-        csvSafe(c.planName),
-        csvSafe(c.identifier),
-        csvSafe(c.year),
-        csvSafe(c.semesterName),
-        csvSafe(c.code),
-        csvSafe(c.name),
-        csvSafe(c.credit),
-        csvSafe((c.prerequisites || []).join(" / ")),
-        csvSafe((c.offered_semester || []).join(" / ")),
-      ];
-      lines.push(row.join(","));
-    });
-
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const base = (plan.name || "AcademicPlan").replace(/[^\w.-]+/g, "_");
-    a.href = url;
-    a.download = `${base}_courses.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
   const doPrint = () => {
     const plan = selectedPlan;
     if (!plan) return;
@@ -271,7 +192,7 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
   };
 
   const buildText = (plan) => {
-    const header = `Shared academic plan: ${plan.name} (${plan.semesters} semesters, ${plan.credits} credits)\nPlan ID: ${plan.identifier}`;
+    const header = `Shared academic plan: ${plan.name} (${plan.semesters} semesters, ${plan.credits} credits)`;
     const notePart = note.trim() ? `\n\nNote: ${note.trim()}` : "";
     const summaryPart = includeSummary ? `\n\n${planSummary(plan)}` : "";
     return header + notePart + summaryPart;
@@ -423,13 +344,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm text-gray-700">Preview</div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={exportCSV}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
-                  disabled={!selectedPlan}
-                >
-                  <Download className="w-4 h-4" /> CSV
-                </button>
                 <button
                   onClick={doPrint}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
