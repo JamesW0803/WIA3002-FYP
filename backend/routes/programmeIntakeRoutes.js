@@ -7,6 +7,7 @@ const {
   getAllProgrammeIntakes,
   getProgrammeIntakeById,
   deleteProgrammeIntakeById,
+  getProgrammeIntakeByCode,
 } = require("../controllers/programmeIntakeController");
 
 // Public routes (no auth required)
@@ -16,7 +17,8 @@ router.use(authenticate);
 // Admin-only routes
 router.use(checkRole(["admin"]));
 router.get("/", getAllProgrammeIntakes);
-router.get("/:id", getProgrammeIntakeById);
+router.get("/id/:id", getProgrammeIntakeById);
+router.get("/:programme_intake_code", getProgrammeIntakeByCode);
 router.post("/", addProgrammeIntake);
 router.delete("/:id", deleteProgrammeIntakeById)
 

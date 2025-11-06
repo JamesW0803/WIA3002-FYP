@@ -13,6 +13,9 @@ import {
   Paper
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useOutletContext } from "react-router-dom";
+import { useState , useEffect} from 'react';
+import axiosClient from '../../api/axiosClient';
 
 const coursePlan = [
   {
@@ -95,6 +98,24 @@ const CourseTable = ({ courses }) => (
 );
 
 const StudentCoursePlan = () => {
+  const { student } = useOutletContext();
+  const [ coursePlans , setCoursePlans ] = useState([]);
+  
+  useEffect(() => {
+      if(student && student._id){
+        const fetchCoursePlans = async () => {
+          try{
+            const response = await axiosClient.get(`/academic-plans/students/${student._id}/plans`);
+            const coursePlans = response.data.data;
+            setCoursePlans(coursePlans);
+          }catch{
+            console.error("Error fetching course plans");
+          }
+        }
+        fetchCoursePlans();
+      }
+    }, [student]);
+
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>

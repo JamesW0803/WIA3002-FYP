@@ -19,7 +19,7 @@ const ProgrammeEnrollmentDetails = () => {
     const [programmeEnrollment, setProgrammeEnrollment] = useState({})
     const [formData, setFormData] = useState({});
     const [graduationRequirements, setGraduationRequirements] = useState([])
-    const [coursePlan, setCoursePlan] = useState([[]])
+    const [programmePlan, setProgrammePlan] = useState([[]])
 
 
     useEffect(() => {
@@ -30,8 +30,8 @@ const ProgrammeEnrollmentDetails = () => {
             setProgrammeEnrollment(currentProgrammeEnrollment)
             setFormData(currentProgrammeEnrollment); // initial form data
             setGraduationRequirements(currentProgrammeEnrollment.graduation_requirements)
-            console.log("Programme Enrollment: ", currentProgrammeEnrollment)
-
+            setProgrammePlan(currentProgrammeEnrollment.programme_plan)
+            console.log("Programme Plan : ", currentProgrammeEnrollment.programme_plan)
         }
         fetchProgrammeEnrollment()
     }, [programme_intake_code])
@@ -58,7 +58,7 @@ const ProgrammeEnrollmentDetails = () => {
             const response = await axiosClient.put(`/programme-intakes/${formData.programme_intake_code}`, payload);
             const updatedProgrammeEnrollment = response.data
             setEditMode(false)
-            console.log("Programme Enrollment is updated successfully")
+
         } catch (error) {
             console.error("Error updating programme enrollment: ", error);
         } finally {
@@ -117,8 +117,8 @@ const ProgrammeEnrollmentDetails = () => {
             <NavTab/>
                 <ChildrenContent 
                     graduationRequirements={graduationRequirements} 
-                    programmeEnrollment={programmeEnrollment} 
-                    coursePlan={coursePlan}
+                    programmeEnrollment={programmeEnrollment}
+                    programmePlan={programmePlan}
                 />
             {editMode ?
                 <ActionBar button1={cancelButton} button2={saveButton}/>
@@ -161,10 +161,10 @@ const NavTab = () => {
     )
 }
 
-const ChildrenContent = ({ graduationRequirements , programmeEnrollment , coursePlan}) => {
+const ChildrenContent = ({ graduationRequirements , programmeEnrollment , programmePlan}) => {
     return (
       <div className="p-4">
-        <Outlet context={{ graduationRequirements, programmeEnrollment, coursePlan }} />
+        <Outlet context={{ graduationRequirements, programmeEnrollment, programmePlan }} />
       </div>
     )
 }

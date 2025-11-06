@@ -30,6 +30,7 @@ const formatStudent = async (student) => {
     const studentProgress = await calculateStudentProgress( programmeIntake , studentAcademicProfile ) ?? 0;
  
     return {
+        _id: student._id,
         username : student.username ?? "-",
         programme_name : programme.programme_name ?? "-",
         department: department,

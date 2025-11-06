@@ -17,7 +17,7 @@ const StudentGraduationRequirement = () => {
 
   useEffect( () => {
     const fetchProgrammeIntake = async () => {
-      const response = await axiosClient.get(`/programme-intakes/${programme_intake_id}`);
+      const response = await axiosClient.get(`/programme-intakes/id/${programme_intake_id}`);
       setProgrammeIntake(response.data);
     }
 

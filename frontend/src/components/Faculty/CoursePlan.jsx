@@ -1,3 +1,6 @@
+import { useState , useEffect } from 'react';
+import { useOutletContext } from "react-router-dom";
+import { READABLE_COURSE_TYPES } from "../../constants/courseType";
 import {
   Accordion,
   AccordionSummary,
@@ -12,43 +15,92 @@ import {
   Paper
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useOutletContext } from "react-router-dom";
-import React, { useMemo } from 'react';
-import { READABLE_COURSE_TYPES } from '../../constants/courseType';
+import axiosClient from '../../api/axiosClient';
 
-const CoursePlan = () => {
-  const { coursePlan, programmeEnrollment } = useOutletContext();
+const CourseTable = ({ courses }) => (
+  <TableContainer component={Paper} sx={{ mb: 2 }}>
+    <Table>
+      <TableHead>
+        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+          <TableCell><strong>Course Code</strong></TableCell>
+          <TableCell><strong>Course Name</strong></TableCell>
+          <TableCell><strong>Credit</strong></TableCell>
+          <TableCell><strong>Type</strong></TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {courses.map((course, index) => {
+          return (
+          <TableRow key={index}>
+            <TableCell>{course.course_code}</TableCell>
+            <TableCell>{course.course_name}</TableCell>
+            <TableCell>{course.credit_hours}</TableCell>
+            <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
+          </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
 
-  const semesterPlans = programmeEnrollment.programme_plan?.semester_plans || [];
+const StudentAcademicProfile = () => {
+  const { programmePlan } = useOutletContext();
+  const [ completeProgrammePlan, setCompleteProgrammePlan ] = useState({});
+  
+  useEffect(() => {
+    const fetchProgrammePlan = async () => {
+      try{
+        const response = await axiosClient.get(`/programme-plans/${programmePlan._id}`);
+        setCompleteProgrammePlan(response.data);
+        console.log("Fetched Programme Plan: ", response.data);
+      }catch(error){
+        console.error("Error fetching programme plan: ", error);
+      }
+    }
+    fetchProgrammePlan();
+  }, [programmePlan]);
 
-  const transformedPlan = useMemo(() => transformPlan(semesterPlans), [semesterPlans]);
+  const semesterPlans = completeProgrammePlan.semester_plans || [];
+
+  // Group every 2 semesters into a "year"
+  const yearGroups = [];
+  for (let i = 0; i < semesterPlans.length; i += 2) {
+    yearGroups.push(semesterPlans.slice(i, i + 2));
+  }
 
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>
-        Reference course plan for students enrolled in {programmeEnrollment.programme_name} session {programmeEnrollment.year} {programmeEnrollment.semester}
+        Reference course plan for students enrolled in Bachelor of Computer Science
+        (Software Engineering) session 2022/2023 Semester 1
       </Typography>
 
-      {transformedPlan.map((yearItem, yearIdx) => (
-        <Accordion key={yearIdx} defaultExpanded={yearIdx === 0}>
+      {yearGroups.map((yearSemesters, yearIndex) => (
+        <Accordion key={yearIndex} defaultExpanded={yearIndex === 0}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography fontWeight="bold">{yearItem.year}</Typography>
+            <Typography fontWeight="bold">Year {yearIndex + 1}</Typography>
           </AccordionSummary>
+
           <AccordionDetails>
-            {yearItem.semesters.length > 0 ? (
-              yearItem.semesters.map((semester, semIdx) => (
-                <div key={semIdx}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    {semester.name}
+            {yearSemesters.map((semesterPlan, semIdx) => (
+              <div key={semesterPlan._id || semIdx} style={{ marginBottom: '1.5rem' }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Semester {semIdx + 1}
+                </Typography>
+                {semesterPlan.courses && semesterPlan.courses.length > 0 ? (
+                  <CourseTable courses={semesterPlan.courses} />
+                ) : (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontStyle="italic"
+                  >
+                    No courses listed
                   </Typography>
-                  <CourseTable courses={semester.courses} />
-                </div>
-              ))
-            ) : (
-              <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                No semesters listed
-              </Typography>
-            )}
+                )}
+              </div>
+            ))}
           </AccordionDetails>
         </Accordion>
       ))}
@@ -56,59 +108,4 @@ const CoursePlan = () => {
   );
 };
 
-const CourseTable = ({ courses }) => (
-  <TableContainer component={Paper} sx={{ mb: 2 }}>
-    <Table size="small">
-      <TableHead>
-        <TableRow>
-          <TableCell>Course Code</TableCell>
-          <TableCell>Course Name</TableCell>
-          <TableCell>Credit Hours</TableCell>
-          <TableCell>Type</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {courses.map((course, idx) => (
-          <TableRow key={idx}>
-            <TableCell>{course.course_code}</TableCell>
-            <TableCell>{course.course_name}</TableCell>
-            <TableCell>{course.credit_hours}</TableCell>
-            <TableCell>{course.type}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </TableContainer>
-);
-
-const transformPlan = (semesterPlans) => {
-  const years = [];
-
-  for (let i = 0; i < semesterPlans.length; i++) {
-    const yearIndex = Math.floor(i / 2); // 2 semesters per year
-    const semesterIndex = i % 2;
-
-    if (!years[yearIndex]) {
-      years[yearIndex] = {
-        year: `Year ${yearIndex + 1}`,
-        semesters: [],
-      };
-    }
-
-    years[yearIndex].semesters.push({
-      name: `Semester ${semesterIndex + 1}`,
-      courses: semesterPlans[i].courses.map(course => ({
-        course_code: course.course_code,
-        course_name: course.course_name,
-        credit_hours: course.credit_hours,
-        type: READABLE_COURSE_TYPES[course.type],
-        // type: course.type,
-
-      })),
-    });
-  }
-
-  return years;
-};
-
-export default CoursePlan;
+export default StudentAcademicProfile;
