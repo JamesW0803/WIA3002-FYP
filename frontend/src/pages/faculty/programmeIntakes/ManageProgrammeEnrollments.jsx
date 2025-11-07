@@ -12,7 +12,9 @@ const ManageProgrammeEnrollment = () => {
 
     const [programmeEnrollments, setProgrammeEnrollments] = useState([]);
     const [items, setItems] = useState([]);
-    const [clickableItems, setClickableItems] = useState(["programme_intake_code"])
+    // const [clickableItems, setClickableItems] = useState(["programme_intake_code"])
+    const [clickableItems, setClickableItems] = useState([""])
+
 
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedProgrammeIntakeCodeToDelete, setSelectedProgrammeIntakeCodeToDelete] = useState(null);

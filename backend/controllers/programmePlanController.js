@@ -1,4 +1,5 @@
 const Student = require("../models/Student");
+const ProgrammePlan = require("../models/ProgrammePlan");
 
 const getProgrammePlans = async (req, res) => {
   try {
@@ -24,6 +25,24 @@ const getProgrammePlans = async (req, res) => {
   }
 };
 
+const getProgrammePlanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const programmePlan = await ProgrammePlan.findById(id).populate({
+      path: "semester_plans",
+      populate: [
+        {path: "courses"},
+        {path: "academic_session_id"}
+      ]
+    });
+    res.status(200).json(programmePlan);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   getProgrammePlans,
+  getProgrammePlanById
 };
