@@ -19,8 +19,6 @@ const ProgrammeEnrollmentDetails = () => {
     const [programmeEnrollment, setProgrammeEnrollment] = useState({})
     const [formData, setFormData] = useState({});
     const [graduationRequirements, setGraduationRequirements] = useState([])
-    const [programmePlan, setProgrammePlan] = useState([[]])
-
 
     useEffect(() => {
         const fetchProgrammeEnrollment = async() => {
@@ -30,7 +28,7 @@ const ProgrammeEnrollmentDetails = () => {
             setProgrammeEnrollment(currentProgrammeEnrollment)
             setFormData(currentProgrammeEnrollment); // initial form data
             setGraduationRequirements(currentProgrammeEnrollment.graduation_requirements)
-            setProgrammePlan(currentProgrammeEnrollment.programme_plan)
+            
         }
         fetchProgrammeEnrollment()
     }, [programme_intake_code])
@@ -117,7 +115,6 @@ const ProgrammeEnrollmentDetails = () => {
                 <ChildrenContent 
                     graduationRequirements={graduationRequirements} 
                     programmeEnrollment={programmeEnrollment}
-                    programmePlan={programmePlan}
                 />
             {editMode ?
                 <ActionBar button1={cancelButton} button2={saveButton}/>
@@ -160,10 +157,10 @@ const NavTab = () => {
     )
 }
 
-const ChildrenContent = ({ graduationRequirements , programmeEnrollment , programmePlan}) => {
+const ChildrenContent = ({ graduationRequirements , programmeEnrollment }) => {
     return (
       <div className="p-4">
-        <Outlet context={{ graduationRequirements, programmeEnrollment, programmePlan }} />
+        <Outlet context={{ graduationRequirements, programmeEnrollment }} />
       </div>
     )
 }

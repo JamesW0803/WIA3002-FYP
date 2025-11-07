@@ -138,11 +138,11 @@ exports.getPlanById = async (req, res) => {
     // Students: must own the plan
     // Admins: can read any plan by identifier
     const filter = isAdmin
-      ? { identifier: planId }
-      : { identifier: planId, student: me };
+      ? { _id : planId }
+      : { _id : planId, student: me };
 
     const plan = await AcademicPlan.findOne(filter).lean();
-
+    
     // Return 404 in both "not found" and "not authorized" cases (prevents identifier enumeration)
     if (!plan) {
       return res.status(404).json({

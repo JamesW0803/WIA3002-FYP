@@ -45,23 +45,22 @@ const CourseTable = ({ courses }) => (
 );
 
 const CoursePlan = () => {
-  const { programmeEnrollment , programmePlan } = useOutletContext();
+  const { programmeEnrollment } = useOutletContext();
   const [ completeProgrammePlan, setCompleteProgrammePlan ] = useState({});
   
   useEffect(() => {
     const fetchProgrammePlan = async () => {
       try{
+        const programmePlan = programmeEnrollment.programme_plan;
         const response = await axiosClient.get(`/programme-plans/${programmePlan._id}`);
         setCompleteProgrammePlan(response.data);
       }catch(error){
         console.error("Error fetching programme plan: ", error);
       }
     }
-    console.log("ProgrammeEnrollemt: ", programmeEnrollment);
-    console.log("Year: ", programmeEnrollment.year);
-
     fetchProgrammePlan();
-  }, [programmePlan]);
+    
+  }, [programmeEnrollment]);
 
   const semesterPlans = completeProgrammePlan.semester_plans || [];
 

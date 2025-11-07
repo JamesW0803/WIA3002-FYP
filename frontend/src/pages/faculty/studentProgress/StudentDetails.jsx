@@ -117,7 +117,7 @@ const NavTab = () => {
     )
 }
 
-const ChildrenContent = ({ academicProfile , programme_intake_id , student}) => {
+const ChildrenContent = ({ academicProfile , programme_intake_id , student }) => {
     return (
       <div className="p-4">
         <Outlet context={{ academicProfile , programme_intake_id , student }}/>
