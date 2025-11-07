@@ -1,6 +1,8 @@
 const Student = require("../models/Student");
 const ProgrammeIntake = require("../models/ProgrammeIntake");
 const AcademicSession = require("../models/AcademicSession");
+const StudentAcademicProfile = require("../models/StudentAcademicProfile");
+
 const {
   formatStudents,
   formatStudent,
@@ -31,6 +33,9 @@ const getStudentByName = async (req, res) => {
     }
 
     const formattedStudent = await formatStudent(student);
+    const academicProfile = await StudentAcademicProfile.findOne( {student: student._id} ).populate("entries.course");
+    formattedStudent.academicProfile = academicProfile;
+
     res.status(200).json(formattedStudent);
   } catch (error) {
     res.status(500).json({ message: error.message });

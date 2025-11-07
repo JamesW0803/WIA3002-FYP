@@ -9,6 +9,7 @@ const academicSessionRoutes = require("./academicSessionRoutes");
 const programmeIntakeRoutes = require("./programmeIntakeRoutes");
 const academicProfileRoutes = require("./academicProfileRoutes");
 const studentAcademicPlanRoutes = require("./studentAcademicPlanRoutes");
+const programmePlanRoutes = require("./programmePlanRoutes");
 const { authenticate } = require("../middleware/authMiddleware");
 
 // Mount routes
@@ -18,6 +19,7 @@ router.use("/students", authenticate, studentRoutes);
 router.use("/programmes", programmeRoutes);
 router.use("/programme-intakes", programmeIntakeRoutes);
 router.use("/academic-sessions", academicSessionRoutes);
+router.use("/programme-plans", programmePlanRoutes);
 router.use("/curriculums", curriculumRoutes);
 router.use("/academic-profile", authenticate, academicProfileRoutes);
 router.use("/academic-plans", studentAcademicPlanRoutes);

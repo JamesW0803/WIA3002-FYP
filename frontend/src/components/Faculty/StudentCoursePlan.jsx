@@ -1,4 +1,6 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { useOutletContext } from "react-router-dom";
+import { READABLE_COURSE_TYPES } from "../../constants/courseType";
 import {
   Accordion,
   AccordionSummary,
@@ -10,64 +12,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Box
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-
-const coursePlan = [
-  {
-    year: 'Year 1',
-    semesters: [
-      {
-        name: 'Semester 1',
-        courses: [
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    year: 'Year 2',
-    semesters: [
-      {
-        name: 'Semester 1',
-        courses: [
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-          {
-            code: 'WIX1002',
-            name: 'Fundamentals of Programming',
-            credit: 5,
-            type: 'Faculty Core Course',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    year: 'Year 3',
-    semesters: [],
-  },
-  {
-    year: 'Year 4',
-    semesters: [],
-  },
-];
+import axiosClient from '../../api/axiosClient';
 
 const CourseTable = ({ courses }) => (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
@@ -77,7 +30,7 @@ const CourseTable = ({ courses }) => (
           <TableCell><strong>Course Code</strong></TableCell>
           <TableCell><strong>Course Name</strong></TableCell>
           <TableCell><strong>Credit</strong></TableCell>
-          <TableCell><strong>Type</strong></TableCell>
+          {/* <TableCell><strong>Type</strong></TableCell> */}
         </TableRow>
       </TableHead>
       <TableBody>
@@ -86,7 +39,7 @@ const CourseTable = ({ courses }) => (
             <TableCell>{course.code}</TableCell>
             <TableCell>{course.name}</TableCell>
             <TableCell>{course.credit}</TableCell>
-            <TableCell>{course.type}</TableCell>
+            {/* <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell> */}
           </TableRow>
         ))}
       </TableBody>
@@ -95,36 +48,112 @@ const CourseTable = ({ courses }) => (
 );
 
 const StudentCoursePlan = () => {
+  const { student } = useOutletContext();
+  const [coursePlans, setCoursePlans] = useState([]); // all plans
+  const [selectedPlanId, setSelectedPlanId] = useState(null); // current plan id
+  const [selectedPlan, setSelectedPlan] = useState(null); // plan details
+
+  // Fetch all available course plans for the student
+  useEffect(() => {
+    const fetchCoursePlans = async () => {
+      try {        
+        const response = await axiosClient.get(`/academic-plans/students/${student._id}/plans`);
+        const coursePlans = response.data.data;
+        setCoursePlans(coursePlans || []);
+        console.log("Fetched course plans: ", coursePlans);
+
+        // Default select the first plan (e.g., Default plan)
+        if (coursePlans && coursePlans.length > 0) {
+          setSelectedPlanId(coursePlans[0]._id);
+        }
+
+      } catch (error) {
+        console.error("Error fetching course plans:", error);
+      }
+    };
+    fetchCoursePlans();
+  }, [student]);
+
+  // Fetch selected course plan details
+  useEffect(() => {
+    const fetchSelectedPlan = async () => {
+      if (!selectedPlanId) return;
+      try {
+        const response = await axiosClient.get(`/academic-plans/plans/${selectedPlanId}`);
+        setSelectedPlan(response.data.data);
+        console.log("Fetched selected plan: ", response.data.data);
+      } catch (error) {
+        console.error("Error fetching selected plan:", error);
+      }
+    };
+    fetchSelectedPlan();
+  }, [selectedPlanId]);
+
+  const semesterPlans = selectedPlan?.semester_plans || [];
+  const yearGroups = [];
+  for (let i = 0; i < semesterPlans.length; i += 2) {
+    yearGroups.push(semesterPlans.slice(i, i + 2));
+  }
+
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>
-        Reference course plan for students enrolled in Bachelor of Computer Science
-        (Software Engineering) session 2022/2023 Semester 1
+        Course plans for student {student.username}
       </Typography>
 
-      {coursePlan.map((yearItem, yearIdx) => (
-        <Accordion key={yearIdx} defaultExpanded={yearIdx === 0}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography fontWeight="bold">{yearItem.year}</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            {yearItem.semesters.length > 0 ? (
-              yearItem.semesters.map((semester, semIdx) => (
-                <div key={semIdx}>
+      {/* Dropdown to select course plan */}
+      <Box sx={{ mb: 3, width: '300px' }}>
+        <FormControl fullWidth size="small">
+          <InputLabel>Select Course Plan</InputLabel>
+          <Select
+            value={selectedPlanId || ''}
+            label="Select Course Plan"
+            onChange={(e) => setSelectedPlanId(e.target.value)}
+          >
+            {coursePlans.map((plan) => (
+              <MenuItem key={plan._id} value={plan._id}>
+                {plan.name || 'Unnamed Plan'}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+      
+
+      {selectedPlan ? (
+        selectedPlan.years.map((yearPlan, yearIndex) => (
+          <Accordion key={yearIndex} defaultExpanded={yearIndex === 0}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography fontWeight="bold">Year {yearPlan.year}</Typography>
+            </AccordionSummary>
+
+            <AccordionDetails>
+              {yearPlan.semesters.map((semesterPlan, semIdx) => (
+                <div key={semesterPlan._id || semIdx} style={{ marginBottom: '1.5rem' }}>
                   <Typography variant="subtitle1" gutterBottom>
-                    {semester.name}
+                    Semester {semIdx + 1}
                   </Typography>
-                  <CourseTable courses={semester.courses} />
+                  {semesterPlan.courses && semesterPlan.courses.length > 0 ? (
+                    <CourseTable courses={semesterPlan.courses} />
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      fontStyle="italic"
+                    >
+                      No courses listed
+                    </Typography>
+                  )}
                 </div>
-              ))
-            ) : (
-              <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                No semesters listed
-              </Typography>
-            )}
-          </AccordionDetails>
-        </Accordion>
-      ))}
+              ))}
+            </AccordionDetails>
+          </Accordion>
+        ))
+      ) : (
+        <Typography color="text.secondary" fontStyle="italic">
+          Select a course plan to view its details.
+        </Typography>
+      )}
     </div>
   );
 };

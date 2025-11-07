@@ -130,7 +130,36 @@ const getProgrammeIntakeById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const programmeIntake = await ProgrammeIntake.findOne({programme_intake_code : id})
+    const programmeIntake = await ProgrammeIntake.findById(id)
+      .populate("graduation_requirements")
+      .populate("programme_id")
+      .populate("academic_session_id")
+      .populate({
+        path: "programme_plan",
+        populate: {
+          path: "semester_plans",
+          populate: {
+            path: "courses"
+          }
+        }
+    });
+
+    if (!programmeIntake) {
+      return res.status(404).json({ message: "Programme intake not found" });
+    }        
+
+    res.status(200).json(formatProgrammeIntake(programmeIntake));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+    console.log("Error fetching programme intake by ID:", error);
+  }
+};
+
+const getProgrammeIntakeByCode = async (req, res) => {
+  try {
+    const { programme_intake_code } = req.params;
+
+    const programmeIntake = await ProgrammeIntake.findOne({ programme_intake_code})
       .populate("graduation_requirements")
       .populate("programme_id")
       .populate("academic_session_id")
@@ -259,5 +288,6 @@ module.exports = {
   getAllProgrammeIntakes,
   addProgrammeIntake,
   getProgrammeIntakeById,
+  getProgrammeIntakeByCode,
   deleteProgrammeIntakeById
 };

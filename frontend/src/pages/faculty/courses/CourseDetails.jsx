@@ -49,7 +49,7 @@ const CourseDetails = () => {
             const payload = {
                 ...formData,
                 prerequisites: formData.prerequisites
-                    ? [formData.prerequisites]  // wrap it in an array
+                    ? formData.prerequisites  // wrap it in an array
                     : [],                       // fallback to empty array
             };
 
