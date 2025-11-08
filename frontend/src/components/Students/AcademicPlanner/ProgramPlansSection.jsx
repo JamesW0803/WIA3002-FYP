@@ -6,6 +6,7 @@ import PlanViewer from "./PlanViewer";
 import { Plus } from "lucide-react";
 import { generateNewPlanFromStartingPoint } from "../AcademicPlanner/utils/planHelpers";
 import axiosClient from "../../../api/axiosClient";
+import { normalizePlanForUI } from "../../../utils/normalisePlan";
 
 const ProgramPlansSection = ({
   programPlans,
@@ -30,7 +31,25 @@ const ProgramPlansSection = ({
   startingPlanPoint,
 }) => {
   const [backupPlan, setBackupPlan] = useState(null);
+  const closeAllModes = () => {
+    setViewingPlan(null);
+    setEditingPlan(null);
+    setIsCreatingNew(false);
+    setUnsavedPlan(null);
+  };
+  const openViewer = (planId) => {
+    setEditingPlan(null); // ensure editor closed
+    setIsCreatingNew(false); // ensure create-new closed
+    setViewingPlan(planId); // open viewer
+  };
+
+  const openEditor = (planId, { creatingNew = false } = {}) => {
+    setViewingPlan(null); // ensure viewer closed
+    setIsCreatingNew(creatingNew);
+    setEditingPlan(planId); // open editor
+  };
   const addPlan = () => {
+    closeAllModes();
     const activePlans = programPlans.filter(
       (plan) => !tempPlans.includes(plan.id)
     );
@@ -46,10 +65,24 @@ const ProgramPlansSection = ({
     );
 
     setUnsavedPlan(newPlan);
-    setEditingPlan(newPlan.id);
-    setIsCreatingNew(true);
+    openEditor(newPlan.id, { creatingNew: true });
     setTempPlans([...tempPlans, newPlan.id]);
     scrollToEditSection();
+  };
+
+  const resolveCourseId = (c) =>
+    c?._id ||
+    c?.course?._id ||
+    c?.course ||
+    allCourses.find((ac) => ac.code === c?.code)?._id;
+
+  const latestCredit = (c) => {
+    // prefer populated live credit, then UI field, then snapshot, then catalog
+    const fromPopulated = c?.course?.credit_hours;
+    const fromUI = c?.credit;
+    const fromSnapshot = c?.credit_at_time;
+    const fromCatalog = allCourses.find((ac) => ac.code === c?.code)?.credit;
+    return Number(fromPopulated ?? fromUI ?? fromSnapshot ?? fromCatalog ?? 0);
   };
 
   const handleSave = async (updatedPlanData) => {
@@ -57,31 +90,55 @@ const ProgramPlansSection = ({
       const token = localStorage.getItem("token");
       const planId = editingPlan;
 
-      const totalSemesters = updatedPlanData.years.reduce(
+      // Build a cleaned payload that drops draft + empty semesters
+      const cleanedYears = (updatedPlanData.years || []).map((y) => ({
+        ...y,
+        semesters: (y.semesters || [])
+          .filter((s) => !s._isDraft && (s.courses?.length || 0) > 0) // ← drop empty
+          .map((s, idx) => ({
+            ...s,
+            name: `Year ${y.year} - Semester ${idx + 1}`,
+            courses: (s.courses || []).map((c) => {
+              const cid = resolveCourseId(c);
+              if (!cid) {
+                throw new Error(
+                  `Missing ObjectId for course ${c?.code || "(unknown)"}`
+                );
+              }
+              return {
+                course: cid,
+                credit_at_time: latestCredit(c),
+                course_code: c.code,
+                title_at_time: c.name,
+              };
+            }),
+          })),
+      }));
+
+      const payload = {
+        ...updatedPlanData,
+        years: cleanedYears,
+      };
+
+      // Now totals based on cleaned payload
+      const totalSemesters = payload.years.reduce(
         (total, year) => total + year.semesters.length,
         0
       );
-      const totalCredits = updatedPlanData.years.reduce(
+      const totalCredits = payload.years.reduce(
         (total, year) =>
           total +
           year.semesters.reduce(
             (sum, semester) =>
               sum +
               semester.courses.reduce(
-                (courseSum, course) => courseSum + (course?.credit || 0),
+                (courseSum, c) => courseSum + (c?.credit_at_time || 0),
                 0
               ),
             0
           ),
         0
       );
-
-      // Update the plan data with recalculated values
-      const payload = {
-        ...updatedPlanData,
-        semesters: totalSemesters,
-        credits: totalCredits,
-      };
 
       // Send PUT to /academic-plans/plans/:planId
       const res = await axiosClient.put(
@@ -90,7 +147,7 @@ const ProgramPlansSection = ({
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const saved = res.data.data;
+      const saved = normalizePlanForUI(res.data.data);
 
       // Merge updated plan into state
       setProgramPlans((prev) =>
@@ -98,7 +155,7 @@ const ProgramPlansSection = ({
           p.id === planId
             ? {
                 ...saved,
-                id: saved.identifier,
+                id: saved.id,
                 semesters: totalSemesters,
                 credits: totalCredits,
               }
@@ -119,13 +176,7 @@ const ProgramPlansSection = ({
   const handleEditPlan = (plan) => {
     setBackupPlan(plan);
     // if we were in View mode, close it
-    setViewingPlan(null);
-
-    // make sure we're in “edit existing,” not “create new”
-    setIsCreatingNew(false);
-
-    // open the editor for this plan
-    setEditingPlan(plan.id);
+    openEditor(plan.id);
     scrollToEditSection();
   };
 
@@ -133,8 +184,7 @@ const ProgramPlansSection = ({
     console.log("Viewing plan:", plan);
     const planId = plan.id;
     console.log("Plan ID:", planId);
-    setViewingPlan(planId);
-    setEditingPlan(null);
+    openViewer(plan.id);
     scrollToViewSection();
   };
 

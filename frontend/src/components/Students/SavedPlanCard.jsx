@@ -17,6 +17,19 @@ const SavedPlanCard = ({ plan, type, onEdit, onDelete, onView }) => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  const computeTotalCredits = (plan) =>
+    (plan?.years || []).reduce(
+      (t, y) =>
+        t +
+        (y.semesters || []).reduce(
+          (s, sem) =>
+            s +
+            (sem.courses || []).reduce((cTot, c) => cTot + (c?.credit || 0), 0),
+          0
+        ),
+      0
+    );
+
   return (
     <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
       <div className="p-5 flex-grow">
@@ -36,7 +49,7 @@ const SavedPlanCard = ({ plan, type, onEdit, onDelete, onView }) => {
               </div>
               <div className="flex items-center text-sm gap-2">
                 <BookOpenText className="w-4 h-4 text-gray-500" />
-                <span>{plan.credits} total credits</span>
+                <span>{computeTotalCredits(plan)} total credits</span>
               </div>
             </>
           ) : (

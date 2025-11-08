@@ -51,14 +51,32 @@ const PlanCard = ({
       return;
     }
 
-    const updatedPlans = plans.map((p) =>
-      p.id === plan.id
-        ? {
-            ...p,
-            years: p.years.filter((y) => y.year !== yearToDelete),
-          }
-        : p
-    );
+    // Remove the year and then renumber years > deleted year (shift down by 1)
+    const updatedPlans = plans.map((p) => {
+      if (p.id !== plan.id) return p;
+
+      // 1) Filter out the deleted year
+      const filtered = p.years.filter((y) => y.year !== yearToDelete);
+
+      // 2) Renumber: any y.year > yearToDelete gets decremented by 1
+      const renumbered = filtered.map((y) => {
+        const newYearNumber = y.year > yearToDelete ? y.year - 1 : y.year;
+
+        // 3) Rebuild semester names to match the new year number & keep 1 to n order
+        const semesters = y.semesters.map((sem, idx) => ({
+          ...sem,
+          name: `Year ${newYearNumber} - Semester ${idx + 1}`,
+        }));
+
+        return { ...y, year: newYearNumber, semesters };
+      });
+
+      // 4) Also re-sort by year in case the deleted was not the last one
+      renumbered.sort((a, b) => a.year - b.year);
+
+      return { ...p, years: renumbered };
+    });
+
     setPlans(updatedPlans);
   };
 

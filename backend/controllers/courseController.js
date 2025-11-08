@@ -19,23 +19,28 @@ const getAllCourses = async (req, res) => {
       };
     }
 
-    const courses = await Course.find(query).populate({
-      path: "prerequisites",
-      select: "course_code course_name credit_hours offered_semester", // Only include necessary fields
-    });
-
     // Return minimal data if requested (for dropdowns, etc.)
     if (minimal === "true") {
-      const minimalCourses = courses.map((course) => ({
+      const mini = await Course.find(query)
+        .select(
+          "course_code course_name credit_hours prerequisites offered_semester"
+        ) // include _id implicitly
+        .populate({ path: "prerequisites", select: "course_code" });
+      const minimalCourses = mini.map((course) => ({
+        _id: course._id,
         code: course.course_code,
         name: course.course_name,
         credit: course.credit_hours,
-        prerequisites: course.prerequisites.map((p) => p.course_code),
+        prerequisites: (course.prerequisites || []).map((p) => p.course_code),
         offered_semester: course.offered_semester,
       }));
       return res.status(200).json(minimalCourses);
     }
 
+    const courses = await Course.find(query).populate({
+      path: "prerequisites",
+      select: "course_code course_name credit_hours offered_semester",
+    });
     const formattedCourses = formatCourses(courses);
     res.status(200).json(formattedCourses);
   } catch (error) {
@@ -55,24 +60,24 @@ const addCourse = async (req, res) => {
       faculty,
       department,
       offered_semester,
-      study_level
+      study_level,
     } = req.body;
 
     let prerequisitesCourseIds = [];
 
     if (prerequisites?.length > 0) {
       const prerequisiteCourses = await Promise.all(
-        prerequisites.map((code) =>
-          Course.findOne({ course_code: code })
-        )
+        prerequisites.map((code) => Course.findOne({ course_code: code }))
       );
 
       // Check for invalid prerequisite course codes
       if (prerequisiteCourses.includes(null)) {
-        return res.status(400).json({ error: "One or more prerequisite course codes are invalid." });
+        return res.status(400).json({
+          error: "One or more prerequisite course codes are invalid.",
+        });
       }
 
-      prerequisitesCourseIds = prerequisiteCourses.map(course => course._id);
+      prerequisitesCourseIds = prerequisiteCourses.map((course) => course._id);
     }
 
     const newCourse = new Course({
@@ -81,11 +86,11 @@ const addCourse = async (req, res) => {
       type,
       credit_hours,
       description,
-      prerequisites : prerequisitesCourseIds,
+      prerequisites: prerequisitesCourseIds,
       faculty,
       department,
       offered_semester,
-      study_level
+      study_level,
     });
 
     const savedCourse = await newCourse.save();

@@ -4,7 +4,6 @@ require("./ProgrammePlan");
 require("./Programme");
 require("./AcademicSession");
 require("./ProgrammeIntake");
-require("./StudentAcademicPlan");
 
 const studentSchema = new mongoose.Schema({
   fullName: {

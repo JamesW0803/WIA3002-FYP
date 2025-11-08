@@ -12,6 +12,8 @@ const SemesterCard = ({
   allCourses,
   isViewMode = false,
   completedCoursesByYear = {},
+  onConfirmDraft,
+  onCancelDraft,
 }) => {
   const MAX_CREDITS = 22;
 
@@ -222,9 +224,39 @@ const SemesterCard = ({
             courses={actualSemester?.courses || []}
             removeCourse={removeCourse}
             isViewMode={isViewMode}
-            passedCourses={Array.from(passedCourses)}
+            completedCourses={Array.from(passedCourses)}
           />
         </div>
+
+        {/* Draft controls */}
+        {!isViewMode && actualSemester?._isDraft && (
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              className="text-sm px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-50"
+              onClick={onCancelDraft}
+              type="button"
+            >
+              Cancel Semester
+            </button>
+            <button
+              className="text-sm px-3 py-1 rounded-md bg-[#1E3A8A] text-white hover:opacity-90"
+              onClick={() => {
+                if ((actualSemester?.courses?.length || 0) === 0) {
+                  alert(
+                    "Please add at least one course before saving this semester."
+                  );
+                  return;
+                }
+                onConfirmDraft();
+              }}
+              type="button"
+            >
+              Save Semester
+            </button>
+          </div>
+        )}
+
+        {/* Course input disabled for view mode, enabled otherwise */}
         {!isViewMode && (
           <CourseInput
             onAdd={addCourse}

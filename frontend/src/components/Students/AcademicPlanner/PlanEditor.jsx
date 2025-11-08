@@ -4,6 +4,7 @@ import { Textarea } from "../../ui/textarea";
 import { X } from "lucide-react";
 import PlanCard from "../PlanCard";
 import axiosClient from "../../../api/axiosClient";
+import { normalizePlanForUI } from "../../../utils/normalisePlan";
 
 const PlanEditor = ({
   editingPlan,
@@ -30,14 +31,68 @@ const PlanEditor = ({
     ? (newPlansArray) => setUnsavedPlan(newPlansArray[0])
     : setProgramPlans;
 
+  // helper to resolve course ObjectId for saving
+  const resolveCourseId = (c) => {
+    // direct possibilities
+    const direct =
+      c?._id || // catalog object
+      c?.course?._id || // populated document
+      c?.course; // plain ObjectId already
+    if (direct) return direct;
+    // fallback by code
+    const byCode = allCourses?.find((ac) => ac.code === c?.code)?._id;
+    return byCode;
+  };
+
+  const latestCredit = (c) => {
+    const fromPopulated = c?.course?.credit_hours;
+    const fromUI = c?.credit;
+    const fromSnapshot = c?.credit_at_time;
+    const fromCatalog = allCourses?.find((ac) => ac.code === c?.code)?.credit;
+    return Number(fromPopulated ?? fromUI ?? fromSnapshot ?? fromCatalog ?? 0);
+  };
+
   // save (POST or PUT) handler
   const savePlan = async () => {
     const token = localStorage.getItem("token");
     const studentId = localStorage.getItem("userId");
     const planId = editingPlan;
-    const payload = isCreatingNew
+    const rawPayload = isCreatingNew
       ? unsavedPlan
       : programPlans.find((p) => p.id === planId);
+
+    const missing = [];
+    const payload = {
+      ...rawPayload,
+      years: (rawPayload?.years || []).map((y) => ({
+        ...y,
+        semesters: (y.semesters || [])
+          .filter((s) => !s._isDraft && (s.courses?.length || 0) > 0)
+          .map((s, idx) => ({
+            ...s,
+            name: `Year ${y.year} - Semester ${idx + 1}`,
+            courses: (s.courses || []).map((c) => {
+              const cid = resolveCourseId(c);
+              if (!cid) missing.push(c?.code || "(unknown)");
+              return {
+                course: cid,
+                credit_at_time: latestCredit(c),
+                course_code: c.code,
+                title_at_time: c.name,
+              };
+            }),
+          })),
+      })),
+    };
+
+    if (missing.length) {
+      alert(
+        `Some courses could not be matched to the catalog: ${missing.join(
+          ", "
+        )}.\n\nWe'll try to save using 'course_code'.`
+      );
+    }
+
     if (isCreatingNew) delete payload.id;
 
     const totalSemesters = payload.years.reduce(
@@ -51,7 +106,7 @@ const PlanEditor = ({
           (sum, semester) =>
             sum +
             semester.courses.reduce(
-              (courseSum, course) => courseSum + (course?.credit || 0),
+              (courseSum, c) => courseSum + (c?.credit_at_time || 0),
               0
             ),
           0
@@ -75,14 +130,14 @@ const PlanEditor = ({
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const saved = response.data.data;
+      const saved = normalizePlanForUI(response.data.data);
 
       if (isCreatingNew) {
         setProgramPlans([
           ...programPlans,
           {
             ...saved,
-            id: saved.identifier,
+            id: saved.id,
             semesters: totalSemesters,
             credits: totalCredits,
           },
