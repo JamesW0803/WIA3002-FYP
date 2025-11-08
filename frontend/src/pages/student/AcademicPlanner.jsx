@@ -7,10 +7,12 @@ import { Plus, CheckCircle2, XCircle, LoaderCircle } from "lucide-react";
 import {
   canAddNewPlan,
   findLastCompletedSemester,
+  findNextSemesterToPlan,
   generateNewPlanFromStartingPoint,
 } from "../../components/Students/AcademicPlanner/utils/planHelpers";
 import axiosClient from "../../api/axiosClient";
 import { AnimatePresence, motion } from "framer-motion";
+import { normalizePlanForUI } from "../../utils/normalisePlan";
 
 const AcademicPlanner = () => {
   const [activeTab, setActiveTab] = useState("program");
@@ -75,17 +77,12 @@ const AcademicPlanner = () => {
         );
 
         // After setting completed courses, determine where to start planning
+        const nextToPlan = findNextSemesterToPlan(profileData.entries);
 
-        const lastCompleted = findLastCompletedSemester(profileData.entries);
-        setStartingPlanPoint(lastCompleted);
+        setStartingPlanPoint(nextToPlan);
 
         if (plansData.success && plansData.data.length > 0) {
-          // Map backend _id to id for frontend compatibility
-          const plansWithIds = plansData.data.map((plan) => ({
-            ...plan,
-            id: plan.identifier,
-          }));
-          setProgramPlans(plansWithIds);
+          setProgramPlans(plansData.data.map(normalizePlanForUI));
         }
       } catch (err) {
         console.error("Failed to fetch data", err);
@@ -110,7 +107,7 @@ const AcademicPlanner = () => {
 
         // Validate and transform the courses data
         const validatedCourses = response.data.map((course) => ({
-          _id: course._id,
+          _id: course._id || course.id || course._doc?._id,
           code: course.code || course.course_code || "",
           name: course.name || course.course_name || "",
           credit: course.credit || course.credit_hours || 0,
@@ -165,14 +162,11 @@ const AcademicPlanner = () => {
       );
 
       const savedPlan = response.data.data;
-      setProgramPlans([
-        ...programPlans,
-        { ...savedPlan, id: savedPlan.identifier },
-      ]);
-      setEditingPlan(savedPlan.identifier);
-      setTempPlans([...tempPlans, savedPlan.identifier]);
-      setIsCreatingNew(true);
-      setUnsavedPlan(savedPlan);
+      setProgramPlans([...programPlans, { ...savedPlan, id: savedPlan._id }]);
+      setEditingPlan(savedPlan._id);
+      setTempPlans([...tempPlans, savedPlan._id]);
+      setIsCreatingNew(false);
+      setUnsavedPlan(null);
       scrollToEditSection();
     } catch (error) {
       console.error("Error creating new plan", error);
@@ -249,7 +243,14 @@ const AcademicPlanner = () => {
               className={`flex-1 whitespace-nowrap ${
                 activeTab !== "gpa" ? "hover:bg-gray-50 text-gray-700" : ""
               }`}
-              onClick={() => setActiveTab("gpa")}
+              onClick={() => {
+                // ensure modes are closed when leaving the section
+                setViewingPlan(null);
+                setEditingPlan(null);
+                setIsCreatingNew(false);
+                setUnsavedPlan(null);
+                setActiveTab("gpa");
+              }}
             >
               GPA Forecasts
             </Button>

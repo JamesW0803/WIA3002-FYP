@@ -1,11 +1,44 @@
 const AcademicPlan = require("../models/StudentAcademicPlan");
 const mongoose = require("mongoose");
+const Course = require("../models/Course");
 
-// Helper (already in your file)
+// ensure every course item has a valid ObjectId in `course`;
+// if not, try to resolve it from `course_code`
+async function hydrateCourseRefs(years) {
+  const result = [];
+  for (const y of years || []) {
+    const newY = { ...y, semesters: [] };
+    for (const s of y.semesters || []) {
+      const newCourses = [];
+      for (const c of s.courses || []) {
+        if (c?.course) {
+          newCourses.push(c);
+          continue;
+        }
+        const code = c?.course_code || c?.code;
+        if (!code) {
+          newCourses.push(c); // leave as-is; validators will catch if needed
+          continue;
+        }
+        const found = await Course.findOne(
+          { course_code: code },
+          { _id: 1 }
+        ).lean();
+        if (found?._id) {
+          newCourses.push({ ...c, course: found._id });
+        } else {
+          newCourses.push(c); // fallback; will fail validation if truly missing
+        }
+      }
+      newY.semesters.push({ ...s, courses: newCourses });
+    }
+    result.push(newY);
+  }
+  return result;
+}
+
 const calculateTotalSemesters = (years) =>
   years.reduce((tot, y) => tot + y.semesters.length, 0);
-
-// controllers/studentAcademicPlanController.js
 
 exports.createPlan = async (req, res) => {
   try {
@@ -38,7 +71,7 @@ exports.createPlan = async (req, res) => {
       });
     }
 
-    const { name, years, notes } = req.body;
+    const { name, years: rawYears, notes } = req.body;
 
     // 4) Validate input
     if (!name || !name.trim()) {
@@ -48,13 +81,14 @@ exports.createPlan = async (req, res) => {
       });
     }
 
-    if (!Array.isArray(years) || years.length === 0) {
+    if (!Array.isArray(rawYears) || rawYears.length === 0) {
       return res
         .status(400)
         .json({ success: false, message: "Years are required" });
     }
 
-    // 5) Compute total semesters
+    // 5) Compute total years and semesters
+    const years = await hydrateCourseRefs(rawYears);
     const semesters = calculateTotalSemesters(years);
 
     // 6) Create & save
@@ -108,8 +142,12 @@ exports.getUserPlans = async (req, res) => {
       });
     }
 
-    // Fetch all plans (could be zero)
     const plans = await AcademicPlan.find({ student: studentId })
+      .populate({
+        path: "years.semesters.courses.course",
+        select:
+          "course_code course_name credit_hours prerequisites offered_semester",
+      })
       .sort({ isDefault: -1, createdAt: -1 })
       .lean();
 
@@ -137,12 +175,16 @@ exports.getPlanById = async (req, res) => {
 
     // Students: must own the plan
     // Admins: can read any plan by identifier
-    const filter = isAdmin
-      ? { _id : planId }
-      : { _id : planId, student: me };
+    const filter = isAdmin ? { _id: planId } : { _id: planId, student: me };
 
-    const plan = await AcademicPlan.findOne(filter).lean();
-    
+    const plan = await AcademicPlan.findOne(filter)
+      .populate({
+        path: "years.semesters.courses.course",
+        select:
+          "course_code course_name credit_hours prerequisites offered_semester",
+      })
+      .lean();
+
     // Return 404 in both "not found" and "not authorized" cases (prevents identifier enumeration)
     if (!plan) {
       return res.status(404).json({
@@ -165,30 +207,35 @@ exports.getPlanById = async (req, res) => {
 };
 
 // Update an existing plan
+// Update
 exports.updatePlan = async (req, res) => {
   try {
-    const { name, years, notes } = req.body;
+    const { name, years: rawYears, notes } = req.body;
     const planId = req.params.planId;
     const studentId = req.user.user_id || req.user._id;
 
-    // Validate input
-    if (!name || !name.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Plan name is required",
-      });
+    if (!mongoose.Types.ObjectId.isValid(planId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid plan ID format" });
     }
 
-    if (!Array.isArray(years) || years.length === 0) {
+    if (!name || !name.trim()) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Plan name is required" });
+    }
+    if (!Array.isArray(rawYears) || rawYears.length === 0) {
       return res
         .status(400)
         .json({ success: false, message: "Years are required" });
     }
 
-    const semesters = calculateTotalSemesters(years);
+    const years = await hydrateCourseRefs(rawYears);
+    const semesters = years.reduce((tot, y) => tot + y.semesters.length, 0);
 
     const updatedPlan = await AcademicPlan.findOneAndUpdate(
-      { identifier: planId, student: studentId },
+      { _id: planId, student: studentId },
       {
         name: name.trim(),
         years,
@@ -197,13 +244,16 @@ exports.updatePlan = async (req, res) => {
         updatedAt: new Date(),
       },
       { new: true, runValidators: true }
-    );
+    ).populate({
+      path: "years.semesters.courses.course",
+      select:
+        "course_code course_name credit_hours prerequisites offered_semester",
+    });
 
     if (!updatedPlan) {
-      return res.status(404).json({
-        success: false,
-        message: "Academic plan not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Academic plan not found" });
     }
 
     return res.status(200).json({
@@ -213,7 +263,6 @@ exports.updatePlan = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating plan:", error);
-
     if (error.name === "ValidationError") {
       return res.status(400).json({
         success: false,
@@ -221,13 +270,6 @@ exports.updatePlan = async (req, res) => {
         errors: Object.values(error.errors).map((val) => val.message),
       });
     }
-
-    if (!Array.isArray(years) || years.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Years are required" });
-    }
-
     return res.status(500).json({
       success: false,
       message: "Internal server error while updating plan",
@@ -235,40 +277,41 @@ exports.updatePlan = async (req, res) => {
   }
 };
 
-// Delete a plan
+// Delete
 exports.deletePlan = async (req, res) => {
   try {
     const planId = req.params.planId;
     const studentId = req.user.user_id || req.user._id;
 
-    const plan = await AcademicPlan.findOneAndDelete({
-      identifier: planId,
-      student: studentId,
-    });
-
-    if (!plan) {
-      return res.status(404).json({
-        success: false,
-        message: "Academic plan not found",
-      });
+    if (!mongoose.Types.ObjectId.isValid(planId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid plan ID format" });
     }
 
-    // If deleted plan was default, set another plan as default
+    const plan = await AcademicPlan.findOneAndDelete({
+      _id: planId,
+      student: studentId,
+    });
+    if (!plan) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Academic plan not found" });
+    }
+
     if (plan.isDefault) {
       const anotherPlan = await AcademicPlan.findOne({ student: studentId })
         .sort({ createdAt: -1 })
         .limit(1);
-
       if (anotherPlan) {
         anotherPlan.isDefault = true;
         await anotherPlan.save();
       }
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Academic plan deleted successfully",
-    });
+    return res
+      .status(200)
+      .json({ success: true, message: "Academic plan deleted successfully" });
   } catch (error) {
     console.error("Error deleting plan:", error);
     return res.status(500).json({
@@ -278,41 +321,38 @@ exports.deletePlan = async (req, res) => {
   }
 };
 
-// Set default plan
+// Set default
 exports.setDefaultPlan = async (req, res) => {
   try {
     const planId = req.params.planId;
     const studentId = req.user.user_id || req.user._id;
 
-    // Verify plan exists and belongs to student
-    const plan = await AcademicPlan.findOne({
-      identifier: planId,
-      student: studentId,
-    });
-
-    if (!plan) {
-      return res.status(404).json({
-        success: false,
-        message: "Academic plan not found",
-      });
+    if (!mongoose.Types.ObjectId.isValid(planId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid plan ID format" });
     }
 
-    // Start transaction to ensure atomic update
+    const plan = await AcademicPlan.findOne({
+      _id: planId,
+      student: studentId,
+    });
+    if (!plan) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Academic plan not found" });
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
-
     try {
-      // Unset all other default plans
       await AcademicPlan.updateMany(
-        { student: studentId, identifier: { $ne: planId } },
+        { student: studentId, _id: { $ne: planId } },
         { $set: { isDefault: false } },
         { session }
       );
-
-      // Set selected plan as default
       plan.isDefault = true;
       await plan.save({ session });
-
       await session.commitTransaction();
 
       return res.status(200).json({

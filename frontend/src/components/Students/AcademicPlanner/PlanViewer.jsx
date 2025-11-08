@@ -32,8 +32,8 @@ const PlanViewer = ({
           <Button
             variant="outline"
             onClick={() => {
-              setEditingPlan(viewingPlan);
               setViewingPlan(null);
+              setEditingPlan(viewingPlan); // only one mode stays open
               scrollToEditSection();
             }}
           >

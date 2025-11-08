@@ -1,5 +1,21 @@
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
+const Student = require("./Student");
+
+// sub schema
+const semesterCourseSchema = new mongoose.Schema(
+  {
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      required: true,
+    },
+    credit_at_time: { type: Number },
+    course_code: { type: String },
+    title_at_time: { type: String },
+  },
+  { _id: false }
+);
 
 const semesterSchema = new mongoose.Schema({
   id: {
@@ -10,30 +26,7 @@ const semesterSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  courses: [
-    {
-      code: {
-        type: String,
-        required: true,
-      },
-      name: {
-        type: String,
-        required: true,
-      },
-      credit: {
-        type: Number,
-        required: true,
-      },
-      prerequisites: {
-        type: [String],
-        default: [],
-      },
-      offered_semester: {
-        type: [String],
-        default: [],
-      },
-    },
-  ],
+  courses: [semesterCourseSchema],
   completed: {
     type: Boolean,
     default: false,
@@ -52,7 +45,7 @@ const academicPlanSchema = new mongoose.Schema(
   {
     student: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "student",
       required: true,
     },
     identifier: {
@@ -94,7 +87,6 @@ const academicPlanSchema = new mongoose.Schema(
 );
 
 // Calculate total credits before saving
-// Calculate total credits before saving
 academicPlanSchema.pre("save", function (next) {
   try {
     let totalCredits = 0;
@@ -104,13 +96,12 @@ academicPlanSchema.pre("save", function (next) {
       totalSemesters += (y.semesters || []).length;
       for (const s of y.semesters || []) {
         for (const c of s.courses || []) {
-          totalCredits += Number(c.credit || 0);
+          totalCredits += Number(c.credit_at_time || 0); // <-- snapshot
         }
       }
     }
 
     this.credits = totalCredits;
-    // if client sent an explicit semesters count, trust recompute instead
     this.semesters = totalSemesters;
     next();
   } catch (e) {

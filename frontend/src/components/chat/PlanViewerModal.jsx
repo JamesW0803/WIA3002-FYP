@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Download, Printer, Search, FileText } from "lucide-react";
+import { X, Printer, Search, FileText } from "lucide-react";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -74,48 +74,7 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
     );
   }, [flatCourses, query]);
 
-  const exportCSV = () => {
-    if (!data) return;
-    const cols = [
-      "Plan Name",
-      "Identifier",
-      "Year",
-      "Semester",
-      "Course Code",
-      "Course Name",
-      "Credit",
-      "Prerequisites",
-      "Offered",
-    ];
-    const lines = [cols.join(",")];
-    filteredCourses.forEach((c) => {
-      const row = [
-        csvSafe(data.name),
-        csvSafe(data.identifier || ""),
-        csvSafe(c.year),
-        csvSafe(c.semesterName),
-        csvSafe(c.code),
-        csvSafe(c.name),
-        csvSafe(c.credit),
-        csvSafe((c.prerequisites || []).join(" / ")),
-        csvSafe((c.offered_semester || []).join(" / ")),
-      ];
-      lines.push(row.join(","));
-    });
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const base = (data.name || "AcademicPlan").replace(/[^\w.-]+/g, "_");
-    a.href = url;
-    a.download = `${base}_courses.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
   const doPrint = () => {
-    // Print only the modal content
     const node = printRef.current;
     if (!node) return;
     const w = window.open("", "_blank", "width=1000,height=800");
@@ -149,9 +108,9 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
     <div className="fixed inset-0 z-[220]">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(1100px,95vw)] h-[min(85vh,900px)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col">
-        {/* Header */}
-        <div className="px-5 py-4 border-b flex items-center justify-between gap-3">
-          <div className="min-w-0">
+        {/* Header — made mobile-friendly and wrapped */}
+        <div className="px-3 sm:px-5 py-3 sm:py-4 border-b flex flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1 order-1">
             <div className="font-semibold truncate flex items-center gap-2">
               <FileText className="w-4 h-4 text-brand" />
               {data?.name || "Academic Plan"}
@@ -161,7 +120,6 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                 <>
                   {data.semesters ?? "—"} semesters • {data.credits ?? "—"}{" "}
                   credits
-                  {data.identifier ? ` • ID: ${data.identifier}` : ""}
                 </>
               ) : loading ? (
                 "Loading…"
@@ -170,30 +128,27 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="order-3 sm:order-2 flex items-center gap-2 ml-auto">
             <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-2 top-2.5" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search courses, codes, prerequisites…"
-                className="pl-8 pr-3 py-2 border rounded-lg text-sm w-[240px]"
+                className="pl-8 pr-3 py-2 border rounded-lg text-sm w-36 sm:w-[240px]"
               />
             </div>
-            <button
-              onClick={exportCSV}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
-              disabled={!data || loading}
-            >
-              <Download className="w-4 h-4" /> CSV
-            </button>
+
             <button
               onClick={doPrint}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
               disabled={!data || loading}
             >
-              <Printer className="w-4 h-4" /> Print
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">Print</span>
             </button>
+
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-gray-100"
@@ -205,7 +160,7 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-auto p-5" ref={printRef}>
+        <div className="flex-1 overflow-auto p-4 sm:p-5" ref={printRef}>
           {!data ? (
             <div className="text-sm text-gray-500">
               {loading ? "Loading plan…" : "No data found."}
@@ -216,14 +171,12 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
             </div>
           ) : (
             <>
-              {/* Grouped view by Year → Semester */}
               {(data.years || []).map((y) => (
                 <div key={y.year} className="mb-6">
                   <div className="text-sm font-semibold text-gray-800 mb-2">
                     Year {y.year}
                   </div>
                   {(y.semesters || []).map((s) => {
-                    // hide semester block if no rows after filter
                     const rows = (s.courses || [])
                       .map((c) => ({
                         year: y.year,
@@ -319,10 +272,4 @@ function TD({ children, className = "" }) {
       {children}
     </td>
   );
-}
-
-function csvSafe(v) {
-  const s = v == null ? "" : String(v);
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
 }
