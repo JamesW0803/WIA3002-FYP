@@ -2,32 +2,50 @@ const { PROGRESS_STATUS } = require("../../constants/progressStatus");
 const AcademicSession = require("../../models/AcademicSession");
 const ProgrammeIntake = require("../../models/ProgrammeIntake");
 const StudentAcademicProfile = require("../../models/StudentAcademicProfile");
-const Course = require("../../models/Course");
 
 const formatStudents = async (students) => {
+    const [ sessions, programmeIntakes, profiles, currentAcademicSession] = await Promise.all([
+        AcademicSession.find(),
+        ProgrammeIntake.find(),
+        StudentAcademicProfile.find(),
+        getCurrentAcademicSession()
+    ]);
+
+    const sessionMap = Object.fromEntries(sessions.map(s => [s._id.toString(), s]));
+    const intakeMap = Object.fromEntries(
+      programmeIntakes.map(i => [`${i.programme_id}_${i.academic_session_id}`, i])
+    );
+    const profileMap = Object.fromEntries(profiles.map(p => [p.student.toString(), p]));
+
     const formattedStudents = await Promise.all(
-        students.map(async (student) => {
-            return await formatStudent(student);
-        })
+        students.map( student => formatStudent(student, {
+            sessionMap,
+            intakeMap,
+            profileMap,
+            currentAcademicSession
+        }) )
     );
     return formattedStudents;
 };
 
 
-const formatStudent = async (student) => {
+const formatStudent = async (student, {
+    sessionMap,
+    intakeMap,
+    profileMap,
+    currentAcademicSession
+}) => {
     const programme = student.programme ? student.programme : "-";
     const department = programme.department ?? "-"
     const faculty = programme.faculty ?? "-"
     
-    const currentAcademicSession = await getCurrentAcademicSession();
-    const academicSessionEnrolled = await AcademicSession.findById(student.academicSession);
-    const programmeIntake = await ProgrammeIntake.findOne({
-        programme_id: student.programme._id,
-        academic_session_id: academicSessionEnrolled._id
-    });
-    const studentAcademicProfile = await StudentAcademicProfile.findOne({ student: student._id });
-    const expectedGraduationSession = await getExpectedGraduation(programmeIntake) ?? "-";
-    const studentProgress = await calculateStudentProgress( programmeIntake , studentAcademicProfile ) ?? 0;
+    const academicSessionEnrolled = sessionMap[student.academicSession?.toString()];
+    // console.log("intakeMap :", intakeMap)
+    // console.log("Student:" , student)
+    const programmeIntake = intakeMap[`${student.programme._id}_${student.academicSession}`];
+    const studentAcademicProfile = profileMap[student._id.toString()];
+    const expectedGraduationSession = getExpectedGraduation(programmeIntake, sessionMap) ?? "-";
+    const studentProgress = calculateStudentProgress( programmeIntake , studentAcademicProfile, sessionMap, currentAcademicSession) ?? 0;
  
     return {
         _id: student._id,
@@ -36,7 +54,7 @@ const formatStudent = async (student) => {
         department: department,
         faculty: faculty,
 
-        currentSemester : await getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession) ?? "-",
+        currentSemester : getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession, sessionMap) ?? "-",
         expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",
         progress : studentProgress.percentage,
         status : studentProgress.status ,
@@ -44,14 +62,18 @@ const formatStudent = async (student) => {
     }
 }
 
-const getStudentCurrentSemester = async ( academicSessionEnrolled, currentAcademicSession ) => {
+const getStudentCurrentSemester = ( academicSessionEnrolled, currentAcademicSession, sessionMap) => {
+    if (!academicSessionEnrolled || !currentAcademicSession) return "-";
+
     let semesters = 1;
     let hold = academicSessionEnrolled;
 
     while (hold._id.toString() !== currentAcademicSession._id.toString()){
         semesters +=1;
-        const nextSession = await AcademicSession.findById(hold.next);
-        hold = nextSession;
+        hold = sessionMap ? sessionMap[hold.next.toString()] : null;
+        if( hold == null){
+            break;
+        }
     }
 
     const year = Math.ceil(semesters / 2);
@@ -60,37 +82,36 @@ const getStudentCurrentSemester = async ( academicSessionEnrolled, currentAcadem
     return "Year " + year + " Semester " + semester;
 }
 
-const getExpectedGraduation = async ( programmeIntake ) => {
+const getExpectedGraduation = ( programmeIntake , sessionMap) => {
     const minSemester = programmeIntake ? programmeIntake.min_semester : 0;
 
-    let expectedGraduationSession = await AcademicSession.findById(programmeIntake.academic_session_id);
+    let expectedGraduationSession = sessionMap[programmeIntake.academic_session_id.toString()];
     for(let i=1; i< minSemester; i++){
         if(expectedGraduationSession.next == null){
             break;
         }
-        expectedGraduationSession = await AcademicSession.findById(expectedGraduationSession.next) ;
+        expectedGraduationSession = sessionMap[expectedGraduationSession.next.toString()];
     };
 
     return expectedGraduationSession;
 
 }
 
-const calculateStudentProgress = async ( programmeIntake , studentAcademicProfile ) => {
+const calculateStudentProgress = ( programmeIntake , studentAcademicProfile, sessionMap, currentAcademicSession ) => {
     const min_semester = programmeIntake.min_semester;
     const max_semester = programmeIntake.max_semester;
     const required_credits = programmeIntake.total_credit_hours;
     const completed_credits = studentAcademicProfile?.completed_credit_hours || 0;
 
-    const currentAcademicSession = await getCurrentAcademicSession();
     let progressPercentage = 0;
     let semesters_passed = 0;
-    let hold = await AcademicSession.findById(programmeIntake.academic_session_id);
+    let hold = sessionMap[programmeIntake.academic_session_id.toString()];
     let status = PROGRESS_STATUS.UNKNOWN;
     
     while (hold._id.toString() !== currentAcademicSession._id.toString()){
         semesters_passed +=1;
-        const nextSession = await AcademicSession.findById(hold.next);
-        hold = nextSession;
+        hold = sessionMap[hold.next.toString()];
+        if (!hold) break;
     }
 
     progressPercentage = ((completed_credits / required_credits) * 100).toFixed(2);
@@ -111,7 +132,6 @@ const calculateStudentStatus = ( min_semester, max_semester, semesters_passed, r
     }else{
         return PROGRESS_STATUS.AT_RISK; // student unable to graduate within max semester, need intervention
     }
-
 }
 
 const getCurrentAcademicSession = async () => {
@@ -124,5 +144,6 @@ const getCurrentAcademicSession = async () => {
 
 module.exports = {
     formatStudents,
-    formatStudent
+    formatStudent,
+    getCurrentAcademicSession
 };
