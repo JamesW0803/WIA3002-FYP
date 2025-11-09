@@ -93,6 +93,7 @@ exports.saveAcademicProfile = async (req, res) => {
       })
     );
 
+    let completed_credits = 0;
     for (const entry of entries) {
       const course = await Course.findOne({ course_code: entry.code });
       if (course?.prerequisites?.length > 0) {
@@ -113,6 +114,9 @@ exports.saveAcademicProfile = async (req, res) => {
           });
         }
       }
+      if (entry.status === "Passed" && course) {
+        completed_credits += course.credit_hours;
+      }
     }
 
     const validEntries = mappedEntries.filter((e) => e !== null);
@@ -120,11 +124,13 @@ exports.saveAcademicProfile = async (req, res) => {
     let savedProfile;
     if (existingProfile) {
       existingProfile.entries = validEntries;
+      existingProfile.completed_credit_hours = completed_credits;
       savedProfile = await existingProfile.save();
     } else {
       savedProfile = await AcademicProfile.create({
         student: studentId,
         entries: validEntries,
+        completed_credit_hours: completed_credits,
       });
     }
 
@@ -155,6 +161,17 @@ exports.getAcademicProfile = async (req, res) => {
     if (!profile) {
       return res.status(200).json({ entries: [] }); // No profile yet
     }
+
+    let totalCompletedCredits = 0;
+    if(!profile.completed_credit_hours || profile.completed_credit_hours === 0){
+      totalCompletedCredits = profile.entries.reduce( (sum, courseObj) => {
+        if(courseObj.status === "Passed" && courseObj.course){
+          return sum + (courseObj.course.credit_hours || 0);
+        }
+      }, 0);
+    }
+
+    profile.completed_credit_hours = totalCompletedCredits
 
     res.json(profile);
   } catch (err) {

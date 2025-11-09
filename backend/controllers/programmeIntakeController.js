@@ -105,6 +105,8 @@ const addProgrammeIntake = async (req, res) => {
       })
     );
 
+    const total_required_credits = courseList.reduce((sum, course) => sum + (course.credits || 0), 0);
+
     const newProgrameIntake = new ProgrammeIntake({
       programme_intake_code : generateProgrammeIntakeCode(programme, year, semester),
       programme_id : programme._id,
@@ -116,6 +118,7 @@ const addProgrammeIntake = async (req, res) => {
       graduation_requirements: required_course_ids,
       course_plan : coursePlan,
       programme_plan : programmePlanId,
+      total_credit_hours : total_required_credits
     });
 
     const savedProgrameIntake = await newProgrameIntake.save();

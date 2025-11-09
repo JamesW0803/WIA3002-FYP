@@ -21,6 +21,10 @@ const programmeIntake = new mongoose.Schema(
         ref: "AcademicSession",
         required: true,
     },
+    total_credit_hours: {
+      type: Number,
+      required: true,
+    },
     programme_plan: {
       type: mongoose.Schema.Types.ObjectId, 
       ref: "ProgrammePlan",

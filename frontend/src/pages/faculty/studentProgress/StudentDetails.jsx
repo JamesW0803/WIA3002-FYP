@@ -22,7 +22,6 @@ const StudentDetails = () => {
         const fetchStudent = async() => {
             const response = await axiosClient.get(`/students/${student_name}`)
             const currentStudent = response.data
-            console.log("Student details: ", currentStudent)
 
             setStudent(currentStudent)
             setFormData(currentStudent); // initial form data
