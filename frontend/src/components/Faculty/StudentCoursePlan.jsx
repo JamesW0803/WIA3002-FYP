@@ -60,7 +60,6 @@ const StudentCoursePlan = () => {
         const response = await axiosClient.get(`/academic-plans/students/${student._id}/plans`);
         const coursePlans = response.data.data;
         setCoursePlans(coursePlans || []);
-        console.log("Fetched course plans: ", coursePlans);
 
         // Default select the first plan (e.g., Default plan)
         if (coursePlans && coursePlans.length > 0) {
@@ -81,7 +80,6 @@ const StudentCoursePlan = () => {
       try {
         const response = await axiosClient.get(`/academic-plans/plans/${selectedPlanId}`);
         setSelectedPlan(response.data.data);
-        console.log("Fetched selected plan: ", response.data.data);
       } catch (error) {
         console.error("Error fetching selected plan:", error);
       }

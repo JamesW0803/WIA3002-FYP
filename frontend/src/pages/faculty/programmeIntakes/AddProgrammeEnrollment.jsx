@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Accordion,
@@ -113,9 +114,7 @@ const handleCourseToggle = (type, course) => {
         ...formData,
         graduation_requirements: selectedCourses, // Optional: structure as needed
       };
-      console.log("Payload: ", payload);
       const response = await axiosClient.post("/programme-intakes", payload);
-      console.log("Programme Enrollment added successfully");
     } catch (error) {
       console.error("Error creating programme enrollment:", error);
     } finally {

@@ -37,13 +37,8 @@ const StudentGraduationRequirement = () => {
           acc[course.type].requiredCredits = 0;
         }
 
-        if(!acc["total_credits_hours"]){
-          acc["total_credits_hours"] = 0;
-        }
-
         acc[course.type].courses.push(course);
         acc[course.type].requiredCredits += course.credit_hours;
-        acc["total_credits_hours"] += course.credit_hours;
         return acc;
       }, {});
       setGraduationRequirements(coursesByCategory);
@@ -52,7 +47,7 @@ const StudentGraduationRequirement = () => {
 
   return (
     <div style={{ width: '80%', margin: 'auto', marginTop: '2rem' }}>
-        <Header totalCreditHours={graduationRequirements.total_credits_hours}/>
+        <Header totalCreditHours={programmeIntake?.total_credits_hours}/>
         <CourseAccordion graduationRequirements={graduationRequirements}/>
     </div>
   );
@@ -61,7 +56,7 @@ const StudentGraduationRequirement = () => {
 const Header = ({ totalCreditHours }) => {
   return (
       <Typography variant="body2" gutterBottom>
-          Students are required to complete a total of {totalCreditHours} credit hours by fulfilling
+          Student is required to complete a total of {totalCreditHours} credit hours by fulfilling
           the minimum credit requirements from each of the course categories listed
           below
       </Typography>

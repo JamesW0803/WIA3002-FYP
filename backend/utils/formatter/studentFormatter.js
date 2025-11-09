@@ -76,31 +76,17 @@ const getExpectedGraduation = async ( programmeIntake ) => {
 }
 
 const calculateStudentProgress = async ( programmeIntake , studentAcademicProfile ) => {
-    const graduation_requirements = programmeIntake.graduation_requirements;
     const min_semester = programmeIntake.min_semester;
     const max_semester = programmeIntake.max_semester;
+    const required_credits = programmeIntake.total_credit_hours;
+    const completed_credits = studentAcademicProfile?.completed_credit_hours || 0;
+
     const currentAcademicSession = await getCurrentAcademicSession();
-    let required_credits = 0;
-    let completed_credits = 0;
     let progressPercentage = 0;
     let semesters_passed = 0;
     let hold = await AcademicSession.findById(programmeIntake.academic_session_id);
     let status = PROGRESS_STATUS.UNKNOWN;
     
-    for (const course_id of graduation_requirements) {
-        const course = await Course.findById(course_id);
-        required_credits += course.credit_hours;
-    }
-
-    if(studentAcademicProfile && studentAcademicProfile.entries){
-        for(const completedCourseObj of studentAcademicProfile.entries){
-            const course = await Course.findById(completedCourseObj.course);
-            if(completedCourseObj.status === "Passed"){ // current condition didnt check if a student passed a course multiple times
-                completed_credits += course.credit_hours;
-            }
-        }
-    }
-
     while (hold._id.toString() !== currentAcademicSession._id.toString()){
         semesters_passed +=1;
         const nextSession = await AcademicSession.findById(hold.next);

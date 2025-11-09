@@ -26,6 +26,7 @@ const Dashboard = () => {
                 const response = await axiosClient.get("/students");
                 const students = response.data;
                 setStudents(students);
+                console.log("Fetched students: ", students);
             }catch(error){
                 console.error("Error fetching students.")
             }

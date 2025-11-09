@@ -28,6 +28,11 @@ const academicProfileSchema = new mongoose.Schema(
         },
       },
     ],
+    completed_credit_hours: {
+      type: Number,
+      default: 0,
+      required: true,
+    }
   },
   { timestamps: true }
 );

@@ -75,8 +75,7 @@ const StudentAcademicProfile = () => {
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>
-        Reference course plan for students enrolled in Bachelor of Computer Science
-        (Software Engineering) session 2022/2023 Semester 1
+        Student Academic Profile 
       </Typography>
 
       {academicProfileSortedByYear.map((yearItem, yearIdx) => (
