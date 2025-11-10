@@ -32,8 +32,7 @@ const AddProgrammeEnrollment = () => {
   const [academicSession, setAcademicSession] = useState([])
   const [formData, setFormData] = useState({
     programme_code: '',
-    year: '',
-    semester: '',
+    academic_session_id: '',
     min_semester: '',
     max_semester: '',
     coursePlanAutoGenerate: false,
@@ -115,6 +114,7 @@ const handleCourseToggle = (type, course) => {
         graduation_requirements: selectedCourses, // Optional: structure as needed
       };
       const response = await axiosClient.post("/programme-intakes", payload);
+      
     } catch (error) {
       console.error("Error creating programme enrollment:", error);
     } finally {
@@ -154,28 +154,14 @@ const handleCourseToggle = (type, course) => {
 
         <TextField
           select
-          label="Intake Year"
-          name="year"
-          value={formData.year}
+          label="Intake Academic Session"
+          name="academic_session_id"
+          value={formData.academic_session_id}
           onChange={handleChange}
         >
           {academicSession.map((academicSession) => (
-            <MenuItem key={academicSession.year} value={academicSession.year}>
-              {academicSession.year}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          select
-          label="Intake Session"
-          name="semester"
-          value={formData.semester}
-          onChange={handleChange}
-        >
-          {['Semester 1', 'Semester 2', 'Special Semester'].map((session) => (
-            <MenuItem key={session} value={session}>
-              {session}
+            <MenuItem key={academicSession._id} value={academicSession._id}>
+              {academicSession.year} {academicSession.semester}
             </MenuItem>
           ))}
         </TextField>

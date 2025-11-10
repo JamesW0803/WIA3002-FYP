@@ -27,6 +27,7 @@ const ManageProgrammeEnrollment = () => {
     useEffect(() => {
         const fetchProgrammeEnrollments = async () => {
             try {
+                await axiosClient.get("/programme-intakes/refresh");
                 const response = await axiosClient.get("/programme-intakes");
                 const programmeEnrollments = response.data;
                 setProgrammeEnrollments(programmeEnrollments)

@@ -8,6 +8,7 @@ import ActionBar from "../../../components/form/ActionBar";
 import TextInputField from "../../../components/form/TextInputField";
 import SelectInputField from "../../../components/form/SelectInputField";
 import { programmeIntakeFormFields } from "../../../constants/programmeIntakeFormConfig"
+import { formatDateToLocaleString } from "../../../utils/dateFormatter"
 
 const ProgrammeEnrollmentDetails = () => {
     const location = useLocation();
@@ -22,9 +23,13 @@ const ProgrammeEnrollmentDetails = () => {
 
     useEffect(() => {
         const fetchProgrammeEnrollment = async() => {
-            const response = await axiosClient.get(`/programme-intakes/${programme_intake_code}`)
-            const currentProgrammeEnrollment = response.data
-
+        const response = await axiosClient.get(`/programme-intakes/${programme_intake_code}`)
+            const hold = response.data
+            const currentProgrammeEnrollment = {
+                ... hold,
+                createdAt : formatDateToLocaleString(hold.createdAt),
+                updatedAt : formatDateToLocaleString(hold.updatedAt)
+            }
             setProgrammeEnrollment(currentProgrammeEnrollment)
             setFormData(currentProgrammeEnrollment); // initial form data
             setGraduationRequirements(currentProgrammeEnrollment.graduation_requirements)
@@ -53,7 +58,6 @@ const ProgrammeEnrollmentDetails = () => {
             };
 
             const response = await axiosClient.put(`/programme-intakes/${formData.programme_intake_code}`, payload);
-            const updatedProgrammeEnrollment = response.data
             setEditMode(false)
 
         } catch (error) {
