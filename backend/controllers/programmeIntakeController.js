@@ -5,6 +5,7 @@ const Programme = require("../models/Programme");
 const AcademicSession = require("../models/AcademicSession");
 const SemesterPlan = require("../models/SemesterPlan")
 const ProgrammePlan = require("../models/ProgrammePlan")
+const Student = require("../models/Student")
 const Course = require("../models/Course");
 
 const getAllProgrammeIntakes = async (req, res) => {
@@ -22,8 +23,7 @@ const addProgrammeIntake = async (req, res) => {
   try {
     const {
       programme_code,
-      year,
-      semester,
+      academic_session_id,
       number_of_students_enrolled,
       graduation_rate,
       min_semester,
@@ -39,7 +39,7 @@ const addProgrammeIntake = async (req, res) => {
       return res.status(404).json({ message: "Programme not found" });
     }
 
-    const academicSession = await AcademicSession.findOne({ year, semester });
+    const academicSession = await AcademicSession.findById(academic_session_id);
     if (!academicSession) {
       return res.status(404).json({ message: "Academic session not found" });
     }
@@ -91,7 +91,7 @@ const addProgrammeIntake = async (req, res) => {
     }
 
       const programmePlan = await ProgrammePlan.create({
-          title: `${programme_code} Auto Plan (${year})`,
+          title: `${programme_code} Auto Plan (${academicSession.year})`,
           semester_plans: semesterPlans,
       });
 
@@ -108,7 +108,7 @@ const addProgrammeIntake = async (req, res) => {
     const total_required_credits = courseList.reduce((sum, course) => sum + (course.credits || 0), 0);
 
     const newProgrameIntake = new ProgrammeIntake({
-      programme_intake_code : generateProgrammeIntakeCode(programme, year, semester),
+      programme_intake_code : generateProgrammeIntakeCode(programme, academicSession.year, academicSession.semester),
       programme_id : programme._id,
       academic_session_id : academicSession._id,
       number_of_students_enrolled : number_of_students_enrolled ?? 0,
@@ -284,13 +284,38 @@ const topologicalSort = async (courses) => {
   return result;
 };
 
+const syncNumberOfStudentEnrolled = async (req, res) => {
+  try {
+    const intakes = await ProgrammeIntake.find();
 
+    // Recalculate student counts for each intake
+    await Promise.all(
+      intakes.map(async (intake) => {
+        const count = await Student.countDocuments({
+          programme: intake.programme_id,
+          academicSession: intake.academic_session_id
+        });
 
+        // Only update if the count changed
+        if (intake.number_of_students_enrolled !== count) {
+          intake.number_of_students_enrolled = count;
+          await intake.save();
+        }
+      })
+    );
+
+    res.status(200).json({ message : "Successfully refresh student counts" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to refresh student counts." });
+  }
+};
 
 module.exports = {
   getAllProgrammeIntakes,
   addProgrammeIntake,
   getProgrammeIntakeById,
   getProgrammeIntakeByCode,
-  deleteProgrammeIntakeById
+  deleteProgrammeIntakeById,
+  syncNumberOfStudentEnrolled
 };
