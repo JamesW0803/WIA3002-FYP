@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import CourseListSelector from "./CourseListSelector";
 import CourseStatusSelector from "./CourseStatusSelector";
 import { TriangleAlert } from "lucide-react";
-import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 import GradeSelector from "./GradeSelector";
 
 const CourseEditor = (props) => {
@@ -19,9 +18,11 @@ const CourseEditor = (props) => {
     currentSemester,
     entries,
     targetSemester,
+    isFutureSemester,
+    isGapSemester,
+    checkCoursePrerequisites,
+    showNotification,
   } = props;
-
-  const { isFutureSemester } = useAcademicProfile();
   const year = editingEntry?.year;
   const semester = editingEntry?.semester;
 
@@ -45,7 +46,6 @@ const CourseEditor = (props) => {
     isOfferedIn(selectedFromList.offered_semester, semester);
 
   const [isCheckingPrerequisites, setIsCheckingPrerequisites] = useState(false);
-  const { checkCoursePrerequisites, showNotification } = useAcademicProfile();
 
   const selectedCourse = useMemo(() => {
     return availableCourses.find((c) => c.code === editingEntry?.code);
@@ -118,15 +118,24 @@ const CourseEditor = (props) => {
   }, [editingEntry.code, entries, year, semester, selectedCourse]);
 
   const disabledCourseCodes = useMemo(() => {
+    // disable only if same course appears in the SAME year+semester
     return entries
       .filter((entry) => {
         const sameCourse = entry.code === editingEntry?.code;
         const sameId = entry.id === editingEntry?.id;
-        const passedOrOngoing = entry.status !== "Failed";
-        return !sameId && sameCourse && passedOrOngoing;
+        const sameTerm =
+          entry.year === editingEntry?.year &&
+          entry.semester === editingEntry?.semester;
+        return !sameId && sameCourse && sameTerm;
       })
       .map((entry) => entry.code);
-  }, [entries, editingEntry?.id, editingEntry?.code]);
+  }, [
+    entries,
+    editingEntry?.id,
+    editingEntry?.code,
+    editingEntry?.year,
+    editingEntry?.semester,
+  ]);
 
   const handleCourseSelect = (courseCode) => {
     const selectedCourse = availableCourses.find((c) => c.code === courseCode);
@@ -164,6 +173,21 @@ const CourseEditor = (props) => {
     );
   };
 
+  const isEarlierTerm = (a, b) =>
+    a.year < b.year || (a.year === b.year && a.semester < b.semester);
+  const hasPriorExcellentGrade = (courseCode) => {
+    return entries.some(
+      (e) =>
+        e.code === courseCode &&
+        e.status === "Passed" &&
+        (e.grade === "A" || e.grade === "A+") &&
+        isEarlierTerm(
+          { year: e.year, semester: e.semester },
+          { year, semester }
+        )
+    );
+  };
+
   const handleSave = async () => {
     if (!isOffered) {
       showNotification(
@@ -172,10 +196,31 @@ const CourseEditor = (props) => {
       );
       return;
     }
-    if (isFutureSemester(year, semester)) {
-      showNotification("Cannot add courses for future semesters.", "error");
+    if (isFutureSemester(year, semester) && editingEntry.status !== "Planned") {
+      showNotification(
+        "Future semesters can only have status 'Planned'.",
+        "error"
+      );
       return;
     }
+
+    if (isGapSemester(year, semester)) {
+      showNotification(
+        `This term is gapped (Year ${year} • Semester ${semester}). Remove the gap to add or modify courses.`,
+        "error"
+      );
+      return;
+    }
+
+    // Prevent retake if a prior A or A+ already exists
+    if (hasPriorExcellentGrade(editingEntry.code)) {
+      showNotification(
+        `You already achieved ${editingEntry.code} with grade A/A+. Retakes are not allowed for A or A+.`,
+        "error"
+      );
+      return;
+    }
+
     const unmet = getUnmetLocalPrereqs();
     if (unmet.length > 0) {
       showNotification(
@@ -201,19 +246,23 @@ const CourseEditor = (props) => {
       return;
     }
 
-    const serverCheck = await checkCoursePrerequisites(editingEntry.code, {
-      year: editingEntry.year,
-      semester: editingEntry.semester,
-    });
-
-    if (!serverCheck.allPrerequisitesMet) {
-      showNotification(
-        `Cannot add ${
-          editingEntry.code
-        }. Missing prerequisites: ${serverCheck.unmetPrerequisites.join(", ")}`,
-        "error"
-      );
-      return;
+    // Skip prereqs if explicit retake
+    if (!editingEntry.isRetake) {
+      const serverCheck = await checkCoursePrerequisites(editingEntry.code, {
+        year: editingEntry.year,
+        semester: editingEntry.semester,
+      });
+      if (!serverCheck.allPrerequisitesMet) {
+        showNotification(
+          `Cannot add ${
+            editingEntry.code
+          }. Missing prerequisites: ${serverCheck.unmetPrerequisites.join(
+            ", "
+          )}`,
+          "error"
+        );
+        return;
+      }
     }
 
     const isPast = isPastSemester(editingEntry.year, editingEntry.semester);
@@ -273,6 +322,18 @@ const CourseEditor = (props) => {
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200 overflow-visible relative z-40">
+      {isGapSemester(editingEntry.year, editingEntry.semester) && (
+        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded">
+          <p className="text-amber-800 text-sm font-medium">
+            This term is currently gapped. Remove the gap to modify courses.
+          </p>
+        </div>
+      )}
+      {editingEntry?.isRetake && (
+        <div className="mb-2 inline-flex items-center px-2 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-medium border border-amber-200">
+          Retake
+        </div>
+      )}
       {isFutureSemester(editingEntry.year, editingEntry.semester) && (
         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
           <p className="text-red-800 text-sm font-medium">
@@ -302,6 +363,7 @@ const CourseEditor = (props) => {
             onChange={handleCourseSelect}
             disabledCodes={disabledCourseCodes}
             targetSemester={semester}
+            allowRetake={!!editingEntry?.isRetake}
           />
         </div>
 
@@ -322,7 +384,7 @@ const CourseEditor = (props) => {
                 ? ["Passed", "Failed"]
                 : year === currentYear && semester === currentSemester
                 ? ["Ongoing"]
-                : ["Ongoing", "Passed", "Failed"]
+                : ["Planned"] // Future
             }
           />
         </div>
@@ -348,17 +410,20 @@ const CourseEditor = (props) => {
             type="button"
             onClick={handleSave}
             disabled={
-              isFutureSemester(editingEntry.year, editingEntry.semester) ||
+              (isFutureSemester(editingEntry.year, editingEntry.semester) &&
+                editingEntry.status !== "Planned") ||
               !isOffered ||
-              !prerequisiteCheck.allPrerequisitesMet ||
+              (!editingEntry.isRetake &&
+                !prerequisiteCheck.allPrerequisitesMet) ||
               isCheckingPrerequisites ||
               !editingEntry.code ||
+              isCourseAlreadyAdded(editingEntry.code, editingEntry?.id) ||
               !editingEntry.status ||
               ((editingEntry.status === "Passed" ||
                 editingEntry.status === "Failed") &&
                 !editingEntry.grade) ||
               getUnmetLocalPrereqs().length > 0 ||
-              hasSameSemesterPrerequisites()
+              (!editingEntry.isRetake && hasSameSemesterPrerequisites())
             }
             className={`px-4 py-2 rounded-md flex-1 border transition-colors ${
               prerequisiteCheck.allPrerequisitesMet &&
@@ -386,9 +451,17 @@ const CourseEditor = (props) => {
 
       {/* Alerts below the grid, with wider max width on larger screens */}
       <div className="mt-3 lg:max-w-md">
+        {editingEntry.code && hasPriorExcellentGrade(editingEntry.code) && (
+          <AlertBox variant="error" title="Retake Not Allowed">
+            You previously achieved grade <strong>A</strong> or{" "}
+            <strong>A+</strong> for this course. Retakes are disabled for A/A+.
+          </AlertBox>
+        )}
         {isCourseAlreadyAdded(editingEntry.code, editingEntry?.id) && (
-          <AlertBox variant="error" title="Duplicate Course">
-            This course has already been taken in another semester/year.
+          <AlertBox variant="error" title="Duplicate in This Semester">
+            This course is already added in{" "}
+            <strong>the same year &amp; semester</strong>. Remove the other
+            entry or choose a different course.
           </AlertBox>
         )}
 
@@ -398,9 +471,6 @@ const CourseEditor = (props) => {
             choose a course offered in this semester.
           </AlertBox>
         )}
-
-        {/* Prereq rendering stays as before */}
-        {/* Move your renderPrerequisiteStatus() content here if you want; keeping your logic */}
       </div>
     </div>
   );
