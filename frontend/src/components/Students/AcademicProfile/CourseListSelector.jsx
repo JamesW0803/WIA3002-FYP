@@ -7,6 +7,7 @@ const CourseListSelector = ({
   onChange,
   disabledCodes = [],
   targetSemester,
+  allowRetake = false,
 }) => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -50,10 +51,10 @@ const CourseListSelector = ({
   useEffect(() => {
     if (courses.length > 0) {
       const enabledCourses = courses.filter(
-        (course) => !disabledCodes.includes(course.code)
+        (course) => allowRetake || !disabledCodes.includes(course.code)
       );
-      const disabledCourses = courses.filter((course) =>
-        disabledCodes.includes(course.code)
+      const disabledCourses = courses.filter(
+        (course) => !allowRetake && disabledCodes.includes(course.code)
       );
       const sortedCourses = [...enabledCourses, ...disabledCourses];
       setFilteredCourses(sortedCourses);
@@ -68,7 +69,7 @@ const CourseListSelector = ({
   }, [selectedCode, selectedLabel]);
 
   const handleSelectCourse = (course) => {
-    if (disabledCodes.includes(course.code)) return;
+    if (!allowRetake && disabledCodes.includes(course.code)) return;
     onChange(course.code);
     setSearchTerm(`${course.code} - ${course.name}`);
     setShowDropdown(false);
@@ -88,7 +89,8 @@ const CourseListSelector = ({
   const renderCourseItem = (course) => {
     const notOffered =
       targetSemester && !isOfferedIn(course.offered_semester, targetSemester);
-    const isDisabled = disabledCodes.includes(course.code) || notOffered;
+    const isDisabled =
+      (!allowRetake && disabledCodes.includes(course.code)) || notOffered;
     const hasPrerequisites =
       course.prerequisites && course.prerequisites.length > 0;
 
@@ -126,9 +128,9 @@ const CourseListSelector = ({
                 Not offered in Semester {targetSemester}
               </div>
             )}
-            {disabledCodes.includes(course.code) && (
+            {!allowRetake && disabledCodes.includes(course.code) && (
               <div className="text-xs text-red-500 mt-1 font-medium">
-                Already taken
+                Already added in this semester
               </div>
             )}
           </div>

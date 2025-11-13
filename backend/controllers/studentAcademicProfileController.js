@@ -9,7 +9,7 @@ exports.saveAcademicProfile = async (req, res) => {
     return res.status(400).json({ message: "Invalid student ID format" });
   }
 
-  const { entries } = req.body;
+  const { entries, gaps = [] } = req.body;
 
   try {
     const currentSession = await AcademicSession.findOne({ isCurrent: true });
@@ -38,6 +38,30 @@ exports.saveAcademicProfile = async (req, res) => {
       }
     }
 
+    const yearGaps = new Set(
+      gaps
+        .filter(
+          (g) =>
+            g && g.year && (g.semester === null || g.semester === undefined)
+        )
+        .map((g) => Number(g.year))
+    );
+    const normalizedGaps = [];
+    const seenKey = new Set();
+    for (const g of gaps) {
+      if (!g || !g.year) continue;
+      const yr = Number(g.year);
+      const sem =
+        g.semester === null || g.semester === undefined
+          ? null
+          : Number(g.semester);
+      if (yearGaps.has(yr) && sem !== null) continue; // suppressed by year-level gap
+      const key = `${yr}:${sem === null ? "Y" : sem}`;
+      if (seenKey.has(key)) continue;
+      seenKey.add(key);
+      normalizedGaps.push({ year: yr, semester: sem });
+    }
+
     // Check for existing profile to identify retakes
     const existingProfile = await AcademicProfile.findOne({
       student: studentId,
@@ -47,8 +71,8 @@ exports.saveAcademicProfile = async (req, res) => {
       if (a.year !== b.year) return a.year - b.year;
       return a.semester - b.semester;
     });
-    // Track per-course failures we've seen so far
-    const seenFailed = new Map();
+    // Track prior attempts per course (status/grade) in chronological order
+    const seenByCourse = new Map();
 
     const mappedEntries = await Promise.all(
       sortedEntries.map(async (entry) => {
@@ -74,7 +98,17 @@ exports.saveAcademicProfile = async (req, res) => {
           }
         }
 
-        const priorFailed = !!seenFailed.get(entry.code);
+        // Any prior attempt => retake
+        const prior = seenByCourse.get(entry.code) || [];
+        const hasAorAplus = prior.some(
+          (p) => p.status === "Passed" && (p.grade === "A" || p.grade === "A+")
+        );
+        if (hasAorAplus) {
+          // Server-side guard (aligns with frontend rule)
+          throw new Error(
+            `Cannot record ${entry.code} again after achieving A/A+.`
+          );
+        }
 
         const result = {
           course: course._id,
@@ -82,12 +116,12 @@ exports.saveAcademicProfile = async (req, res) => {
           semester: entry.semester,
           status: entry.status,
           grade: entry.grade || "",
-          isRetake: priorFailed,
+          isRetake: prior.length > 0,
         };
 
-        if (entry.status === "Failed") {
-          seenFailed.set(entry.code, true);
-        }
+        // Append this attempt so later ones see it
+        prior.push({ status: entry.status, grade: entry.grade });
+        seenByCourse.set(entry.code, prior);
 
         return result;
       })
@@ -124,12 +158,14 @@ exports.saveAcademicProfile = async (req, res) => {
     let savedProfile;
     if (existingProfile) {
       existingProfile.entries = validEntries;
+      existingProfile.gaps = normalizedGaps;
       existingProfile.completed_credit_hours = completed_credits;
       savedProfile = await existingProfile.save();
     } else {
       savedProfile = await AcademicProfile.create({
         student: studentId,
         entries: validEntries,
+        gaps: normalizedGaps,
         completed_credit_hours: completed_credits,
       });
     }
@@ -141,6 +177,12 @@ exports.saveAcademicProfile = async (req, res) => {
   } catch (err) {
     console.error("Error saving academic profile:", err);
     if (String(err?.message || "").includes("not offered in Semester")) {
+      return res.status(400).json({ message: err.message });
+    }
+    if (
+      String(err?.message || "").includes("Cannot record") &&
+      String(err?.message || "").includes("A/A+")
+    ) {
       return res.status(400).json({ message: err.message });
     }
     res.status(500).json({ message: "Server error" });
@@ -159,21 +201,25 @@ exports.getAcademicProfile = async (req, res) => {
     }).populate("entries.course");
 
     if (!profile) {
-      return res.status(200).json({ entries: [] }); // No profile yet
+      return res.status(200).json({ entries: [], gaps: [] });
     }
 
     let totalCompletedCredits = 0;
-    if(!profile.completed_credit_hours || profile.completed_credit_hours === 0){
-      totalCompletedCredits = profile.entries.reduce( (sum, courseObj) => {
-        if(courseObj.status === "Passed" && courseObj.course){
+    if (
+      !profile.completed_credit_hours ||
+      profile.completed_credit_hours === 0
+    ) {
+      totalCompletedCredits = profile.entries.reduce((sum, courseObj) => {
+        if (courseObj.status === "Passed" && courseObj.course) {
           return sum + (courseObj.course.credit_hours || 0);
         }
+        return sum;
       }, 0);
+      profile.completed_credit_hours = totalCompletedCredits;
     }
-
-    profile.completed_credit_hours = totalCompletedCredits
-
-    res.json(profile);
+    const json = profile.toObject ? profile.toObject() : profile;
+    if (!json.gaps) json.gaps = [];
+    res.json(json);
   } catch (err) {
     console.error("Error fetching academic profile:", err.message, err.stack);
     res.status(500).json({ message: "Server error" });

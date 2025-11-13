@@ -32,9 +32,30 @@ const AcademicProfile = () => {
     completeOnboarding,
     closeNotification,
     setEditingEntry,
+    addSemester,
+    addYear,
+    startRetake,
+    collapsedYears,
+    setCollapsedYears,
+    isFutureReady,
+    deleteYear,
+    isGapYear,
+    requestGapYear,
+    isGapSemester,
+    requestGapSemester,
+    checkCoursePrerequisites,
+    showNotification,
+    toggleGapYear,
+    toggleGapSemester,
   } = useAcademicProfile();
 
-  const { isFutureReady } = useAcademicProfile();
+  const onToggleCollapse = (y) => {
+    setCollapsedYears((prev) => {
+      const next = new Set(prev);
+      next.has(y) ? next.delete(y) : next.add(y);
+      return next;
+    });
+  };
 
   if (!isFutureReady) {
     return (
@@ -62,6 +83,8 @@ const AcademicProfile = () => {
               <YearSection
                 key={year}
                 year={year}
+                isCollapsed={collapsedYears.has(year)}
+                onToggleCollapse={onToggleCollapse}
                 entriesByYearSemester={entriesByYearSemester}
                 editingEntry={editingEntry}
                 addNewEntry={addNewEntry}
@@ -77,15 +100,41 @@ const AcademicProfile = () => {
                 currentSemester={studentSemester}
                 setEditingEntry={setEditingEntry}
                 entries={entries}
+                deleteYear={deleteYear}
+                isGapYear={isGapYear}
+                requestGapYear={requestGapYear}
+                isFutureSemester={isFutureSemester}
+                isGapSemester={isGapSemester}
+                requestGapSemester={requestGapSemester}
+                checkCoursePrerequisites={checkCoursePrerequisites}
+                showNotification={showNotification}
+                toggleGapYear={toggleGapYear}
+                toggleGapSemester={toggleGapSemester}
               />
             ))}
 
-            <div className="mt-4 sm:mt-6">
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2">
               <button
                 type="submit"
                 className="w-full sm:w-auto bg-[#1E3A8A] text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
               >
                 Save All Changes
+              </button>
+              <button
+                type="button"
+                onClick={addSemester}
+                className="w-full sm:w-auto bg-blue-50 text-blue-700 px-6 py-2 rounded-md hover:bg-blue-100 transition border border-blue-200"
+                title="Append the next chronological semester (e.g., Year 5 • Semester 1)"
+              >
+                + Add Semester
+              </button>
+              <button
+                type="button"
+                onClick={addYear}
+                className="w-full sm:w-auto bg-blue-50 text-blue-700 px-6 py-2 rounded-md hover:bg-blue-100 transition border border-blue-200"
+                title="Add one more academic year (manual)"
+              >
+                + Add Year
               </button>
             </div>
           </form>

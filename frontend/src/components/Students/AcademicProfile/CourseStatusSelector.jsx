@@ -3,7 +3,7 @@ import SelectMenu from "./SelectMenu";
 
 const CourseStatusSelector = ({ status, onChange, allowedStatuses = [] }) => {
   const options = useMemo(() => {
-    const order = ["Ongoing", "Passed", "Failed"];
+    const order = ["Planned", "Ongoing", "Passed", "Failed"];
     return order
       .filter((s) => allowedStatuses.includes(s))
       .map((s) => ({ value: s, label: s }));

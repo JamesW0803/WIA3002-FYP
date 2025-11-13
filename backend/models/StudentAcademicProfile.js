@@ -28,11 +28,17 @@ const academicProfileSchema = new mongoose.Schema(
         },
       },
     ],
+    gaps: [
+      {
+        year: { type: Number, required: true },
+        semester: { type: Number, default: null }, // null => gap year
+      },
+    ],
     completed_credit_hours: {
       type: Number,
       default: 0,
       required: true,
-    }
+    },
   },
   { timestamps: true }
 );
