@@ -284,22 +284,43 @@ const topologicalSort = async (courses) => {
   return result;
 };
 
-const syncNumberOfStudentEnrolled = async (req, res) => {
+const updateProgrammeIntake = async (req, res) => {
   try {
     const intakes = await ProgrammeIntake.find();
 
     // Recalculate student counts for each intake
     await Promise.all(
       intakes.map(async (intake) => {
-        const count = await Student.countDocuments({
+        let update = false;
+        const totalStudentsEnrolled = await Student.countDocuments({
           programme: intake.programme_id,
           academicSession: intake.academic_session_id
         });
 
+        const totalStudentsGraduated = await Student.countDocuments({
+          programme: intake.programme_id,
+          academicSession: intake.academic_session_id,
+          isGraduated : true,
+        })
+
+        const graduaionRate = totalStudentsEnrolled > 0 ? 
+            (totalStudentsGraduated / totalStudentsEnrolled) * 100 : 0;
+  
         // Only update if the count changed
-        if (intake.number_of_students_enrolled !== count) {
-          intake.number_of_students_enrolled = count;
-          await intake.save();
+        if (intake.number_of_students_enrolled !== totalStudentsEnrolled) {
+          intake.number_of_students_enrolled = totalStudentsEnrolled;
+          update = true;
+        }
+
+        // Only update if the graduation rate changed
+        if (intake.graduation_rate !== graduaionRate) {
+          intake.number_of_students_graduated = totalStudentsGraduated
+          intake.graduation_rate = graduaionRate;
+          update = true;
+        }
+
+        if(update){
+          await intake.save()
         }
       })
     );
@@ -317,5 +338,5 @@ module.exports = {
   getProgrammeIntakeById,
   getProgrammeIntakeByCode,
   deleteProgrammeIntakeById,
-  syncNumberOfStudentEnrolled
+  updateProgrammeIntake
 };

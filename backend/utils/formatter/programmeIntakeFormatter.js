@@ -19,6 +19,7 @@ const formatProgrammeIntake = (programmeIntake) => {
       min_semester: programmeIntake.min_semester,
       max_semester: programmeIntake.max_semester,
       number_of_students_enrolled: programmeIntake.number_of_students_enrolled,
+      number_of_students_graduated: programmeIntake.number_of_students_graduated,
       graduation_rate: programmeIntake.graduation_rate,
 
       createdAt: programmeIntake.createdAt,

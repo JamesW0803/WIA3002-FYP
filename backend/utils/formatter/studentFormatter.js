@@ -40,8 +40,6 @@ const formatStudent = async (student, {
     const faculty = programme.faculty ?? "-"
     
     const academicSessionEnrolled = sessionMap[student.academicSession?.toString()];
-    // console.log("intakeMap :", intakeMap)
-    // console.log("Student:" , student)
     const programmeIntake = intakeMap[`${student.programme._id}_${student.academicSession}`];
     const studentAcademicProfile = profileMap[student._id.toString()];
     const expectedGraduationSession = getExpectedGraduation(programmeIntake, sessionMap) ?? "-";
@@ -53,6 +51,7 @@ const formatStudent = async (student, {
         programme_name : programme.programme_name ?? "-",
         department: department,
         faculty: faculty,
+        is_graduated : student.isGraduated? student.isGraduated : false,
 
         currentSemester : getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession, sessionMap) ?? "-",
         expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",

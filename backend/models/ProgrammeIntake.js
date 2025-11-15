@@ -33,6 +33,10 @@ const programmeIntake = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    number_of_students_graduated: {
+      type: Number,
+      default: 0,
+    },
     graduation_rate: {
       type: Number,
       default: 0,
