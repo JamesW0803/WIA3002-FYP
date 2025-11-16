@@ -129,24 +129,28 @@ const StudentCoursePlan = () => {
             </AccordionSummary>
 
             <AccordionDetails>
-              {yearPlan.semesters.map((semesterPlan, semIdx) => (
-                <div key={semesterPlan._id || semIdx} style={{ marginBottom: '1.5rem' }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Semester {semIdx + 1}
-                  </Typography>
-                  {semesterPlan.courses && semesterPlan.courses.length > 0 ? (
-                    <CourseTable courses={semesterPlan.courses} />
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      fontStyle="italic"
-                    >
-                      No courses listed
-                    </Typography>
-                  )}
+              {yearPlan.semesters.length > 0 ? (
+                <div 
+                  style={{ 
+                    display: "flex", 
+                    gap: "2rem", 
+                    flexWrap: "wrap"  // allows wrapping on small screens
+                  }}
+                >
+                  {yearPlan.semesters.map((semesterObj, semIdx) => (
+                    <div key={semIdx} style={{ flex: "1 1 45%" }}>
+                      <Typography variant="subtitle1" gutterBottom>
+                        {"Semester " + (semIdx + 1)}
+                      </Typography>
+                      <CourseTable courses={semesterObj.courses} />
+                    </div>
+                    ))}
                 </div>
-              ))}
+                ) : (
+                  <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                    No semesters listed
+                  </Typography>
+                )}
             </AccordionDetails>
           </Accordion>
         ))

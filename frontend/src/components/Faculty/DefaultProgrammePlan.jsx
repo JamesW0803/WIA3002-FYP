@@ -92,19 +92,27 @@ const DefaultProgrammePlan = () => {
           </AccordionSummary>
           <AccordionDetails>
             {yearItem.length > 0 ? (
-              yearItem.map((semesterObj, semIdx) => (
-                <div key={semIdx}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    {"Semester " + (semIdx + 1)}
-                  </Typography>
-                  <CourseTable courses={semesterObj.courses} />
-                </div>
-              ))
-            ) : (
-              <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                No semesters listed
-              </Typography>
-            )}
+              <div 
+                style={{ 
+                  display: "flex", 
+                  gap: "2rem", 
+                  flexWrap: "wrap"  // allows wrapping on small screens
+                }}
+              >
+                {yearItem.map((semesterObj, semIdx) => (
+                  <div key={semIdx} style={{ flex: "1 1 45%" }}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      {"Semester " + (semIdx + 1)}
+                    </Typography>
+                    <CourseTable courses={semesterObj.courses} />
+                  </div>
+                  ))}
+              </div>
+              ) : (
+                <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                  No semesters listed
+                </Typography>
+              )}
           </AccordionDetails>
         </Accordion>
       ))}
