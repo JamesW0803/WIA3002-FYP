@@ -9,11 +9,16 @@ const {
   deleteProgrammeIntakeById,
   getProgrammeIntakeByCode,
   updateProgrammeIntake,
+  getGraduationRequirementsForStudent,
 } = require("../controllers/programmeIntakeController");
 
 // Public routes (no auth required)
 
 router.use(authenticate);
+router.get(
+  "/student/:studentId/requirements",
+  getGraduationRequirementsForStudent
+);
 
 // Admin-only routes
 router.use(checkRole(["admin"]));

@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 require("./Programme");
 require("./AcademicSession");
-require("./ProgrammePlan")
-require("./Course")
+require("./ProgrammePlan");
+require("./Course");
 
 const programmeIntake = new mongoose.Schema(
   {
@@ -12,21 +12,21 @@ const programmeIntake = new mongoose.Schema(
       unique: true,
     },
     programme_id: {
-      type: mongoose.Schema.Types.ObjectId, 
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Programme",
       required: true,
     },
     academic_session_id: {
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: "AcademicSession",
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AcademicSession",
+      required: true,
     },
     total_credit_hours: {
       type: Number,
       required: true,
     },
     programme_plan: {
-      type: mongoose.Schema.Types.ObjectId, 
+      type: mongoose.Schema.Types.ObjectId,
       ref: "ProgrammePlan",
     },
     number_of_students_enrolled: {
@@ -50,11 +50,10 @@ const programmeIntake = new mongoose.Schema(
       default: 11,
     },
     graduation_requirements: {
-        type: [mongoose.Schema.Types.ObjectId], 
-        ref: "Course",
-        required: true,
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Course",
+      required: true,
     },
-
   },
   {
     timestamps: true,
@@ -62,6 +61,9 @@ const programmeIntake = new mongoose.Schema(
   }
 );
 
-programmeIntake.index({ programme_id: 1, academic_session_id: 1 }, { unique: true });
+programmeIntake.index(
+  { programme_id: 1, academic_session_id: 1 },
+  { unique: true }
+);
 
 module.exports = mongoose.model("ProgrammeIntake", programmeIntake);
