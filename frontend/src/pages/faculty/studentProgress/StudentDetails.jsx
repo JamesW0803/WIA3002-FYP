@@ -112,7 +112,7 @@ const NavTab = () => {
             >
                 Default Programme Plan
             </Link>
-            <Link 
+            {/* <Link 
                 to="course-plan"
                 className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
                     isActive('course-plan') 
@@ -121,7 +121,7 @@ const NavTab = () => {
                 }`}
             >
                 Course Plans
-            </Link>
+            </Link> */}
         </div>
     )
 }
