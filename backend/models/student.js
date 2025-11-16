@@ -65,7 +65,7 @@ const studentSchema = new mongoose.Schema({
   isGraduated: {
     type: Boolean,
     default: false,
-  }
+  },
 });
 
 const Student = User.discriminator("student", studentSchema);

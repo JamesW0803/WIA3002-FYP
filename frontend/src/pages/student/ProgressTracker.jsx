@@ -11,13 +11,13 @@ import {
 import PageHeader from "../../components/Students/PageHeader";
 import axiosClient from "../../api/axiosClient";
 
-const creditRequirements = {
-  "Faculty Core": 17,
-  "Programme Core": 59,
-  "University Courses": 14,
-  "Specialization Electives": 30,
-  "SHE Cluster": 8,
-};
+const CATEGORY_ORDER = [
+  "Faculty Core",
+  "Programme Core",
+  "University Courses",
+  "Specialization Electives",
+  "SHE Cluster",
+];
 
 const categoryMap = {
   faculty_core: "Faculty Core",
@@ -113,7 +113,14 @@ const ProgressTracker = () => {
   const [coursesMap, setCoursesMap] = useState({});
   const [completedByCategory, setCompletedByCategory] = useState({});
   const [updatedAt, setUpdatedAt] = useState(new Date());
-  const [selectedCat, setSelectedCat] = useState(null); // single source of truth
+  const [selectedCat, setSelectedCat] = useState(null);
+
+  const [creditRequirements, setCreditRequirements] = useState(
+    CATEGORY_ORDER.reduce((acc, cat) => {
+      acc[cat] = 0;
+      return acc;
+    }, {})
+  );
 
   // ---- data loads
   useEffect(() => {
@@ -152,6 +159,38 @@ const ProgressTracker = () => {
       }
     };
     fetchCourses();
+  }, []);
+
+  // Load graduation requirements for the logged-in student's intake
+  useEffect(() => {
+    const fetchRequirements = async () => {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+      if (!token || !userId) return;
+
+      try {
+        const res = await axiosClient.get(
+          `/programme-intakes/student/${userId}/requirements`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const { requirementsByCategory } = res.data || {};
+
+        if (requirementsByCategory) {
+          const newReqs = CATEGORY_ORDER.reduce((acc, cat) => {
+            acc[cat] = requirementsByCategory[cat]?.requiredCredits ?? 0;
+            return acc;
+          }, {});
+          setCreditRequirements(newReqs);
+        }
+      } catch (err) {
+        console.error("Failed to load graduation requirements", err);
+      }
+    };
+
+    fetchRequirements();
   }, []);
 
   useEffect(() => {
@@ -312,7 +351,9 @@ const ProgressTracker = () => {
             const completed = completedByCategory[cat] || 0;
             const total = creditRequirements[cat];
             const percent =
-              total > 0 ? Math.round((completed / total) * 100) : 0;
+              total > 0
+                ? Math.min(100, Math.round((completed / total) * 100))
+                : 0;
             const color = colors[index % colors.length];
 
             return (

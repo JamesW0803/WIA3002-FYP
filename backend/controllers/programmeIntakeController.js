@@ -1,16 +1,24 @@
-const { formatProgrammeIntake , formatProgrammeIntakes } = require("../utils/formatter/programmeIntakeFormatter");
+const {
+  formatProgrammeIntake,
+  formatProgrammeIntakes,
+} = require("../utils/formatter/programmeIntakeFormatter");
 
 const ProgrammeIntake = require("../models/ProgrammeIntake");
 const Programme = require("../models/Programme");
 const AcademicSession = require("../models/AcademicSession");
-const SemesterPlan = require("../models/SemesterPlan")
-const ProgrammePlan = require("../models/ProgrammePlan")
-const Student = require("../models/Student")
+const SemesterPlan = require("../models/SemesterPlan");
+const ProgrammePlan = require("../models/ProgrammePlan");
+const Student = require("../models/Student");
 const Course = require("../models/Course");
+const {
+  COURSE_TYPE_TO_CATEGORY,
+} = require("../constants/graduationCategories");
 
 const getAllProgrammeIntakes = async (req, res) => {
   try {
-    const programmeIntakes = await ProgrammeIntake.find().populate("programme_id").populate("academic_session_id");
+    const programmeIntakes = await ProgrammeIntake.find()
+      .populate("programme_id")
+      .populate("academic_session_id");
     res.status(200).json(formatProgrammeIntakes(programmeIntakes));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -29,10 +37,10 @@ const addProgrammeIntake = async (req, res) => {
       min_semester,
       max_semester,
       graduation_requirements,
-      coursePlanAutoGenerate
+      coursePlanAutoGenerate,
     } = req.body;
 
-    let programmePlanId = null
+    let programmePlanId = null;
 
     const programme = await Programme.findOne({ programme_code });
     if (!programme) {
@@ -46,13 +54,13 @@ const addProgrammeIntake = async (req, res) => {
 
     const courseList = Object.values(graduation_requirements).flat();
 
-    let coursePlan
+    let coursePlan;
 
-    const selectedCourseCodes = courseList.map(course => course.course_code);
+    const selectedCourseCodes = courseList.map((course) => course.course_code);
     const semesterPlans = [];
 
-    if(coursePlanAutoGenerate && courseList.length > 0){
-            // 1. Fetch full course objects
+    if (coursePlanAutoGenerate && courseList.length > 0) {
+      // 1. Fetch full course objects
       const selectedCourses = await Course.find({
         course_code: { $in: selectedCourseCodes },
       });
@@ -70,7 +78,7 @@ const addProgrammeIntake = async (req, res) => {
 
         if (typeA !== typeB) return typeA - typeB;
         return a.study_level - b.study_level; // fallback to study_level
-      });      
+      });
       const sortedCourses = await topologicalSort(selectedCourses);
 
       // 3. Distribute evenly into semesters
@@ -82,7 +90,7 @@ const addProgrammeIntake = async (req, res) => {
         const semesterCourses = sortedCourses.slice(sliceStart, sliceEnd);
 
         const semesterPlan = await SemesterPlan.create({
-          courses: semesterCourses.map(c => c._id),
+          courses: semesterCourses.map((c) => c._id),
           academic_session_id: null, // optional if you want to link later
         });
 
@@ -90,35 +98,44 @@ const addProgrammeIntake = async (req, res) => {
       }
     }
 
-      const programmePlan = await ProgrammePlan.create({
-          title: `${programme_code} Auto Plan (${academicSession.year})`,
-          semester_plans: semesterPlans,
-      });
+    const programmePlan = await ProgrammePlan.create({
+      title: `${programme_code} Auto Plan (${academicSession.year})`,
+      semester_plans: semesterPlans,
+    });
 
-      programmePlanId = programmePlan
+    programmePlanId = programmePlan;
 
     // console.log("Course plan: ", coursePlan)
     const required_course_ids = await Promise.all(
       courseList.map(async (course) => {
-        const currentCourse = await Course.findOne({ course_code: course.course_code });
+        const currentCourse = await Course.findOne({
+          course_code: course.course_code,
+        });
         return currentCourse?._id;
       })
     );
 
-    const total_required_credits = courseList.reduce((sum, course) => sum + (course.credits || 0), 0);
+    const total_required_credits = courseList.reduce(
+      (sum, course) => sum + (course.credits || 0),
+      0
+    );
 
     const newProgrameIntake = new ProgrammeIntake({
-      programme_intake_code : generateProgrammeIntakeCode(programme, academicSession.year, academicSession.semester),
-      programme_id : programme._id,
-      academic_session_id : academicSession._id,
-      number_of_students_enrolled : number_of_students_enrolled ?? 0,
-      graduation_rate : graduation_rate ?? 0,
+      programme_intake_code: generateProgrammeIntakeCode(
+        programme,
+        academicSession.year,
+        academicSession.semester
+      ),
+      programme_id: programme._id,
+      academic_session_id: academicSession._id,
+      number_of_students_enrolled: number_of_students_enrolled ?? 0,
+      graduation_rate: graduation_rate ?? 0,
       min_semester,
       max_semester,
       graduation_requirements: required_course_ids,
-      course_plan : coursePlan,
-      programme_plan : programmePlanId,
-      total_credit_hours : total_required_credits
+      course_plan: coursePlan,
+      programme_plan: programmePlanId,
+      total_credit_hours: total_required_credits,
     });
 
     const savedProgrameIntake = await newProgrameIntake.save();
@@ -142,14 +159,14 @@ const getProgrammeIntakeById = async (req, res) => {
         populate: {
           path: "semester_plans",
           populate: {
-            path: "courses"
-          }
-        }
-    });
+            path: "courses",
+          },
+        },
+      });
 
     if (!programmeIntake) {
       return res.status(404).json({ message: "Programme intake not found" });
-    }        
+    }
 
     res.status(200).json(formatProgrammeIntake(programmeIntake));
   } catch (error) {
@@ -162,7 +179,9 @@ const getProgrammeIntakeByCode = async (req, res) => {
   try {
     const { programme_intake_code } = req.params;
 
-    const programmeIntake = await ProgrammeIntake.findOne({ programme_intake_code})
+    const programmeIntake = await ProgrammeIntake.findOne({
+      programme_intake_code,
+    })
       .populate("graduation_requirements")
       .populate("programme_id")
       .populate("academic_session_id")
@@ -171,14 +190,14 @@ const getProgrammeIntakeByCode = async (req, res) => {
         populate: {
           path: "semester_plans",
           populate: {
-            path: "courses"
-          }
-        }
-    });
+            path: "courses",
+          },
+        },
+      });
 
     if (!programmeIntake) {
       return res.status(404).json({ message: "Programme intake not found" });
-    }        
+    }
 
     res.status(200).json(formatProgrammeIntake(programmeIntake));
   } catch (error) {
@@ -191,7 +210,9 @@ const deleteProgrammeIntakeById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedProgrammeIntake = await ProgrammeIntake.findOneAndDelete({programme_intake_code : id})
+    const deletedProgrammeIntake = await ProgrammeIntake.findOneAndDelete({
+      programme_intake_code: id,
+    });
 
     if (!deletedProgrammeIntake) {
       return res.status(404).json({ message: "Programme intake not found" });
@@ -204,7 +225,7 @@ const deleteProgrammeIntakeById = async (req, res) => {
   }
 };
 
-const generateProgrammeIntakeCode = ( programme, year, semester) => {
+const generateProgrammeIntakeCode = (programme, year, semester) => {
   // Split year from "2023/2024" to "23" and "24"
   const [startYear, endYear] = year.split("/").map((y) => y.slice(-2)); // ["23", "24"]
 
@@ -214,11 +235,12 @@ const generateProgrammeIntakeCode = ( programme, year, semester) => {
     "Semester 2": "S2",
     "Special Semester": "SS",
   };
-  const shortSemester = semesterMap[semester] || semester.replace(/\s+/g, '').toUpperCase(); // fallback
+  const shortSemester =
+    semesterMap[semester] || semester.replace(/\s+/g, "").toUpperCase(); // fallback
 
   const programmeIntakeCode = `${programme.programme_code}-${startYear}-${endYear}-${shortSemester}`;
-  return programmeIntakeCode
-}
+  return programmeIntakeCode;
+};
 
 const topologicalSort = async (courses) => {
   const courseMap = {};
@@ -226,7 +248,7 @@ const topologicalSort = async (courses) => {
   const graph = {};
 
   // Initialize map
-  courses.forEach(course => {
+  courses.forEach((course) => {
     const id = course._id.toString();
     courseMap[id] = course;
     inDegree[id] = 0;
@@ -249,7 +271,9 @@ const topologicalSort = async (courses) => {
           inDegree[prereqId] = 0;
           graph[prereqId] = [];
         } else {
-          console.warn(`⚠️ Prerequisite course with ID ${prereqId} not found in DB`);
+          console.warn(
+            `⚠️ Prerequisite course with ID ${prereqId} not found in DB`
+          );
           continue; // skip if not found
         }
       }
@@ -294,18 +318,20 @@ const updateProgrammeIntake = async (req, res) => {
         let update = false;
         const totalStudentsEnrolled = await Student.countDocuments({
           programme: intake.programme_id,
-          academicSession: intake.academic_session_id
+          academicSession: intake.academic_session_id,
         });
 
         const totalStudentsGraduated = await Student.countDocuments({
           programme: intake.programme_id,
           academicSession: intake.academic_session_id,
-          isGraduated : true,
-        })
+          isGraduated: true,
+        });
 
-        const graduaionRate = totalStudentsEnrolled > 0 ? 
-            (totalStudentsGraduated / totalStudentsEnrolled) * 100 : 0;
-  
+        const graduaionRate =
+          totalStudentsEnrolled > 0
+            ? (totalStudentsGraduated / totalStudentsEnrolled) * 100
+            : 0;
+
         // Only update if the count changed
         if (intake.number_of_students_enrolled !== totalStudentsEnrolled) {
           intake.number_of_students_enrolled = totalStudentsEnrolled;
@@ -314,21 +340,121 @@ const updateProgrammeIntake = async (req, res) => {
 
         // Only update if the graduation rate changed
         if (intake.graduation_rate !== graduaionRate) {
-          intake.number_of_students_graduated = totalStudentsGraduated
+          intake.number_of_students_graduated = totalStudentsGraduated;
           intake.graduation_rate = graduaionRate;
           update = true;
         }
 
-        if(update){
-          await intake.save()
+        if (update) {
+          await intake.save();
         }
       })
     );
 
-    res.status(200).json({ message : "Successfully refresh student counts" });
+    res.status(200).json({ message: "Successfully refresh student counts" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to refresh student counts." });
+  }
+};
+
+// Student
+// Get graduation requirements for a given student, based on their intake
+const getGraduationRequirementsForStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params; // we'll call /programme-intakes/student/:studentId/requirements
+
+    const student = await Student.findById(studentId)
+      .populate("programme")
+      .populate("academicSession")
+      .populate("programme_intake");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // 1. Determine the correct intake for this student
+    let intake = student.programme_intake;
+
+    if (!intake && student.programme && student.academicSession) {
+      // fallback: find by programme + academic session (year/semester like 2022/2023, Semester 1)
+      intake = await ProgrammeIntake.findOne({
+        programme_id: student.programme,
+        academic_session_id: student.academicSession,
+      });
+    }
+
+    if (!intake) {
+      return res
+        .status(404)
+        .json({ message: "No programme intake found for this student" });
+    }
+
+    // 2. Populate graduation requirement courses
+    intake = await ProgrammeIntake.findById(intake._id)
+      .populate({
+        path: "graduation_requirements",
+        model: "Course",
+        select: "course_code course_name credit_hours type",
+      })
+      .populate("academic_session_id")
+      .populate("programme_id");
+
+    const courses = intake.graduation_requirements || [];
+
+    // 3. Group by category & sum required credits
+    const requirementsByCategory = {};
+    let totalRequiredCredits = 0;
+
+    for (const course of courses) {
+      const category = COURSE_TYPE_TO_CATEGORY[course.type];
+      if (!category) continue;
+
+      if (!requirementsByCategory[category]) {
+        requirementsByCategory[category] = {
+          requiredCredits: 0,
+          courses: [],
+        };
+      }
+
+      const cr = course.credit_hours || 0;
+      requirementsByCategory[category].requiredCredits += cr;
+      totalRequiredCredits += cr;
+
+      requirementsByCategory[category].courses.push({
+        _id: course._id,
+        code: course.course_code,
+        name: course.course_name,
+        type: course.type,
+        credit_hours: cr,
+      });
+    }
+
+    return res.status(200).json({
+      student: {
+        _id: student._id,
+        fullName: student.fullName,
+      },
+      intake: {
+        _id: intake._id,
+        programme_intake_code: intake.programme_intake_code,
+        programme: {
+          _id: intake.programme_id?._id,
+          programme_code: intake.programme_id?.programme_code,
+          programme_name: intake.programme_id?.programme_name,
+        },
+        academicSession: {
+          _id: intake.academic_session_id?._id,
+          year: intake.academic_session_id?.year, // e.g. "2022/2023"
+          semester: intake.academic_session_id?.semester,
+        },
+      },
+      totalRequiredCredits,
+      requirementsByCategory,
+    });
+  } catch (error) {
+    console.error("Error fetching graduation requirements: ", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -338,5 +464,6 @@ module.exports = {
   getProgrammeIntakeById,
   getProgrammeIntakeByCode,
   deleteProgrammeIntakeById,
-  updateProgrammeIntake
+  updateProgrammeIntake,
+  getGraduationRequirementsForStudent,
 };
