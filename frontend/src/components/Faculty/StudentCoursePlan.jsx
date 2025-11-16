@@ -22,7 +22,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axiosClient from '../../api/axiosClient';
 
-const CourseTable = ({ courses }) => (
+const CourseTable = ({ courses }) => {
+  return   (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
       <TableHead>
@@ -30,22 +31,26 @@ const CourseTable = ({ courses }) => (
           <TableCell><strong>Course Code</strong></TableCell>
           <TableCell><strong>Course Name</strong></TableCell>
           <TableCell><strong>Credit</strong></TableCell>
-          {/* <TableCell><strong>Type</strong></TableCell> */}
+          <TableCell><strong>Type</strong></TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
-        {courses.map((course, index) => (
+        {courses.map((courseObj, index) => {
+          const course = courseObj.course
+          return (
           <TableRow key={index}>
-            <TableCell>{course.code}</TableCell>
-            <TableCell>{course.name}</TableCell>
-            <TableCell>{course.credit}</TableCell>
-            {/* <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell> */}
+            <TableCell>{course.course_code}</TableCell>
+            <TableCell>{course.course_name}</TableCell>
+            <TableCell>{course.credit_hours}</TableCell>
+            <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
           </TableRow>
-        ))}
+          )}
+        )}
       </TableBody>
     </Table>
-  </TableContainer>
-);
+  </TableContainer> )
+}
+;
 
 const StudentCoursePlan = () => {
   const { student } = useOutletContext();
@@ -79,19 +84,17 @@ const StudentCoursePlan = () => {
       if (!selectedPlanId) return;
       try {
         const response = await axiosClient.get(`/academic-plans/plans/${selectedPlanId}`);
-        setSelectedPlan(response.data.data);
+        const coursePlan = response.data.data
+        setSelectedPlan(coursePlan);
+
+        console.log("Course plan: ", coursePlan)
+        
       } catch (error) {
         console.error("Error fetching selected plan:", error);
       }
     };
     fetchSelectedPlan();
   }, [selectedPlanId]);
-
-  const semesterPlans = selectedPlan?.semester_plans || [];
-  const yearGroups = [];
-  for (let i = 0; i < semesterPlans.length; i += 2) {
-    yearGroups.push(semesterPlans.slice(i, i + 2));
-  }
 
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>

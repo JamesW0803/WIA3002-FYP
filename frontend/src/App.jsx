@@ -25,6 +25,7 @@ import CoursePlan from "./components/Faculty/CoursePlan";
 import StudentAcademicProfile from "./components/Faculty/StudentAcademicProfile";
 import StudentGraduationRequirement from "./components/Faculty/StudentGraduationRequirement";
 import StudentCoursePlan from "./components/Faculty/StudentCoursePlan";
+import DefaultProgrammePlan from "./components/Faculty/DefaultProgrammePlan";
 
 import { AuthProvider } from "./context/AuthContext";
 import Unauthorized from "./pages/general/Unauthorized";
@@ -168,15 +169,9 @@ function App() {
                 index
                 element={<Navigate to="academic-profile" replace />}
               />
-              <Route
-                path="academic-profile"
-                element={<StudentAcademicProfile />}
-              />
-
-              <Route
-                path="graduation-requirement"
-                element={<StudentGraduationRequirement />}
-              />
+              <Route path="academic-profile" element={<StudentAcademicProfile />} />
+              <Route path="graduation-requirement" element={<StudentGraduationRequirement />}/>
+              <Route path="default-programme-plan" element={<DefaultProgrammePlan />} />
               <Route path="course-plan" element={<StudentCoursePlan />} />
             </Route>
             <Route
