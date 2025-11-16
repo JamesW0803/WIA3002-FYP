@@ -8,7 +8,10 @@ import React, {
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import ReactDOM from "react-dom";
-import { validateCourseAddition } from "./AcademicPlanner/utils/planHelpers";
+import {
+  validateCourseAddition,
+  canRetakeCourse,
+} from "./AcademicPlanner/utils/planHelpers";
 
 const CourseInput = ({
   onAdd,
@@ -83,19 +86,50 @@ const CourseInput = ({
 
   const enrichedCourses = useMemo(() => {
     if (!semester) return [];
+
     return filteredCourses.map((course) => {
+      // Check retake rule first
+      const { hasTaken, canRetake, reason } = canRetakeCourse(
+        course.code,
+        completedCoursesByYear
+      );
+
+      // If taken and not retakable (A/A+ case), block here
+      if (hasTaken && !canRetake) {
+        return {
+          ...course,
+          _canAdd: false,
+          _reason: reason,
+        };
+      }
+
+      // Build completed list for prereq validation – remove the target
+      // course itself if it's a retake, so we don't let it block itself.
       const completedArray = Array.isArray(passedCourses)
-        ? passedCourses
+        ? [...passedCourses]
         : Array.from(passedCourses || []);
+
+      if (hasTaken && canRetake) {
+        const idx = completedArray.indexOf(course.code);
+        if (idx !== -1) completedArray.splice(idx, 1);
+      }
+
       const { isValid, message } = validateCourseAddition(
         course,
         semester,
         allCourses,
         completedArray
       );
+
       return { ...course, _canAdd: isValid, _reason: message };
     });
-  }, [filteredCourses, semester, allCourses, passedCourses]);
+  }, [
+    filteredCourses,
+    semester,
+    allCourses,
+    passedCourses,
+    completedCoursesByYear,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -138,16 +172,39 @@ const CourseInput = ({
 
   const handleAdd = () => {
     if (!selectedCourse) return;
+
+    // Check retake rule first (A/A+ restriction)
+    const { hasTaken, canRetake, reason } = canRetakeCourse(
+      selectedCourse.code,
+      completedCoursesByYear
+    );
+
+    if (hasTaken && !canRetake) {
+      alert(`Cannot add course: ${reason}`);
+      return;
+    }
+
+    // Prepare completed list for prerequisite checking
+    const completedArray = Array.isArray(passedCourses)
+      ? [...passedCourses]
+      : Array.from(passedCourses || []);
+
+    if (hasTaken && canRetake) {
+      const idx = completedArray.indexOf(selectedCourse.code);
+      if (idx !== -1) completedArray.splice(idx, 1);
+    }
+
     const validation = validateCourseAddition(
       selectedCourse,
       semester,
       allCourses,
-      passedCourses
+      completedArray
     );
     if (!validation.isValid) {
       alert(`Cannot add course: ${validation.message}`);
       return;
     }
+
     onAdd(selectedCourse.code);
     setSearchTerm("");
     setSelectedCourse(null);

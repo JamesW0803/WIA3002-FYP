@@ -16,8 +16,10 @@ export const normalizePlanForUI = (plan) => ({
   id: plan._id || plan.id || plan.identifier,
   years: (plan.years || []).map((y) => ({
     ...y,
+    isGapYear: y.isGapYear || false,
     semesters: (y.semesters || []).map((s) => ({
       ...s,
+      isGap: s.isGap || false,
       courses: (s.courses || []).map(toUICourse),
     })),
   })),

@@ -6,6 +6,7 @@ const PlanViewer = ({
   viewingPlan,
   setViewingPlan,
   setEditingPlan,
+  setBackupPlan,
   programPlans,
   scrollToEditSection,
   viewSectionRef,
@@ -32,6 +33,10 @@ const PlanViewer = ({
           <Button
             variant="outline"
             onClick={() => {
+              const plan = programPlans.find((p) => p.id === viewingPlan);
+              if (plan) {
+                setBackupPlan(plan);
+              }
               setViewingPlan(null);
               setEditingPlan(viewingPlan); // only one mode stays open
               scrollToEditSection();

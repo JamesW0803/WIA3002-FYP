@@ -67,7 +67,9 @@ const PlanEditor = ({
       years: (rawPayload?.years || []).map((y) => ({
         ...y,
         semesters: (y.semesters || [])
-          .filter((s) => !s._isDraft && (s.courses?.length || 0) > 0)
+          .filter(
+            (s) => !s._isDraft && (s.isGap || (s.courses?.length || 0) > 0)
+          )
           .map((s, idx) => ({
             ...s,
             name: `Year ${y.year} - Semester ${idx + 1}`,
@@ -132,12 +134,14 @@ const PlanEditor = ({
 
       const saved = normalizePlanForUI(response.data.data);
 
+      const savedId = saved._id || saved.id || saved.identifier;
+
       if (isCreatingNew) {
         setProgramPlans([
           ...programPlans,
           {
             ...saved,
-            id: saved.id,
+            id: savedId,
             semesters: totalSemesters,
             credits: totalCredits,
           },
@@ -148,7 +152,7 @@ const PlanEditor = ({
             p.id === editingPlan
               ? {
                   ...saved,
-                  id: saved.identifier,
+                  id: savedId,
                   semesters: totalSemesters,
                   credits: totalCredits,
                 }

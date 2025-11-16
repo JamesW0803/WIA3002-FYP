@@ -31,6 +31,10 @@ const semesterSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  isGap: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const yearSchema = new mongoose.Schema({
@@ -39,6 +43,10 @@ const yearSchema = new mongoose.Schema({
     required: true,
   },
   semesters: [semesterSchema],
+  isGapYear: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const academicPlanSchema = new mongoose.Schema(

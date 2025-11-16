@@ -1,7 +1,10 @@
 import React, { useMemo } from "react";
 import CourseList from "./CourseList";
 import CourseInput from "./CourseInput";
-import { validateCourseAddition } from "./AcademicPlanner/utils/planHelpers";
+import {
+  validateCourseAddition,
+  canRetakeCourse,
+} from "./AcademicPlanner/utils/planHelpers";
 
 const SemesterCard = ({
   planId,
@@ -22,6 +25,8 @@ const SemesterCard = ({
       .find((plan) => plan.id === planId)
       ?.years.find((y) => y.year === year)
       ?.semesters.find((s) => s.name === semester.name) || semester;
+
+  const isGapSemester = !!actualSemester?.isGap;
 
   console.log("Actual semester courses:", actualSemester?.courses);
 
@@ -62,6 +67,13 @@ const SemesterCard = ({
     ) || 0;
 
   const addCourse = (courseCode) => {
+    if (isGapSemester) {
+      alert(
+        "This semester is marked as a gap semester. Undo the gap flag if you want to add courses."
+      );
+      return;
+    }
+
     console.log("Attempting to add course:", courseCode);
     const courseToAdd = allCourses.find((c) => c.code === courseCode);
     if (!courseToAdd) {
@@ -71,15 +83,19 @@ const SemesterCard = ({
 
     console.log("All passed courses:", passedCourses);
 
-    // Check if course is already passed
-    if (passedCourses.has(courseCode)) {
-      alert(
-        `Course ${courseCode} has already been passed and cannot be taken again`
-      );
+    // NEW: check retake rules using completedCoursesByYear (grades + status)
+    const { hasTaken, canRetake, reason } = canRetakeCourse(
+      courseCode,
+      completedCoursesByYear
+    );
+
+    // If the student has taken it and it's not retakable (A/A+ case), block
+    if (hasTaken && !canRetake) {
+      alert(`Cannot retake ${courseCode}. ${reason}`);
       return;
     }
 
-    // Check if course is currently ongoing
+    // Keep blocking if course is currently ongoing (you already had this)
     if (ongoingCourses.has(courseCode)) {
       alert(
         `Course ${courseCode} is currently ongoing and cannot be taken again`
@@ -87,11 +103,23 @@ const SemesterCard = ({
       return;
     }
 
+    // Build the list of "completed" courses used for prerequisite checking.
+    // For retakes we want prerequisites to still count, but we must NOT
+    // let validateCourseAddition think the target course itself is blocking.
+    const completedForPrereqs = Array.from(passedCourses);
+
+    if (hasTaken && canRetake) {
+      const idx = completedForPrereqs.indexOf(courseCode);
+      if (idx !== -1) {
+        completedForPrereqs.splice(idx, 1); // remove target course itself
+      }
+    }
+
     const { isValid, message } = validateCourseAddition(
       courseToAdd,
       actualSemester,
       allCourses,
-      Array.from(passedCourses)
+      completedForPrereqs
     );
     console.log("Validation result:", { isValid, message });
     if (!isValid) {
@@ -99,7 +127,7 @@ const SemesterCard = ({
       return;
     }
 
-    // Flatten all semesters and track order
+    // Flatten all semesters and track order (kept as in your original)
     const currentPlan = plans.find((p) => p.id === planId);
     let targetSemesterIndex = -1;
     const allSemesters = [];
@@ -122,7 +150,7 @@ const SemesterCard = ({
       });
     }
 
-    // Find the actual semester in plans by ID or name
+    // Update plan with the new course
     const updatedPlans = plans.map((plan) => {
       if (plan.id !== planId) return plan;
 
@@ -134,20 +162,10 @@ const SemesterCard = ({
 
           if (!isMatch) return sem;
 
-          // Check if course is already in semester
+          // Still keep protection: cannot add twice in same semester
           const alreadyAdded = sem.courses.some((c) => c.code === courseCode);
           if (alreadyAdded) {
             alert(`Course ${courseCode} already exists in this semester`);
-            return sem;
-          }
-
-          // Check if offered this semester
-          const semesterNum = sem.name.split(" ")[3]; // "Year X - Semester Y"
-          const offered = courseToAdd.offered_semester?.some((s) =>
-            s.includes(semesterNum)
-          );
-          if (!offered) {
-            alert(`Course ${courseCode} is not offered in ${sem.name}`);
             return sem;
           }
 
@@ -207,29 +225,80 @@ const SemesterCard = ({
     setPlans(updatedPlans);
   };
 
+  const toggleGapSemester = () => {
+    if (isViewMode) return;
+    const updatedPlans = plans.map((p) => {
+      if (p.id !== planId) return p;
+      return {
+        ...p,
+        years: p.years.map((y) => {
+          if (y.year !== year) return y;
+          return {
+            ...y,
+            semesters: y.semesters.map((s) => {
+              if (s.name !== actualSemester.name) return s;
+              const makeGap = !s.isGap;
+              return {
+                ...s,
+                isGap: makeGap,
+                courses: makeGap ? [] : s.courses, // wipe courses when turning into gap
+              };
+            }),
+          };
+        }),
+      };
+    });
+    setPlans(updatedPlans);
+  };
+
   return (
     <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden relative z-0">
       <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border-b">
-        <h4 className="font-medium text-gray-800 text-sm sm:text-base uppercase tracking-wide truncate">
-          {actualSemester?.name || "Semester"}
-        </h4>
-        <span className="text-xs sm:text-sm font-medium text-gray-600 bg-white px-2 py-1 rounded-full border">
-          {currentCredits}/{MAX_CREDITS} credits
-        </span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+          <h4 className="font-medium text-gray-800 text-sm sm:text-base uppercase tracking-wide truncate">
+            {actualSemester?.name || "Semester"}
+          </h4>
+          {isGapSemester && (
+            <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">
+              Gap Semester
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs sm:text-sm font-medium text-gray-600 bg-white px-2 py-1 rounded-full border">
+            {currentCredits}/{MAX_CREDITS} credits
+          </span>
+          {!isViewMode && (
+            <button
+              type="button"
+              onClick={toggleGapSemester}
+              className="text-[10px] sm:text-xs px-2 py-1 rounded-md border border-yellow-300 text-yellow-800 bg-yellow-50 hover:bg-yellow-100"
+            >
+              {isGapSemester ? "Undo Gap" : "Set Gap"}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="p-3 sm:p-4 relative z-0 overflow-visible">
         <div className="space-y-3 mb-4 min-w-0 overflow-x-auto">
-          <CourseList
-            courses={actualSemester?.courses || []}
-            removeCourse={removeCourse}
-            isViewMode={isViewMode}
-            completedCourses={Array.from(passedCourses)}
-          />
+          {!isGapSemester ? (
+            <CourseList
+              courses={actualSemester?.courses || []}
+              removeCourse={removeCourse}
+              isViewMode={isViewMode}
+              completedCourses={Array.from(passedCourses)}
+            />
+          ) : (
+            <p className="text-sm text-gray-600 italic">
+              No courses planned for this gap semester.
+            </p>
+          )}
         </div>
 
         {/* Draft controls */}
-        {!isViewMode && actualSemester?._isDraft && (
+        {!isViewMode && actualSemester?._isDraft && !isGapSemester && (
           <div className="flex items-center gap-2 mb-3">
             <button
               className="text-sm px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-50"
@@ -257,13 +326,14 @@ const SemesterCard = ({
         )}
 
         {/* Course input disabled for view mode, enabled otherwise */}
-        {!isViewMode && (
+        {!isViewMode && !isGapSemester && (
           <CourseInput
             onAdd={addCourse}
             allCourses={allCourses}
             passedCourses={Array.from(passedCourses)}
             ongoingCourses={ongoingCourses}
             semester={actualSemester}
+            completedCoursesByYear={completedCoursesByYear}
           />
         )}
       </div>
