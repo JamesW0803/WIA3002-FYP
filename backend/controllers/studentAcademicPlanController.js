@@ -146,7 +146,7 @@ exports.getUserPlans = async (req, res) => {
       .populate({
         path: "years.semesters.courses.course",
         select:
-          "course_code course_name credit_hours prerequisites offered_semester",
+          "course_code course_name credit_hours prerequisites offered_semester type",
       })
       .sort({ isDefault: -1, createdAt: -1 })
       .lean();
@@ -181,7 +181,7 @@ exports.getPlanById = async (req, res) => {
       .populate({
         path: "years.semesters.courses.course",
         select:
-          "course_code course_name credit_hours prerequisites offered_semester",
+          "course_code course_name credit_hours prerequisites offered_semester type",
       })
       .lean();
 

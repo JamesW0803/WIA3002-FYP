@@ -103,6 +103,16 @@ const NavTab = () => {
                 Graduation Requirement
             </Link>
             <Link 
+                to="default-programme-plan"
+                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
+                    isActive('default-programme-plan') 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+                Default Programme Plan
+            </Link>
+            <Link 
                 to="course-plan"
                 className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
                     isActive('course-plan') 
@@ -110,7 +120,7 @@ const NavTab = () => {
                         : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
-                Course Plan
+                Course Plans
             </Link>
         </div>
     )
