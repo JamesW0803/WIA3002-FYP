@@ -13,8 +13,9 @@ const YearCard = ({
   completedCoursesByYear,
   isViewMode = false,
 }) => {
+  const isGapYear = !!yearData.isGapYear;
   const handleAddSemester = () => {
-    if (isViewMode) return;
+    if (isViewMode || isGapYear) return;
 
     // Find the plan and year to get current semester count
     const currentPlan = plans.find((p) => p.id === planId);
@@ -96,8 +97,15 @@ const YearCard = ({
     <Card className="bg-gray-50 overflow-visible relative z-0">
       <CardContent className="p-4 relative z-0 overflow-visible">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-lg font-medium">Year {yearData.year}</h4>
-          {!isViewMode && yearData.semesters.length < 2 && (
+          <h4 className="text-lg font-medium">
+            Year {yearData.year}
+            {isGapYear && (
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">
+                Gap Year
+              </span>
+            )}
+          </h4>
+          {!isViewMode && !isGapYear && yearData.semesters.length < 2 && (
             <Button
               variant="outline"
               size="sm"

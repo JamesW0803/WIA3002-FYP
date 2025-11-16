@@ -11,7 +11,14 @@ import {
   Eye,
 } from "lucide-react";
 
-const SavedPlanCard = ({ plan, type, onEdit, onDelete, onView }) => {
+const SavedPlanCard = ({
+  plan,
+  type,
+  onEdit,
+  onDelete,
+  onView,
+  isOutdated = false,
+}) => {
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "short", day: "numeric" };
     return new Date(dateString).toLocaleDateString(undefined, options);
@@ -31,7 +38,19 @@ const SavedPlanCard = ({ plan, type, onEdit, onDelete, onView }) => {
     );
 
   return (
-    <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
+    <Card
+      className={`hover:shadow-lg transition-shadow h-full flex flex-col relative ${
+        isOutdated ? "opacity-60" : ""
+      }`}
+    >
+      {isOutdated && (
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div className="bg-red-500/80 text-white text-xs sm:text-sm px-3 py-2 rounded-full shadow-lg">
+            Plan is outdated – academic profile has advanced. Please edit or
+            remove.
+          </div>
+        </div>
+      )}
       <div className="p-5 flex-grow">
         <div className="flex justify-between items-start mb-3">
           <h3 className="text-lg font-bold text-gray-800">{plan.name}</h3>

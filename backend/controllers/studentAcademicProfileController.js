@@ -71,11 +71,36 @@ exports.saveAcademicProfile = async (req, res) => {
       if (a.year !== b.year) return a.year - b.year;
       return a.semester - b.semester;
     });
-    // Track prior attempts per course (status/grade) in chronological order
-    const seenByCourse = new Map();
 
+    // ---- 1) Sync pass: enforce A/A+ rule & mark retakes ----
+    const attemptsByCourse = new Map();
+    const annotatedEntries = sortedEntries.map((entry) => {
+      const history = attemptsByCourse.get(entry.code) || [];
+
+      // have we already seen a prior A/A+ for this course?
+      const hasAorAplus = history.some(
+        (h) => h.status === "Passed" && (h.grade === "A" || h.grade === "A+")
+      );
+      if (hasAorAplus) {
+        // same message your catch block is looking for
+        throw new Error(
+          `Cannot record ${entry.code} again after achieving A/A+.`
+        );
+      }
+
+      // any prior attempt => this one is a retake
+      const isRetake = history.length > 0;
+
+      // record current attempt for later checks
+      history.push({ status: entry.status, grade: entry.grade });
+      attemptsByCourse.set(entry.code, history);
+
+      return { ...entry, isRetake };
+    });
+
+    // ---- 2) Async pass: map to DB documents (no shared mutable state) ----
     const mappedEntries = await Promise.all(
-      sortedEntries.map(async (entry) => {
+      annotatedEntries.map(async (entry) => {
         const course = await Course.findOne({ course_code: entry.code });
         if (!course) return null;
 
@@ -98,32 +123,14 @@ exports.saveAcademicProfile = async (req, res) => {
           }
         }
 
-        // Any prior attempt => retake
-        const prior = seenByCourse.get(entry.code) || [];
-        const hasAorAplus = prior.some(
-          (p) => p.status === "Passed" && (p.grade === "A" || p.grade === "A+")
-        );
-        if (hasAorAplus) {
-          // Server-side guard (aligns with frontend rule)
-          throw new Error(
-            `Cannot record ${entry.code} again after achieving A/A+.`
-          );
-        }
-
-        const result = {
+        return {
           course: course._id,
           year: entry.year,
           semester: entry.semester,
           status: entry.status,
           grade: entry.grade || "",
-          isRetake: prior.length > 0,
+          isRetake: entry.isRetake, // use the annotated flag
         };
-
-        // Append this attempt so later ones see it
-        prior.push({ status: entry.status, grade: entry.grade });
-        seenByCourse.set(entry.code, prior);
-
-        return result;
       })
     );
 

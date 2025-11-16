@@ -90,11 +90,12 @@ const ProgramPlansSection = ({
       const token = localStorage.getItem("token");
       const planId = editingPlan;
 
-      // Build a cleaned payload that drops draft + empty semesters
       const cleanedYears = (updatedPlanData.years || []).map((y) => ({
         ...y,
         semesters: (y.semesters || [])
-          .filter((s) => !s._isDraft && (s.courses?.length || 0) > 0) // ← drop empty
+          .filter(
+            (s) => !s._isDraft && (s.isGap || (s.courses?.length || 0) > 0)
+          )
           .map((s, idx) => ({
             ...s,
             name: `Year ${y.year} - Semester ${idx + 1}`,
@@ -192,20 +193,71 @@ const ProgramPlansSection = ({
     if (!window.confirm(`Delete plan “${plan.name}”?`)) return;
     try {
       const token = localStorage.getItem("token");
-      // call your DELETE /academic-plans/:id
       await axiosClient.delete(`/academic-plans/plans/${plan.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // remove from state
-      setProgramPlans(programPlans.filter((p) => p.id !== plan.id));
-      // if we were viewing it, close viewer
+
+      setProgramPlans((prev) => prev.filter((p) => p.id !== plan.id));
+
       if (viewingPlan === plan.id) {
         setViewingPlan(null);
+      }
+      if (editingPlan === plan.id) {
+        setEditingPlan(null);
+        setUnsavedPlan(null);
+        setBackupPlan(null);
       }
     } catch (err) {
       console.error("Failed to delete plan", err);
       alert("Could not delete plan—please try again.");
     }
+  };
+
+  const semesterIndex = (year, semester) =>
+    (Number(year) - 1) * 2 + (Number(semester) - 1);
+
+  const extractSemesterNumber = (name = "") => {
+    const parts = String(name).split(" ");
+    const semStr = parts[3]; // "Year X - Semester Y"
+    const semNum = parseInt(semStr, 10);
+    return Number.isNaN(semNum) ? 1 : semNum;
+  };
+
+  const getPlanFirstSemester = (plan) => {
+    let best = null;
+    let minIdx = Infinity;
+
+    (plan.years || []).forEach((y) => {
+      (y.semesters || []).forEach((s) => {
+        const hasCourses = Array.isArray(s.courses) && s.courses.length > 0;
+        if (!hasCourses || s.isGap) return;
+
+        const semNum = extractSemesterNumber(s.name);
+        const idx = semesterIndex(y.year, semNum);
+
+        if (idx < minIdx) {
+          minIdx = idx;
+          best = { year: y.year, semester: semNum };
+        }
+      });
+    });
+
+    return best;
+  };
+
+  const isPlanOutdated = (plan) => {
+    if (!startingPlanPoint) return false;
+    const first = getPlanFirstSemester(plan);
+    if (!first) return false; // empty plan → can't say it's outdated
+
+    const planIdx = semesterIndex(first.year, first.semester);
+    const startIdx = semesterIndex(
+      startingPlanPoint.year,
+      startingPlanPoint.semester
+    );
+
+    // if plan starts before the "next to plan" point → outdated
+    return planIdx < startIdx;
   };
 
   return (
@@ -223,6 +275,7 @@ const ProgramPlansSection = ({
                 key={plan.id}
                 plan={plan}
                 type="program"
+                isOutdated={isPlanOutdated(plan)}
                 onEdit={() => {
                   handleEditPlan(plan);
                 }}
@@ -297,6 +350,7 @@ const ProgramPlansSection = ({
           viewingPlan={viewingPlan}
           setViewingPlan={setViewingPlan}
           setEditingPlan={setEditingPlan}
+          setBackupPlan={setBackupPlan}
           programPlans={programPlans}
           scrollToEditSection={scrollToEditSection}
           viewSectionRef={viewSectionRef}

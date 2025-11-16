@@ -32,6 +32,7 @@ const AcademicPlanner = () => {
   const [allCourses, setAllCourses] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [coursesError, setCoursesError] = useState(null);
+  const [gapsByYear, setGapsByYear] = useState({});
 
   useEffect(() => {
     const fetchAcademicProfileAndPlans = async () => {
@@ -71,13 +72,40 @@ const AcademicPlanner = () => {
           });
         });
 
+        const gapMap = {};
+        (profileData.gaps || []).forEach((gap) => {
+          const yearKey = `Year ${gap.year}`;
+          if (!gapMap[yearKey]) gapMap[yearKey] = { isGapYear: false };
+
+          if (gap.semester == null) {
+            // gap year => whole year is gap
+            gapMap[yearKey].isGapYear = true;
+          } else {
+            const semKey = `Semester ${gap.semester}`;
+            gapMap[yearKey][semKey] = true;
+          }
+        });
+
+        Object.keys(gapMap).forEach((yearKey) => {
+          if (!byYear[yearKey]) byYear[yearKey] = {};
+          ["Semester 1", "Semester 2"].forEach((semKey) => {
+            if (!byYear[yearKey][semKey]) {
+              byYear[yearKey][semKey] = []; // empty but exists -> "No courses"
+            }
+          });
+        });
+
         setCompletedCoursesByYear(byYear);
+        setGapsByYear(gapMap);
         setCompletedCourses(
           profileData.entries.map((e) => e.course.course_code)
         );
 
         // After setting completed courses, determine where to start planning
-        const nextToPlan = findNextSemesterToPlan(profileData.entries);
+        const nextToPlan = findNextSemesterToPlan(
+          profileData.entries,
+          profileData.gaps || []
+        );
 
         setStartingPlanPoint(nextToPlan);
 
@@ -268,6 +296,8 @@ const AcademicPlanner = () => {
                 {Object.entries(completedCoursesByYear).map(
                   ([year, semesters], index) => {
                     const isCollapsed = collapsedYears[year];
+                    const gapInfo = gapsByYear[year] || {};
+                    const isGapYear = !!gapInfo.isGapYear;
                     return (
                       <div
                         key={year}
@@ -280,9 +310,15 @@ const AcademicPlanner = () => {
                           onClick={() => toggleYearCollapse(year)}
                           className="flex justify-between items-center cursor-pointer mb-3"
                         >
-                          <h4 className="text-lg font-semibold text-gray-700">
+                          <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
                             {year}
+                            {isGapYear && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">
+                                Gap Year
+                              </span>
+                            )}
                           </h4>
+
                           <span className="text-sm text-blue-600 hover:underline">
                             {isCollapsed ? "Show" : "Hide"}
                           </span>
@@ -302,68 +338,88 @@ const AcademicPlanner = () => {
                               style={{ overflow: "hidden" }}
                             >
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
-                                {["Semester 1", "Semester 2"].map((sem) => (
-                                  <div key={sem}>
-                                    <div className="flex justify-between items-center mb-2">
-                                      <h5 className="text-md font-medium text-gray-600">
-                                        {sem}
-                                      </h5>
-                                      <span className="text-sm text-green-600 font-medium">
-                                        {semesters[sem]?.reduce(
-                                          (sum, c) => sum + c.credit,
-                                          0
-                                        ) || 0}{" "}
-                                        credits
-                                      </span>
-                                    </div>
+                                {["Semester 1", "Semester 2"].map((sem) => {
+                                  const isGapSemester =
+                                    isGapYear || gapInfo[sem] === true;
+                                  const creditTotal =
+                                    semesters[sem]?.reduce(
+                                      (sum, c) => sum + c.credit,
+                                      0
+                                    ) || 0;
 
-                                    {semesters[sem]?.length ? (
-                                      <div className="space-y-3">
-                                        {semesters[sem].map((course, index) => (
-                                          <div
-                                            key={index}
-                                            className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100"
-                                          >
-                                            <div
-                                              className={`p-2 rounded-full mr-3 ${getStatusColor(
-                                                course.status
-                                              )}`}
-                                            >
-                                              {course.status === "Failed" ? (
-                                                <XCircle className="h-4 w-4 text-red-600" />
-                                              ) : course.status ===
-                                                "Ongoing" ? (
-                                                <LoaderCircle className="h-4 w-4 text-yellow-600 animate-spin" />
-                                              ) : (
-                                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                              )}
-                                            </div>
-                                            <div>
-                                              <div className="font-medium text-gray-900">
-                                                {course.code} - {course.name}
-                                              </div>
-                                              <div className="text-sm text-gray-600">
-                                                {course.credit} credits
-                                              </div>
-                                              <div className="text-xs text-gray-500 mt-1 capitalize">
-                                                {course.type.replace(/_/g, " ")}
-                                                {course.isRetake && (
-                                                  <span className="ml-2 inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
-                                                    Retake
-                                                  </span>
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ))}
+                                  return (
+                                    <div key={sem}>
+                                      <div className="flex justify-between items-center mb-2">
+                                        <h5 className="text-md font-medium text-gray-600">
+                                          {sem}
+                                          {isGapSemester && (
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
+                                              Gap Semester
+                                            </span>
+                                          )}
+                                        </h5>
+                                        <span className="text-sm text-green-600 font-medium">
+                                          {creditTotal} credits
+                                        </span>
                                       </div>
-                                    ) : (
-                                      <p className="text-sm text-gray-400">
-                                        No courses
-                                      </p>
-                                    )}
-                                  </div>
-                                ))}
+
+                                      {semesters[sem]?.length ? (
+                                        <div className="space-y-3">
+                                          {semesters[sem].map(
+                                            (course, index) => (
+                                              <div
+                                                key={index}
+                                                className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100"
+                                              >
+                                                <div
+                                                  className={`p-2 rounded-full mr-3 ${getStatusColor(
+                                                    course.status
+                                                  )}`}
+                                                >
+                                                  {course.status ===
+                                                  "Failed" ? (
+                                                    <XCircle className="h-4 w-4 text-red-600" />
+                                                  ) : course.status ===
+                                                    "Ongoing" ? (
+                                                    <LoaderCircle className="h-4 w-4 text-yellow-600 animate-spin" />
+                                                  ) : (
+                                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                  )}
+                                                </div>
+                                                <div>
+                                                  <div className="font-medium text-gray-900">
+                                                    {course.code} -{" "}
+                                                    {course.name}
+                                                  </div>
+                                                  <div className="text-sm text-gray-600">
+                                                    {course.credit} credits
+                                                  </div>
+                                                  <div className="text-xs text-gray-500 mt-1 capitalize">
+                                                    {course.type.replace(
+                                                      /_/g,
+                                                      " "
+                                                    )}
+                                                    {course.isRetake && (
+                                                      <span className="ml-2 inline-block bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
+                                                        Retake
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-gray-400">
+                                          {isGapSemester
+                                            ? "No courses – recorded as a gap."
+                                            : "No courses"}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </motion.div>
                           )}

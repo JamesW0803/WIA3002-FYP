@@ -83,15 +83,6 @@ export const validateCourseAddition = (
     };
   }
 
-  // Check if course is already completed (in any semester)
-  if (completedCourses.includes(course.code)) {
-    console.log("Validation failed: Course already completed");
-    return {
-      isValid: false,
-      message: "Course has already been completed",
-    };
-  }
-
   // Check prerequisites
   const prereqs = course.prerequisites || [];
   console.log("Prerequisites to check:", prereqs);
@@ -115,10 +106,22 @@ export const validateCourseAddition = (
   }
 
   // Check if course is offered in this semester
-  const semesterNum = semester.name.split(" ")[3];
-  const isOfferedThisSemester = course.offered_semester?.some((sem) =>
-    sem.includes(semesterNum)
+  const semesterNum = Number(semester.name.split(" ")[3]); // 1 or 2
+  const offeredList = Array.isArray(course.offered_semester)
+    ? course.offered_semester
+    : [];
+
+  const norm = offeredList.map((s) => String(s).toLowerCase());
+
+  const isOfferedThisSemester = norm.some(
+    (val) =>
+      val.includes(`semester ${semesterNum}`) || // "Semester 1"
+      val === String(semesterNum) || // "1" or 1
+      val.includes("both") ||
+      val.includes("all") ||
+      val.includes("any")
   );
+
   console.log("Offered this semester?", isOfferedThisSemester);
 
   if (!isOfferedThisSemester) {
@@ -203,17 +206,16 @@ export const canAddCourseToSemester = (
   return validation.isValid;
 };
 
-// Add to planHelpers.js
 export const generateNewPlanFromStartingPoint = (index, startPoint) => {
   const years = [];
-  const totalYears = 4; // Assuming 4-year program
+  const baseProgramYears = 4;
+
+  // endYear must be at least startPoint.year so that Year 5 plans still work
+  const endYear = Math.max(baseProgramYears, startPoint.year);
   let semesterCount = 0;
 
-  // Start from the determined starting point
-  for (let year = startPoint.year; year <= totalYears; year++) {
+  for (let year = startPoint.year; year <= endYear; year++) {
     const semesters = [];
-
-    // For the starting year, only include semesters after the starting semester
     const startSemester = year === startPoint.year ? startPoint.semester : 1;
 
     for (let sem = startSemester; sem <= 2; sem++) {
@@ -222,6 +224,7 @@ export const generateNewPlanFromStartingPoint = (index, startPoint) => {
         name: `Year ${year} - Semester ${sem}`,
         courses: [],
         completed: false,
+        isGap: false,
       });
       semesterCount++;
     }
@@ -229,6 +232,7 @@ export const generateNewPlanFromStartingPoint = (index, startPoint) => {
     years.push({
       year,
       semesters,
+      isGapYear: false,
     });
   }
 
@@ -244,27 +248,108 @@ export const generateNewPlanFromStartingPoint = (index, startPoint) => {
 };
 
 // Strict: returns the last semester that has any entries (attempts)
-export const findLastCompletedSemester = (entries) => {
-  if (!entries || entries.length === 0) return null;
-  let maxYear = 0,
-    maxSemester = 0;
-  for (const entry of entries) {
-    if (
-      entry.year > maxYear ||
-      (entry.year === maxYear && entry.semester > maxSemester)
-    ) {
-      maxYear = entry.year;
-      maxSemester = entry.semester;
+// NOW also includes gap semesters/years
+export const findLastCompletedSemester = (entries = [], gaps = []) => {
+  if ((!entries || entries.length === 0) && (!gaps || gaps.length === 0)) {
+    return null;
+  }
+
+  let maxIdx = -1;
+
+  // from entries
+  for (const entry of entries || []) {
+    if (!entry.year || !entry.semester) continue;
+    const idx = semesterIndex(entry.year, entry.semester);
+    if (idx > maxIdx) maxIdx = idx;
+  }
+
+  // from gaps
+  for (const gap of gaps || []) {
+    if (!gap || !gap.year) continue;
+    if (gap.semester == null) {
+      // gap year => both semesters
+      for (let s = 1; s <= 2; s++) {
+        const idx = semesterIndex(gap.year, s);
+        if (idx > maxIdx) maxIdx = idx;
+      }
+    } else {
+      const idx = semesterIndex(gap.year, gap.semester);
+      if (idx > maxIdx) maxIdx = idx;
     }
   }
-  return { year: maxYear || 1, semester: maxSemester || 1 };
+
+  if (maxIdx < 0) return null;
+  return indexToYearSemester(maxIdx);
 };
 
-// Friendly: returns the next semester to plan after the last completed/attempted one
-export const findNextSemesterToPlan = (entries) => {
-  const last = findLastCompletedSemester(entries);
+// Friendly: returns the next semester to plan after the last completed/attempted/gapped one
+export const findNextSemesterToPlan = (entries = [], gaps = []) => {
+  const last = findLastCompletedSemester(entries, gaps);
   if (!last) return { year: 1, semester: 1 };
+
   return last.semester === 2
     ? { year: last.year + 1, semester: 1 }
     : { year: last.year, semester: last.semester + 1 };
+};
+
+const semesterIndex = (year, semester) =>
+  (Number(year) - 1) * 2 + (Number(semester) - 1);
+
+const indexToYearSemester = (index) => ({
+  year: Math.floor(index / 2) + 1,
+  semester: (index % 2) + 1,
+});
+
+// Determine if a course can be retaken based on the academic profile
+export const canRetakeCourse = (courseCode, completedCoursesByYear = {}) => {
+  if (!courseCode) {
+    return {
+      hasTaken: false,
+      canRetake: false,
+      reason: "Invalid course code.",
+    };
+  }
+
+  const attempts = [];
+
+  Object.values(completedCoursesByYear).forEach((yearData) => {
+    if (!yearData) return;
+    Object.values(yearData).forEach((semesterCourses) => {
+      (semesterCourses || []).forEach((entry) => {
+        if (entry.code === courseCode) {
+          attempts.push(entry);
+        }
+      });
+    });
+  });
+
+  // Never taken before → not a "retake"
+  if (attempts.length === 0) {
+    return {
+      hasTaken: false,
+      canRetake: false,
+      reason: "Course has not been taken before.",
+    };
+  }
+
+  // If ANY attempt is Passed with A or A+, it is not retakable
+  const hasAorAplus = attempts.some(
+    (a) => a.status === "Passed" && (a.grade === "A" || a.grade === "A+")
+  );
+
+  if (hasAorAplus) {
+    return {
+      hasTaken: true,
+      canRetake: false,
+      reason:
+        "You already passed this course with grade A or A+, so it cannot be retaken.",
+    };
+  }
+
+  // Taken before, but never with A/A+ → retake is allowed
+  return {
+    hasTaken: true,
+    canRetake: true,
+    reason: "",
+  };
 };

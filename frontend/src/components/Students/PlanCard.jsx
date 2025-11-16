@@ -95,14 +95,44 @@ const PlanCard = ({
     0
   );
 
+  // PlanCard.jsx
+
+  const toggleGapYear = (yearNumber) => {
+    const updatedPlans = plans.map((p) => {
+      if (p.id !== plan.id) return p;
+
+      return {
+        ...p,
+        years: p.years.map((y) => {
+          if (y.year !== yearNumber) return y;
+
+          const makeGap = !y.isGapYear;
+
+          return {
+            ...y,
+            isGapYear: makeGap,
+            semesters: y.semesters.map((s) =>
+              makeGap
+                ? {
+                    ...s,
+                    isGap: true,
+                    courses: [], // wipe courses when marking as gap
+                  }
+                : { ...s, isGap: false }
+            ),
+          };
+        }),
+      };
+    });
+
+    setPlans(updatedPlans);
+  };
+
   return (
     <Card className="bg-white shadow-md overflow-visible relative z-0">
       <CardContent className="p-6 space-y-6 overflow-visible relative z-0">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="min-w-0">
-            <h3 className="text-lg sm:text-xl font-semibold truncate">
-              {plan.name}
-            </h3>
             <p className="text-sm text-gray-600">
               Total Credits: {totalCredits}
             </p>
@@ -123,14 +153,24 @@ const PlanCard = ({
           {plan.years.map((yearData) => (
             <div key={yearData.year} className="relative">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="text-lg font-medium">Year {yearData.year}</h4>
-                {!isViewMode && plan.years.length > 1 && (
-                  <button
-                    onClick={() => deleteYear(yearData.year)}
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
-                  >
-                    Delete Year
-                  </button>
+                {!isViewMode && (
+                  <div className="flex items-center gap-2">
+                    {!yearData.isGapYear && plan.years.length > 1 && (
+                      <button
+                        onClick={() => deleteYear(yearData.year)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        Delete Year
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => toggleGapYear(yearData.year)}
+                      className="text-xs px-2 py-1 rounded-md border border-yellow-300 text-yellow-800 bg-yellow-50 hover:bg-yellow-100"
+                    >
+                      {yearData.isGapYear ? "Undo Gap Year" : "Set as Gap Year"}
+                    </button>
+                  </div>
                 )}
               </div>
               <YearCard

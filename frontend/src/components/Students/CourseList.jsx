@@ -42,7 +42,7 @@ const CourseList = ({
             </div>
 
             {/* right */}
-            {!isViewMode && removeCourse && !isCompleted && (
+            {!isViewMode && removeCourse && (
               <Button
                 variant="ghost"
                 size="sm"
