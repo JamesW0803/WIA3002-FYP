@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
@@ -29,6 +30,9 @@ const initials = (name = "") =>
     .join("") || "?";
 
 export function HelpDesk() {
+  const location = useLocation();
+  const convo = location.state?.convo
+
   const [active, setActive] = useState(null);
   const [tab, setTab] = useState("open");
   const [search, setSearch] = useState("");
@@ -66,9 +70,14 @@ export function HelpDesk() {
       setLoadingLists(true);
       await loadLists();
       setLoadingLists(false);
+      if (convo) {
+        openConversation(convo)
+      }
     })();
+
     // eslint-disable-next-line
   }, []);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messagesByConv, active]);

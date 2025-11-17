@@ -3,7 +3,7 @@ import axiosClient from "../../api/axiosClient";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const FeedbackModal = ({ open, onClose, student, planId, selectedPlan }) => {
+const FeedbackModal = ({ open, onClose, student }) => {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -16,18 +16,19 @@ const FeedbackModal = ({ open, onClose, student, planId, selectedPlan }) => {
     setLoading(true);
 
     try {
-      const res = await axiosClient.post("/conversations/course-plan-feedback", {
+      const res = await axiosClient.post("/chat/conversations/advise-on-course-plan", {
         studentId: student._id,
-        planId,
         message: text
       });
 
-      const convoId = res.data.conversationId;
+      const convo = res.data;
 
       if (redirect) {
-        navigate(`/admin/helpdesk?cid=${convoId}`);
+        navigate(`/admin/helpdesk` , { state : { convo }});
       } else {
+        // replace this with better UI/UX
         alert("Feedback sent successfully!");
+
       }
 
       onClose();

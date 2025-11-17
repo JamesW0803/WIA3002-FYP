@@ -69,7 +69,9 @@ const StudentAcademicProfile = () => {
         console.error("Error fetching course plans:", error);
       }
     };
-    fetchCoursePlans();
+    if(student && student._id){
+      fetchCoursePlans();
+    }
   }, [student]);
 
   // Fetch selected course plan details
@@ -178,8 +180,6 @@ const StudentAcademicProfile = () => {
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         student={student}
-        planId={selectedPlanId}
-        selectedPlan={selectedPlan}
       />
 
       {/* Display Semesters */}
