@@ -69,19 +69,19 @@ function PlanPreviewTable({ plan }) {
                           className="odd:bg-white even:bg-gray-50/60"
                         >
                           <td className="px-3 py-2 border-b align-top font-medium">
-                            {c.code}
+                            {c.course.course_code}
                           </td>
                           <td className="px-3 py-2 border-b align-top">
-                            {c.name}
+                            {c.course.course_name}
                           </td>
                           <td className="px-3 py-2 border-b align-top text-right">
-                            {c.credit ?? ""}
+                            {c.course.credit_hours ?? ""}
                           </td>
                           <td className="px-3 py-2 border-b align-top text-gray-600">
-                            {(c.prerequisites || []).join(", ") || "—"}
+                            {(c.course.prerequisites || []).join(", ") || "—"}
                           </td>
                           <td className="px-3 py-2 border-b align-top text-gray-600">
-                            {(c.offered_semester || []).join(", ") || "—"}
+                            {(c.course.offered_semester || []).join(", ") || "—"}
                           </td>
                         </tr>
                       ))}

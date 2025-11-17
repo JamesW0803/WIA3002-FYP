@@ -5,8 +5,6 @@ import Title from "../../../components/Title";
 import { useState , useEffect } from "react"
 import axiosClient from "../../../api/axiosClient";
 import ActionBar from "../../../components/form/ActionBar";
-import TextInputField from "../../../components/form/TextInputField";
-import SelectInputField from "../../../components/form/SelectInputField";
 import { studentDetailFields } from "../../../constants/studentDetailsFormConfig"
 
 const StudentDetails = () => {
@@ -134,64 +132,42 @@ const ChildrenContent = ({ academicProfile , programme_intake_id , student }) =>
     )
 }
 
-const StudentDetailsDisplayTable = ({ 
-    leftEntries, 
-    rightEntries, 
-    handleInputChange, 
-    editMode 
-}) => {
-    return (
-        <div id="student-details-display-table" className="flex flex-row items-center justify-center w-[90%] ml-40">
-            <StudentDetailsDisplayColumn  // Left Column
-                entries={leftEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode} 
-            />
-            <StudentDetailsDisplayColumn // Right Column
-                entries={rightEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode} 
-            />
-        </div>
-    )
-}
+// Table component
+const StudentDetailsDisplayTable = ({ leftEntries, rightEntries }) => (
+  <div id="student-details-display-table" className="flex flex-row items-start justify-center w-[90%] ml-40 gap-6">
+    <StudentDetailsDisplayColumn entries={leftEntries} />
+    <StudentDetailsDisplayColumn entries={rightEntries} />
+  </div>
+);
 
-const StudentDetailsDisplayColumn = ({ entries, handleInputChange, editMode }) => {
-    const location = useLocation();
+// Column component
+const StudentDetailsDisplayColumn = ({ entries }) => (
+  <div className="w-1/2">
+    {entries.map(([key, value]) => {
+      const field = studentDetailFields.find((f) => f.key === key);
+      if (!field) return null;
 
-    return (
-        <div className="w-1/2">
-            {entries.map(([key, value]) => {
-                const field = studentDetailFields.find((field) => field.key === key)
-                if(!field) return
-                if(field.type === "text") 
-                    return (
-                    <div id={`form-field-${field.key}`} className="h-[50px]">
-                        <TextInputField 
-                                label={field.label}
-                                value={value}
-                                onChange={handleInputChange(key)}
-                                editMode={editMode}
-                                size={"small"}
-                        />
-                    </div>
-                    )
-                else if (field.type === "select")
-                    return (
-                        <div id={`form-field-${field.key}`} className="h-[50px]">
-                            <SelectInputField 
-                                label={field.label} 
-                                options={field.options}
-                                value={value}
-                                onChange={handleInputChange(key)}
-                                editMode={editMode}
+      return (
+        <StudentInfoField
+          key={key}
+          icon={field.icon} // optionally add an icon in your config
+          label={field.label}
+          value={value}
+        />
+      );
+    })}
+  </div>
+);
 
-                            />
-                        </div>
-                    )
-            })}
-        </div>
-    );
-};
+// Reusable component for student info display
+const StudentInfoField = ({ icon: Icon, label, value, color }) => (
+  <div className="flex items-start mb-3">
+    {Icon && <Icon className={`mr-3 mt-1 text-gray-400 ${color || ""}`} size={18} />}
+    <div>
+      <p className="text-sm text-gray-500">{label}</p>
+      <p className="font-semibold text-gray-900">{value}</p>
+    </div>
+  </div>
+);
 
 export default StudentDetails;

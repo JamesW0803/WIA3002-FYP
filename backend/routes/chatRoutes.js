@@ -35,6 +35,61 @@ router.post("/conversations", authenticate, async (req, res) => {
   }
 });
 
+// Create a conversation OR return an existing open convo with that student
+router.post("/conversations/advise-on-course-plan", authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admins only" });
+    }
+
+    const { studentId, message } = req.body;
+    if (!studentId || !message) {
+      return res.status(400).json({ message: "studentId and message required" });
+    }
+
+    // 1️⃣ Find existing open conversation
+    let convo = await Conversation.findOne({
+      student: studentId,
+      status: "open",
+      deletedForAdmin: { $ne: true },
+      deletedForStudent: { $ne: true }
+    });
+
+    // 2️⃣ If not found → create new conversation
+    if (!convo) {
+      convo = await Conversation.create({
+        student: studentId,
+        subject: "General Support"
+      });
+    }
+
+    // 3️⃣ Insert feedback as a new message
+    const newMsg = await Message.create({
+      conversation: convo._id,
+      sender: req.user.user_id,
+      senderRole: "admin",
+      text: message,
+    });
+
+    convo.lastMessage = newMsg._id;
+    await convo.save();
+
+    // // 4️⃣ Notify via WebSocket
+    // const io = getIO && getIO();
+    // if (io) {
+    //   io.to("admins").emit("message:new", { conversationId: convo._id, message: newMsg });
+    //   io.to(`user:${studentId}`).emit("message:new", { conversationId: convo._id, message: newMsg });
+    // }
+
+    res.json(convo);
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to send feedback" });
+  }
+});
+
+
 // List conversations
 // - student: only their own
 // - admin: all

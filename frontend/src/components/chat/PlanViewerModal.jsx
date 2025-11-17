@@ -214,7 +214,7 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                                 <TH>Code</TH>
                                 <TH>Course</TH>
                                 <TH className="w-20 text-right">Credit</TH>
-                                <TH>Prerequisites</TH>
+                                {/* <TH>Prerequisites</TH> */}
                                 <TH>Offered</TH>
                               </tr>
                             </thead>
@@ -224,16 +224,16 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                                   key={`${c.code}-${i}`}
                                   className="odd:bg-white even:bg-gray-50/60"
                                 >
-                                  <TD className="font-medium">{c.code}</TD>
-                                  <TD>{c.name}</TD>
+                                  <TD className="font-medium">{c.course.course_code}</TD>
+                                  <TD>{c.course.course_name}</TD>
                                   <TD className="text-right">
-                                    {c.credit ?? ""}
+                                    {c.course.credit_hours ?? ""}
                                   </TD>
+                                  {/* <TD className="text-gray-600">
+                                    {(c.course.prerequisites || []).join(", ") || "—"}
+                                  </TD> */}
                                   <TD className="text-gray-600">
-                                    {(c.prerequisites || []).join(", ") || "—"}
-                                  </TD>
-                                  <TD className="text-gray-600">
-                                    {(c.offered_semester || []).join(", ") ||
+                                    {(c.course.offered_semester || []).join(", ") ||
                                       "—"}
                                   </TD>
                                 </tr>

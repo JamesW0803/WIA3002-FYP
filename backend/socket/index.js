@@ -72,14 +72,23 @@ function initSocket(server) {
           if (role !== "admin" && String(convo.student) !== String(userId))
             return;
         } else {
-          // No valid conversationId → create a new one now
           const studentId = role === "admin" ? createForStudentId : userId;
           if (!studentId) return; // admin must specify target student if starting a new thread via socket
-          convo = await Conversation.create({
+
+          convo = await Conversation.findOne({
             student: studentId,
-            subject: "",
+            status: "open",
+            deletedForAdmin: { $ne: true },
+            deletedForStudent: { $ne: true }
           });
-          isNewConvo = true;
+
+          if(!convo){
+            convo = await Conversation.create({
+              student: studentId,
+              subject: "",
+            });
+            isNewConvo = true;
+          }
         }
 
         // Validate reply target belongs to same conversation (or drop it)

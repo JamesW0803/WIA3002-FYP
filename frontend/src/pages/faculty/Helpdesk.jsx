@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
@@ -29,6 +30,9 @@ const initials = (name = "") =>
     .join("") || "?";
 
 export function HelpDesk() {
+  const location = useLocation();
+  const conversationId = location.state?.conversationId
+
   const [active, setActive] = useState(null);
   const [tab, setTab] = useState("open");
   const [search, setSearch] = useState("");
@@ -66,9 +70,14 @@ export function HelpDesk() {
       setLoadingLists(true);
       await loadLists();
       setLoadingLists(false);
+      if (conversationId) {
+        openConversation(conversationId)
+      }
     })();
+
     // eslint-disable-next-line
   }, []);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messagesByConv, active]);
@@ -111,10 +120,10 @@ export function HelpDesk() {
     return groups;
   }, [active, messagesByConv]);
 
-  const openConversation = async (c) => {
+  const openConversation = async (conversationId) => {
     if (active) leaveConversation(active);
-    setActive(c._id);
-    await joinConversation(c._id);
+    setActive(conversationId);
+    await joinConversation(conversationId);
   };
 
   const toggleStatus = async () => {
@@ -280,7 +289,7 @@ export function HelpDesk() {
                 key={c._id}
                 convo={c}
                 active={active === c._id}
-                onClick={() => openConversation(c)}
+                onClick={() => openConversation(c._id)}
                 unread={unreadCounts[c._id] || 0}
               />
             ))}
