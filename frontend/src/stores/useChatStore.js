@@ -314,7 +314,7 @@ const useChatStore = create((set, get) => ({
     return data;
   },
 
-  sendMessage: (conversationId, text, attachments = []) => {
+  sendMessage: (conversationId, text, attachments = [], studentId = null) => {
     const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const reply = get().replyTo;
     const replyTo = reply?._id || null;
@@ -330,6 +330,7 @@ const useChatStore = create((set, get) => ({
       attachments,
       replyTo,
       replyToAttachment,
+      createForStudentId : studentId
     });
 
     const convKey =

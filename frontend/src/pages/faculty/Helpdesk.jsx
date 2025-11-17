@@ -31,7 +31,7 @@ const initials = (name = "") =>
 
 export function HelpDesk() {
   const location = useLocation();
-  const convo = location.state?.convo
+  const conversationId = location.state?.conversationId
 
   const [active, setActive] = useState(null);
   const [tab, setTab] = useState("open");
@@ -70,8 +70,8 @@ export function HelpDesk() {
       setLoadingLists(true);
       await loadLists();
       setLoadingLists(false);
-      if (convo) {
-        openConversation(convo)
+      if (conversationId) {
+        openConversation(conversationId)
       }
     })();
 
@@ -120,10 +120,10 @@ export function HelpDesk() {
     return groups;
   }, [active, messagesByConv]);
 
-  const openConversation = async (c) => {
+  const openConversation = async (conversationId) => {
     if (active) leaveConversation(active);
-    setActive(c._id);
-    await joinConversation(c._id);
+    setActive(conversationId);
+    await joinConversation(conversationId);
   };
 
   const toggleStatus = async () => {
@@ -289,7 +289,7 @@ export function HelpDesk() {
                 key={c._id}
                 convo={c}
                 active={active === c._id}
-                onClick={() => openConversation(c)}
+                onClick={() => openConversation(c._id)}
                 unread={unreadCounts[c._id] || 0}
               />
             ))}

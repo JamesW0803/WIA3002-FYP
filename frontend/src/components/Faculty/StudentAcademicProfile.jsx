@@ -180,6 +180,7 @@ const StudentAcademicProfile = () => {
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         student={student}
+        coursePlan={selectedPlan}
       />
 
       {/* Display Semesters */}

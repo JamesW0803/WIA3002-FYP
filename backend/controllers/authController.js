@@ -185,8 +185,6 @@ const resetPassword = async (req, res) => {
 const getStudentProfile = async (req, res) => {
   try {
     const userId = req.params.userId;
-    console.log("🔍 Fetching student with ID:", userId);
-
     const student = await Student.findById(userId)
       // pull in the programme’s human‐readable field
       .populate({ path: "programme", select: "programme_name" })

@@ -2,33 +2,64 @@ import { useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import useChatStore from "../../stores/useChatStore";
 
-const FeedbackModal = ({ open, onClose, student }) => {
+const FeedbackModal = ({ open, onClose, student, coursePlan }) => {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { getUploadUrl, putToAzure, sendMessage } = useChatStore();
+
 
   if (!open) return null;
 
   const handleSend = async (redirect = false) => {
     if (!text.trim()) return;
+    if (!coursePlan) return;
 
     setLoading(true);
 
     try {
-      const res = await axiosClient.post("/chat/conversations/advise-on-course-plan", {
-        studentId: student._id,
-        message: text
+      const attachments = [];
+
+      // 2️⃣ Build JSON like SharePlanModal
+      const pretty = JSON.stringify(coursePlan, null, 2);
+      const blob = new Blob([pretty], { type: "application/json" });
+
+      const filename = `CoursePlan_${coursePlan.name
+        ?.replace(/[^\w.-]+/g, "_")
+        .slice(0, 40)}_${new Date().toISOString().slice(0, 10)}.json`;
+
+      const file = new File([blob], filename, { type: "application/json" });
+
+      // 3️⃣ Upload to Azure (same steps as SharePlanModal)
+      const { uploadUrl, blobUrl } = await getUploadUrl({
+        filename,
+        mimeType: "application/json",
       });
 
-      const convo = res.data;
+      await putToAzure({ uploadUrl, file });
 
+      attachments.push({
+        url: blobUrl,
+        name: filename,
+        mimeType: "application/json",
+        size: file.size,
+        caption: "Academic plan export",
+        originalUrl: blobUrl,
+        originalName: filename,
+        originalMimeType: "application/json",
+        originalSize: file.size,
+      });
+
+      await sendMessage(null, text, attachments, student._id);
+      const convoId = useChatStore.getState().activeConversationId;
+
+      // 5️⃣ Redirect or show success
       if (redirect) {
-        navigate(`/admin/helpdesk` , { state : { convo }});
+        navigate(`/admin/helpdesk`, { state: { conversationId: convoId }});
       } else {
-        // replace this with better UI/UX
-        alert("Feedback sent successfully!");
-
+        alert("Feedback sent with course plan attached!");
       }
 
       onClose();
@@ -40,6 +71,7 @@ const FeedbackModal = ({ open, onClose, student }) => {
 
     setLoading(false);
   };
+
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
