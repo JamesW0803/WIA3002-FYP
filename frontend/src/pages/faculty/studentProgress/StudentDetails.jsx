@@ -5,8 +5,6 @@ import Title from "../../../components/Title";
 import { useState , useEffect } from "react"
 import axiosClient from "../../../api/axiosClient";
 import ActionBar from "../../../components/form/ActionBar";
-import TextInputField from "../../../components/form/TextInputField";
-import SelectInputField from "../../../components/form/SelectInputField";
 import { studentDetailFields } from "../../../constants/studentDetailsFormConfig"
 
 const StudentDetails = () => {

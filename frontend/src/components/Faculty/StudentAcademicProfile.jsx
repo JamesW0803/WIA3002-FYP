@@ -10,6 +10,9 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
+import { MessageSquare } from "lucide-react";
+import FeedbackModal from "./FeedbackModal"; // ⭐ you'll create this next
+
 const CourseTable = ({ courses , plan=false }) => (
   <TableContainer 
     component={Paper}
@@ -51,6 +54,8 @@ const StudentAcademicProfile = () => {
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [itemsToDisplay, setItemsToDisplay] = useState([]);
+
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   // Fetch all available course plans for the student
   useEffect(() => {
@@ -123,14 +128,20 @@ const StudentAcademicProfile = () => {
         View the student’s academic courses. You can explore their actual completed courses or see them organized according to a course plan.
       </Typography>
 
-      {/* inside your JSX, instead of dropdown */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+      {/* Radio group + feedback icon */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "1.5rem"
+      }}>
         <RadioGroup
           row
           value={selectedPlanId || 'no-plan'}
           onChange={(e) => setSelectedPlanId(e.target.value === 'no-plan' ? null : e.target.value)}
         >
           <FormControlLabel value="no-plan" control={<Radio />} label="Completed Courses" />
+
           {coursePlans.map((plan) => (
             <FormControlLabel
               key={plan._id}
@@ -140,7 +151,36 @@ const StudentAcademicProfile = () => {
             />
           ))}
         </RadioGroup>
-      </Stack>
+
+        {/* ⭐ Comment icon only visible when a course plan is selected */}
+        {selectedPlanId && (
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              borderRadius: "6px",
+              border: "1px solid #ddd",
+              background: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            <MessageSquare size={20} color="#1976d2" />
+            <span style={{ color: "#1976d2", fontWeight: 500 }}>Comment</span>
+          </button>
+        )}
+      </div>
+
+      {/* ⭐ The modal */}
+      <FeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        student={student}
+        planId={selectedPlanId}
+        selectedPlan={selectedPlan}
+      />
 
       {/* Display Semesters */}
       {itemsToDisplay.length > 0 ? (
