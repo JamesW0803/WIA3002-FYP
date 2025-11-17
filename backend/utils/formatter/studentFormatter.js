@@ -53,6 +53,7 @@ const formatStudent = async (student, {
         faculty: faculty,
         is_graduated : student.isGraduated? student.isGraduated : false,
 
+        intakeSession : `${academicSessionEnrolled.year} ${academicSessionEnrolled.semester}`,
         currentSemester : getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession, sessionMap) ?? "-",
         expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",
         progress : studentProgress.percentage,

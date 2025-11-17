@@ -17,8 +17,8 @@ const Dashboard = () => {
 
     const [searchKeywords, setSearchKeywords] = useState("");
 
-    const header = ["Name", "Programme", "Current Semester", "Expected Graduation", "Progress", "Status"]
-    const order = ["username", "programme_name", "currentSemester", "expectedGraduation", "progress", "status"]
+    const header = ["Name", "Programme", "Intake Session" ,"Current Semester", "Expected Graduation", "Progress", "Status"]
+    const order = ["username", "programme_name", "intakeSession", "currentSemester", "expectedGraduation", "progress", "status"]
     
     useEffect(() => {
         const fetchStudents = async () =>{
