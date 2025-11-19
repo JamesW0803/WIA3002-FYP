@@ -10,6 +10,7 @@ const {
   getProgrammeIntakeByCode,
   updateProgrammeIntake,
   getGraduationRequirementsForStudent,
+  getProgrammePlanMappingByCode,
 } = require("../controllers/programmeIntakeController");
 
 // Public routes (no auth required)
@@ -18,6 +19,10 @@ router.use(authenticate);
 router.get(
   "/student/:studentId/requirements",
   getGraduationRequirementsForStudent
+);
+router.get(
+  "/programme-intakes/:programme_intake_code/programme-plan",
+  getProgrammePlanMappingByCode
 );
 
 // Admin-only routes

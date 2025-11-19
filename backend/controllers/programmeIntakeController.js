@@ -2,6 +2,9 @@ const {
   formatProgrammeIntake,
   formatProgrammeIntakes,
 } = require("../utils/formatter/programmeIntakeFormatter");
+const {
+  buildSemesterMappingFromProgrammePlan,
+} = require("../utils/formatter/programmePlanToSemesterMapping");
 
 const ProgrammeIntake = require("../models/ProgrammeIntake");
 const Programme = require("../models/Programme");
@@ -458,6 +461,56 @@ const getGraduationRequirementsForStudent = async (req, res) => {
   }
 };
 
+// Student
+const getProgrammePlanMappingByCode = async (req, res) => {
+  try {
+    const { programme_intake_code } = req.params;
+
+    const intake = await ProgrammeIntake.findOne({ programme_intake_code })
+      .populate("programme_id")
+      .populate("academic_session_id")
+      .populate({
+        path: "programme_plan",
+        populate: {
+          path: "semester_plans",
+          populate: [{ path: "courses" }, { path: "academic_session_id" }],
+        },
+      });
+
+    if (!intake) {
+      return res.status(404).json({ message: "Programme intake not found" });
+    }
+
+    if (!intake.programme_plan) {
+      return res
+        .status(404)
+        .json({ message: "No programme plan attached to this intake" });
+    }
+
+    const semesterMapping = buildSemesterMappingFromProgrammePlan(
+      intake.programme_plan
+    );
+
+    return res.status(200).json({
+      programme_intake_code,
+      programme: {
+        _id: intake.programme_id?._id,
+        programme_code: intake.programme_id?.programme_code,
+        programme_name: intake.programme_id?.programme_name,
+      },
+      academicSession: {
+        _id: intake.academic_session_id?._id,
+        year: intake.academic_session_id?.year,
+        semester: intake.academic_session_id?.semester,
+      },
+      semesterMapping,
+    });
+  } catch (error) {
+    console.error("Error fetching programme plan mapping:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   getAllProgrammeIntakes,
   addProgrammeIntake,
@@ -466,4 +519,5 @@ module.exports = {
   deleteProgrammeIntakeById,
   updateProgrammeIntake,
   getGraduationRequirementsForStudent,
+  getProgrammePlanMappingByCode,
 };

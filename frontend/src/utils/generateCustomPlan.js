@@ -4,8 +4,6 @@ import semesterMapping from "../constants/semesterMapping";
 const SHE4_CODE = "SHE4444";
 const KIAR_CODE = "GQX0056";
 
-/** ===== Utilities ===== **/
-
 const SEM_NAMES = ["Semester 1", "Semester 2"];
 const MAX_YEARS_HARD_CAP = 10; // protect from runaway while-loop
 
@@ -98,7 +96,6 @@ function analyzeProfile(profile) {
 
 // Gap controls
 function toGapSets(profile, preferences) {
-  // support both persisted and user-specified quick modes
   const gapYears = new Set([
     ...(profile.gapYears || []),
     ...(preferences.gapYears || []),
@@ -117,8 +114,6 @@ function toGapSets(profile, preferences) {
   ]);
   return { gapYears, gapSemKeys, outboundSemKeys };
 }
-
-/** ===== Core planner ===== **/
 
 export default async function generateCustomPlan(
   userId,
@@ -151,15 +146,14 @@ export default async function generateCustomPlan(
     // Try to "finish by" Year 4, but account for any full gap years (e.g., Year 4 gap -> finish by Year 5)
     const FINISH_BY_YEAR = Math.min(4 + gapYearsInFirst4, MAX_YEARS_HARD_CAP);
 
-    const preferLight = !!preferences.lightweight; // soft preference
-    const maxPerSem = 21; // hard operational cap
-    const absoluteCap = 22; // absolute hard cap
+    const preferLight = !!preferences.lightweight;
+    const maxPerSem = 21;
+    const absoluteCap = 22;
     const softCap = preferLight ? 16 : maxPerSem;
 
-    // Build catalog (fast lookups)
-    const catalog = new Map(); // code -> { code, name, credits, mask, prereqCodes[], type }
-    const prereqGraph = new Map(); // code -> Set(its prerequisites)
-    const dependents = new Map(); // code -> Set(courses that depend on it), to compute "fanout"
+    const catalog = new Map();
+    const prereqGraph = new Map();
+    const dependents = new Map();
 
     for (const c of allCourses) {
       const code = c.course_code;
@@ -221,10 +215,6 @@ export default async function generateCustomPlan(
 
     const plan = {};
 
-    // Determine REQUIRED set:
-    // 1) Start from “all courses in default plan”
-    // 2) Drop already passed
-    // 3) Add special ensureCodes if not passed
     const required = new Set(
       defaultFlat
         .map((x) => x.code)
@@ -259,8 +249,6 @@ export default async function generateCustomPlan(
       }
     }
 
-    // Resolve SPECIALIZATION placeholders: allow planner to fill with any programme_elective (3 credits)
-    // Strategy: For each SPECIALIZATION_x in default, reserve a slot "SPECIALIZATION" and later fill
     const specializationSlots = defaultFlat.filter((x) =>
       String(x.code).startsWith("SPECIALIZATION_")
     ).length;
@@ -354,10 +342,6 @@ export default async function generateCustomPlan(
       return out;
     };
 
-    // Priority scoring:
-    // - Default plan closeness (earlier idxFromStart -> higher priority)
-    // - High fanout (more dependents) -> higher priority
-    // - Prereq depth (lower depth -> earlier), approximated via topological rank
     const topoLevel = computeTopoLevels(prereqGraph); // code -> level (0 for no prereqs)
     function score(code, ctx = {}) {
       const urgentPrereqs = ctx.urgentPrereqs;
@@ -383,8 +367,6 @@ export default async function generateCustomPlan(
     // Track WIA3002/WIA3003 “immediate-next” rule
     let mustPlaceWIA3003At = null;
 
-    // If WIA3002 was passed in the last completed semester, try to put WIA3003
-    // in the very next planned semester (if possible).
     const lastKey = keyYS(lastYear || 0, lastSem || 0);
     if (passed.has("WIA3002") && !passed.has("WIA3003")) {
       const lastCodes = takenByYS[lastKey] || [];
@@ -485,12 +467,9 @@ export default async function generateCustomPlan(
         targetCr = clamp(targetCr, minAim, perSemCap);
         targetCr = Math.max(targetCr, credits); // never below what’s already in base
 
-        // If even a regular load can’t hit Year 4 (avgToY4 > perSemCap), we’ll warn later
-
-        // Look-ahead: prioritize missing prereqs for current + next default semester
-        const URGENT_WINDOW = 2; // current + next default semester
+        const URGENT_WINDOW = 2;
         const urgentPrereqs = computeUrgentPrereqsForUpcoming(
-          defaultChrono, // make sure you defined this once before the loops (see step 3)
+          defaultChrono,
           y,
           s,
           URGENT_WINDOW,
@@ -917,7 +896,6 @@ export default async function generateCustomPlan(
               virtPassed.add(elect);
               scheduledAt.set(elect, { y: y5, s });
             }
-            // (Intentionally no additional elective “fillers” beyond the required 10)
           }
 
           plan[yearKey][semKey] = chosen.slice().sort();
@@ -1005,8 +983,6 @@ export default async function generateCustomPlan(
   }
 }
 
-/** ===== Helpers (credits, topo levels) ===== **/
-
 function sumCredits(codes, catalog) {
   let t = 0;
   for (const c of codes) t += catalog.get(c)?.credits ?? 3;
@@ -1076,8 +1052,6 @@ function isTakenBefore(code, y, s, scheduledAt, virtTaken) {
 }
 
 function isPassedBefore(code, y, s, scheduledAt, virtPassed) {
-  // virtPassed includes historical passes AND anything we've scheduled,
-  // but a same-semester placement should NOT satisfy a "before" constraint.
   if (!virtPassed.has(code)) return false;
   const at = scheduledAt.get(code);
   if (!at) return true; // historical pass
@@ -1088,8 +1062,6 @@ function nextSemester(y, s) {
   return s === 1 ? { y, s: 2 } : { y: y + 1, s: 1 };
 }
 
-// Validate that all course codes in semesterMapping exist in the catalog.
-// Returns { missingCodes: string[], normalizedDefaultMap: object }
 function validateSemesterMappingCourses(allCourses, defaultMap) {
   const codesInCatalog = new Set(allCourses.map((c) => c.course_code));
   const missing = new Set();
@@ -1235,9 +1207,6 @@ function countOpenSemestersFrom(
   return Math.max(1, n); // never 0 to avoid divide-by-zero
 }
 
-// Move the final non-empty Y+1 S1 bucket into the previous year's Semester 2
-// if that target slot is empty, not a gap/outbound, offerings allow it, and prereqs are satisfied.
-// Won't move if WIA3001 is involved.
 function compactPlannerTailOneStep(
   plan,
   catalog,

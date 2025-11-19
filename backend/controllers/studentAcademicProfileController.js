@@ -3,6 +3,9 @@ const AcademicSession = require("../models/AcademicSession");
 const Course = require("../models/Course");
 const mongoose = require("mongoose");
 
+const Student = require("../models/Student");
+const ProgrammeIntake = require("../models/ProgrammeIntake");
+
 exports.saveAcademicProfile = async (req, res) => {
   const studentId = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(studentId)) {
@@ -203,14 +206,46 @@ exports.getAcademicProfile = async (req, res) => {
   }
 
   try {
+    // 1) Academic profile (courses, gaps, etc.)
     const profile = await AcademicProfile.findOne({
       student: studentId,
     }).populate("entries.course");
 
+    // 2) Student, with possible programme_intake
+    const studentDoc = await Student.findById(studentId)
+      .populate("programme")
+      .populate("academicSession")
+      .populate("programme_intake");
+
+    // If no profile yet, still return intake info so planner can work
     if (!profile) {
-      return res.status(200).json({ entries: [], gaps: [] });
+      let programme_intake_code = null;
+      let intakeDoc = null;
+
+      if (studentDoc?.programme_intake) {
+        intakeDoc = studentDoc.programme_intake;
+        programme_intake_code = intakeDoc.programme_intake_code;
+      } else if (studentDoc?.programme && studentDoc?.academicSession) {
+        // Fallback: find by programme + academic session
+        intakeDoc = await ProgrammeIntake.findOne({
+          programme_id: studentDoc.programme._id || studentDoc.programme,
+          academic_session_id:
+            studentDoc.academicSession._id || studentDoc.academicSession,
+        });
+        programme_intake_code = intakeDoc?.programme_intake_code || null;
+      }
+
+      return res.status(200).json({
+        entries: [],
+        gaps: [],
+        completed_credit_hours: 0,
+        student: studentId,
+        programme_intake_code,
+        programmeIntake: intakeDoc || undefined,
+      });
     }
 
+    // --- existing credit-hour recompute logic ---
     let totalCompletedCredits = 0;
     if (
       !profile.completed_credit_hours ||
@@ -224,9 +259,39 @@ exports.getAcademicProfile = async (req, res) => {
       }, 0);
       profile.completed_credit_hours = totalCompletedCredits;
     }
+
     const json = profile.toObject ? profile.toObject() : profile;
     if (!json.gaps) json.gaps = [];
-    res.json(json);
+
+    // 3) Resolve intake, same way as for the no-profile case
+    let programme_intake_code = null;
+    let intakeDoc = null;
+
+    if (studentDoc?.programme_intake) {
+      intakeDoc = studentDoc.programme_intake;
+      programme_intake_code = intakeDoc.programme_intake_code;
+    } else if (studentDoc?.programme && studentDoc?.academicSession) {
+      intakeDoc = await ProgrammeIntake.findOne({
+        programme_id: studentDoc.programme._id || studentDoc.programme,
+        academic_session_id:
+          studentDoc.academicSession._id || studentDoc.academicSession,
+      });
+      programme_intake_code = intakeDoc?.programme_intake_code || null;
+    }
+
+    // 4) Attach to response
+    const payload = {
+      ...json,
+      programme_intake_code,
+      programmeIntake: intakeDoc || undefined,
+    };
+
+    console.log("[API] getAcademicProfile payload:", {
+      studentId,
+      programme_intake_code,
+    });
+
+    res.json(payload);
   } catch (err) {
     console.error("Error fetching academic profile:", err.message, err.stack);
     res.status(500).json({ message: "Server error" });
