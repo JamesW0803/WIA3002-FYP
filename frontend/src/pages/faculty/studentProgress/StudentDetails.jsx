@@ -6,6 +6,7 @@ import { useState , useEffect } from "react"
 import axiosClient from "../../../api/axiosClient";
 import ActionBar from "../../../components/form/ActionBar";
 import { studentDetailFields } from "../../../constants/studentDetailsFormConfig"
+import StatusBadge from "../../../components/Faculty/StatusBadge";
 
 const StudentDetails = () => {
     const location = useLocation();
@@ -50,7 +51,7 @@ const StudentDetails = () => {
     const allowedKeys = studentDetailFields.map(field => field.key);
 
     const entries = Object.entries(formData).filter(
-    ([key, _]) => allowedKeys.includes(key)
+        ([key, _]) => allowedKeys.includes(key)
     );
     const mid = Math.ceil(entries.length / 2);
     const leftEntries = entries.slice(0, mid);
@@ -147,12 +148,16 @@ const StudentDetailsDisplayColumn = ({ entries }) => (
       const field = studentDetailFields.find((f) => f.key === key);
       if (!field) return null;
 
+      const isStatusField = key.toLowerCase() === "status";
+
       return (
         <StudentInfoField
           key={key}
           icon={field.icon} // optionally add an icon in your config
           label={field.label}
-          value={value}
+          value={
+            isStatusField ? <StatusBadge status={value.status} notes={value.status_notes} /> : value
+          }        
         />
       );
     })}

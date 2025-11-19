@@ -57,7 +57,10 @@ const formatStudent = async (student, {
         currentSemester : getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession, sessionMap) ?? "-",
         expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",
         progress : studentProgress.percentage,
-        status : studentProgress.status ,
+        status : {
+            status : studentProgress.status,
+            status_notes : student.status_notes,
+        } ,
         programme_intake_id : programmeIntake ? programmeIntake._id : null
     }
 }
