@@ -2,7 +2,7 @@ const Student = require("../models/Student");
 const ProgrammeIntake = require("../models/ProgrammeIntake");
 const AcademicSession = require("../models/AcademicSession");
 const StudentAcademicProfile = require("../models/StudentAcademicProfile");
-const { getCurrentAcademicSession } = require("../utils/formatter/studentFormatter")
+const { getCurrentAcademicSession , getProgressStatus } = require("../utils/formatter/studentFormatter")
 
 const {
   formatStudents,
@@ -60,7 +60,36 @@ const getStudentByName = async (req, res) => {
   }
 };
 
+const updateStudentProgressStatus = async (studentId, profile) => {
+  let update = false
+  const student = await Student.findById(studentId)
+  const programmeIntake = await ProgrammeIntake.findOne({
+    programme_id : student.programme,
+    academic_session_id : student.academicSession
+  })
+  const latestProgressStatus = await getProgressStatus(programmeIntake , profile)
+
+  if(student.status !== latestProgressStatus.status){
+    student.status = latestProgressStatus.status
+    update = true
+  }
+
+  const mergedStatusNotes = [...new Set([...student.status_notes, ...latestProgressStatus.status_notes])]
+  if(mergedStatusNotes.length !== student.status_notes){
+    student.status_notes = mergedStatusNotes
+    update = true
+  }
+
+  if(update){
+    await student.save()
+    return "Updated successfully"
+  }else return "No update required"
+
+}
+
+
 module.exports = {
   getAllStudents,
   getStudentByName,
+  updateStudentProgressStatus,
 };

@@ -2,6 +2,7 @@ const AcademicProfile = require("../models/StudentAcademicProfile");
 const AcademicSession = require("../models/AcademicSession");
 const Course = require("../models/Course");
 const mongoose = require("mongoose");
+const { updateStudentProgressStatus  } = require("../controllers/studentController")
 
 exports.saveAcademicProfile = async (req, res) => {
   const studentId = req.params.id;
@@ -176,6 +177,8 @@ exports.saveAcademicProfile = async (req, res) => {
         completed_credit_hours: completed_credits,
       });
     }
+
+    await updateStudentProgressStatus(studentId, savedProfile)
 
     res.json({
       message: "Academic profile saved successfully",
