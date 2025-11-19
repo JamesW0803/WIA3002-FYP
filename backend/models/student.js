@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const User = require("./User");
+const { PROGRESS_STATUS } = require("../constants/progressStatus");
 require("./ProgrammePlan");
 require("./Programme");
 require("./AcademicSession");
@@ -65,6 +66,16 @@ const studentSchema = new mongoose.Schema({
   isGraduated: {
     type: Boolean,
     default: false,
+  },
+  status: {
+    type: String,
+    enum: PROGRESS_STATUS,
+    default: PROGRESS_STATUS.UNKNOWN
+  },
+  status_notes: {
+    type: [String],
+    required : false,
+    default : []
   },
 });
 

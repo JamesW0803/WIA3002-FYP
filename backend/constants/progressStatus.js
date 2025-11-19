@@ -1,7 +1,7 @@
-const ON_TRACK = "On track";
-const AT_RISK = "At risk";
-const UNKNOWN = "Unknown";
-const DELAYED = "Delayed";
+const ON_TRACK = "on_track";
+const AT_RISK = "at_risk";
+const UNKNOWN = "unknown";
+const DELAYED = "delayed";
 
 const PROGRESS_STATUS = {
     ON_TRACK,

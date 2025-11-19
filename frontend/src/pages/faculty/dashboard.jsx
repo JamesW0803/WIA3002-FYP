@@ -5,6 +5,8 @@ import Title from "../../components/Title";
 import ToolBar from "../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
+import { STATUS_STYLES } from "../../constants/statusStyle";
+import StatusBadge from "../../components/Faculty/StatusBadge";
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -35,8 +37,12 @@ const Dashboard = () => {
 
     useEffect(() => {
         const latestItem = students.map((student) => {
+            console.log("student: ", student)
             return  (
                 Object.entries(student).map(([key, value]) => {
+                    if (key === "status") {
+                        value = <StatusBadge status={value.status} />;
+                    }
                     return {
                         key,
                         value,
