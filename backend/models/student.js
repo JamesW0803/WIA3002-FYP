@@ -70,12 +70,13 @@ const studentSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: PROGRESS_STATUS,
-    default: PROGRESS_STATUS.ON_TRACK
+    default: PROGRESS_STATUS.UNKNOWN
   },
-  status_notes: [{
-    type: String,
-    required : false
-  }],
+  status_notes: {
+    type: [String],
+    required : false,
+    default : []
+  },
 });
 
 const Student = User.discriminator("student", studentSchema);

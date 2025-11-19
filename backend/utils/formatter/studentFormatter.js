@@ -43,7 +43,6 @@ const formatStudent = async (student, {
     const programmeIntake = intakeMap[`${student.programme._id}_${student.academicSession}`];
     const studentAcademicProfile = profileMap[student._id.toString()];
     const expectedGraduationSession = getExpectedGraduation(programmeIntake, sessionMap) ?? "-";
-    const studentProgress = calculateStudentProgress( programmeIntake , studentAcademicProfile, sessionMap, currentAcademicSession) ?? 0;
  
     return {
         _id: student._id,
@@ -56,9 +55,9 @@ const formatStudent = async (student, {
         intakeSession : `${academicSessionEnrolled.year} ${academicSessionEnrolled.semester}`,
         currentSemester : getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession, sessionMap) ?? "-",
         expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",
-        progress : studentProgress.percentage,
+        progress : calculateStudentProgressPercentage(studentAcademicProfile.completed_credit_hours, programmeIntake.total_credit_hours),
         status : {
-            status : studentProgress.status,
+            status : student.status,
             status_notes : student.status_notes,
         } ,
         programme_intake_id : programmeIntake ? programmeIntake._id : null
@@ -100,16 +99,45 @@ const getExpectedGraduation = ( programmeIntake , sessionMap) => {
 
 }
 
-const calculateStudentProgress = ( programmeIntake , studentAcademicProfile, sessionMap, currentAcademicSession ) => {
+const calculateStudentProgressPercentage = ( completed_credit_hours , total_required_credit_hours ) => {
+    return progressPercentage = ((completed_credit_hours / total_required_credit_hours) * 100).toFixed(2);
+}
+
+//current status calculation didnt include current semester registered courses
+const computeStudentStatus = ( min_semester, max_semester, semesters_passed, remaining_credit_hours ) => {
+    let status = PROGRESS_STATUS.UNKNOWN
+    const status_notes = []
+    const remaining_On_Track_Semesters = min_semester - semesters_passed;
+    const remaining_Delayed_Semesters = max_semester - semesters_passed;
+
+    if( remaining_On_Track_Semesters * 21 >= remaining_credit_hours ){
+        // student graduate as planned in the proramme intake
+        status =  PROGRESS_STATUS.ON_TRACK; 
+    }else if( remaining_Delayed_Semesters * 21 >= remaining_credit_hours ){
+        // student graduate later than planned in the proramme intake but still within max semester
+        status = PROGRESS_STATUS.DELAYED; 
+        status_notes.push("Student graduate later than planned in the proramme intake but still within max semester")
+    }else{
+        // student unable to graduate within max semester, need intervention
+        status = PROGRESS_STATUS.AT_RISK; 
+        status_notes.push("Student unable to graduate within max semester, need intervention")
+    }
+
+    return { status , status_notes}
+}
+
+const getProgressStatus = async (programmeIntake, academicProfile) => {
+    const currentAcademicSession = await getCurrentAcademicSession();
+    const sessions = await AcademicSession.find()
+    const sessionMap = Object.fromEntries(sessions.map(s => [s._id.toString(), s]));
+
     const min_semester = programmeIntake.min_semester;
     const max_semester = programmeIntake.max_semester;
     const required_credits = programmeIntake.total_credit_hours;
-    const completed_credits = studentAcademicProfile?.completed_credit_hours || 0;
+    const completed_credits = academicProfile?.completed_credit_hours || 0;
 
-    let progressPercentage = 0;
     let semesters_passed = 0;
     let hold = sessionMap[programmeIntake.academic_session_id.toString()];
-    let status = PROGRESS_STATUS.UNKNOWN;
     
     while (hold._id.toString() !== currentAcademicSession._id.toString()){
         semesters_passed +=1;
@@ -117,24 +145,9 @@ const calculateStudentProgress = ( programmeIntake , studentAcademicProfile, ses
         if (!hold) break;
     }
 
-    progressPercentage = ((completed_credits / required_credits) * 100).toFixed(2);
-    status = calculateStudentStatus( min_semester, max_semester, semesters_passed, required_credits - completed_credits );
+    const statusObj = computeStudentStatus( min_semester, max_semester, semesters_passed, required_credits - completed_credits );
+    return { status : statusObj.status , status_notes : statusObj.status_notes};
 
-    return { percentage : progressPercentage , status };
-}
-
-//current status calculation didnt include current semester registered courses
-const calculateStudentStatus = ( min_semester, max_semester, semesters_passed, remaining_credit_hours ) => {
-    const remaining_On_Track_Semesters = min_semester - semesters_passed;
-    const remaining_Delayed_Semesters = max_semester - semesters_passed;
-
-    if( remaining_On_Track_Semesters * 21 >= remaining_credit_hours ){
-        return PROGRESS_STATUS.ON_TRACK; // student graduate as planned in the proramme intake
-    }else if( remaining_Delayed_Semesters * 21 >= remaining_credit_hours ){
-        return PROGRESS_STATUS.DELAYED; // student graduate later than planned in the proramme intake but still within max semester
-    }else{
-        return PROGRESS_STATUS.AT_RISK; // student unable to graduate within max semester, need intervention
-    }
 }
 
 const getCurrentAcademicSession = async () => {
@@ -148,5 +161,6 @@ const getCurrentAcademicSession = async () => {
 module.exports = {
     formatStudents,
     formatStudent,
-    getCurrentAcademicSession
+    getCurrentAcademicSession,
+    getProgressStatus
 };

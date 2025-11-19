@@ -8,15 +8,15 @@ export const STATUS_STYLES = {
     text: "text-green-700",
     border: "border-green-300",
   },
-  at_risk: {
-    label: "At Risk",
+  delayed: {
+    label: "Delayed",
     icon: AlertTriangle,
     bg: "bg-yellow-100",
     text: "text-yellow-700",
     border: "border-yellow-300",
   },
-  delayed: {
-    label: "Delayed",
+  at_risk: {
+    label: "At Risk",
     icon: Clock,
     bg: "bg-red-100",
     text: "text-red-700",

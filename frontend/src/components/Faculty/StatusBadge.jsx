@@ -11,7 +11,8 @@ const StatusBadge = ({ status, notes = null }) => {
         <Bagde style={style} Icon={style.icon}/>
 
       {/* Reason tooltip if exists */}
-        {notes && <StatusNotes status={status} notes={notes}/>}
+        {notes && notes.length > 0
+        && <StatusNotes status={status} notes={notes}/>}
     </div>
   );
 };
