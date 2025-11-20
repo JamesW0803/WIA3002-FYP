@@ -90,9 +90,22 @@ const Dashboard = () => {
         navigate(`/admin/student-progress/${student_name}`, { state : { student_name }})
     }
 
+    const handleMessageOnClick = ( student_name ) => {
+        // navigate to student details page
+        const findConversation = async() => {
+            const res = await axiosClient.post("/chat/conversations/create-or-get", {studentName : student_name});
+            const conversation = res.data
+            navigate(`/admin/helpdesk/`, { state : { conversationId: conversation._id }})
+        }
+        findConversation()
+    }
+
     const StudentsActionBar = {
         viewButton : {
             onClick : handleStudentOnClick
+        },
+        messageButton : {
+            onClick : handleMessageOnClick
         },
         editButton : null,
         deleteButton : null

@@ -2,8 +2,10 @@ import IconButton from "@mui/material/IconButton";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import MessageIcon from "@mui/icons-material/Message"; // import a message icon
 
-const TableActionBar = ({ viewButton, editButton, deleteButton, identifier}) => {
+
+const TableActionBar = ({ viewButton, editButton, deleteButton, messageButton, identifier}) => {
   return (
     <div id="action-bar" className="flex flex-row justify-center items-center gap-2">
       {viewButton && (
@@ -31,6 +33,15 @@ const TableActionBar = ({ viewButton, editButton, deleteButton, identifier}) => 
           title="Delete"
         >
           <DeleteIcon />
+        </IconButton>
+      )}
+      {messageButton && (
+        <IconButton
+          onClick={() => messageButton.onClick(identifier)}
+          sx={{ color: "#2563EB" }} // blue-600
+          title="Message"
+        >
+          <MessageIcon />
         </IconButton>
       )}
     </div>
