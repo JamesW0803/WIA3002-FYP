@@ -60,7 +60,11 @@ const formatStudent = async (student, {
             status : student.status,
             status_notes : student.status_notes,
         } ,
-        programme_intake_id : programmeIntake ? programmeIntake._id : null
+        programme_intake_id : programmeIntake ? programmeIntake._id : null,
+        role : student.role ?? "-",
+        profilePicture : student.profilePicture ?? "-",
+        profileColor : student.profileColor ?? "-",
+        email : student.email ?? "-",
     }
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { use, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import {
@@ -31,7 +31,7 @@ const initials = (name = "") =>
 
 export function HelpDesk() {
   const location = useLocation();
-  const conversationId = location.state?.conversationId
+  const { conversationId } = location.state || {};
 
   const [active, setActive] = useState(null);
   const [tab, setTab] = useState("open");

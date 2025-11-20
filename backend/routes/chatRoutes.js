@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const router = express.Router();
 const mongoose = require("mongoose");
+const Student = require("../models/Student");
 
 const { authenticate } = require("../middleware/authMiddleware");
 const Conversation = require("../models/Conversation");
@@ -34,6 +35,52 @@ router.post("/conversations", authenticate, async (req, res) => {
     res.status(500).json({ message: "Failed to create conversation" });
   }
 });
+
+router.post("/conversations/create-or-get", authenticate, async (req, res) => {
+  try {
+    const me = req.user.user_id;
+    const role = req.user.role;
+    const { subject = "", studentId, studentName } = req.body;
+
+    let student = studentId || null;
+
+    // If studentName is provided and no studentId, look it up
+    if (!student && studentName) {
+      const studentDoc = await Student.findOne({ username: studentName });
+      if (!studentDoc) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      student = studentDoc._id;
+    }
+
+    // If admin, student must exist
+    if (role === "admin" && !student) {
+      return res.status(400).json({ message: "studentId or studentName required" });
+    }
+
+    // If student, default to self
+    if (role !== "admin") student = me;
+
+    // Try to find an existing open conversation for this student
+    let convo = await Conversation.findOne({
+      student,
+      status: "open",
+      deletedForAdmin: { $ne: true },
+      deletedForStudent: { $ne: true },
+    });
+
+    // If no conversation exists, create one
+    if (!convo) {
+      convo = await Conversation.create({ student, subject });
+    }
+
+    res.status(201).json(convo);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to create conversation" });
+  }
+});
+
 
 // Create a conversation OR return an existing open convo with that student
 router.post("/conversations/advise-on-course-plan", authenticate, async (req, res) => {
@@ -120,6 +167,41 @@ router.get("/conversations", authenticate, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Failed to fetch conversations" });
+  }
+});
+
+router.get("/conversation/:student_id", authenticate, async (req, res) => {
+  try {
+    const role = req.user.role;
+    const me = req.user.user_id;
+    const { status = "open" } = req.query; 
+    const { student_id } = req.params;
+
+    const filter = role === "admin" ? {} : { student: me };
+    if (["open", "done"].includes(status)) filter.status = status;
+
+    if (role === "admin") filter.deletedForAdmin = { $ne: true };
+    else filter.deletedForStudent = { $ne: true };
+
+    if(!student_id){
+      return res.status(404).json({ message: "Student ID is required" });
+    }
+
+    filter.student = student_id;
+    const convo = await Conversation.find(filter)
+      .populate({
+        path: "student",
+        select: "username role profilePicture profileColor email",
+      })
+      .populate({
+        path: "lastMessage",
+        populate: { path: "sender", select: "username role profilePicture" },
+      });
+
+    res.json(convo);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to fetch conversation" });
   }
 });
 

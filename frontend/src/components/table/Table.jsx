@@ -27,6 +27,7 @@ const Row = ({
                     identifier={item.find(data => data.key === identifier)?.value}
                     editButton={tableActionBarButton.editButton}
                     deleteButton={tableActionBarButton.deleteButton}
+                    messageButton={tableActionBarButton.messageButton}
                 />
             }
         </tr>

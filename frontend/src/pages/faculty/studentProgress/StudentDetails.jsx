@@ -7,6 +7,8 @@ import axiosClient from "../../../api/axiosClient";
 import ActionBar from "../../../components/form/ActionBar";
 import { studentDetailFields } from "../../../constants/studentDetailsFormConfig"
 import StatusBadge from "../../../components/Faculty/StatusBadge";
+import { MessageCircle } from "lucide-react";
+import MessageModal from "../../../components/Faculty/MessageModal";
 
 const StudentDetails = () => {
     const location = useLocation();
@@ -16,6 +18,8 @@ const StudentDetails = () => {
     const [editMode, setEditMode] = useState(location.state?.editMode || false);
     const [student, setStudent] = useState({})
     const [formData, setFormData] = useState({});
+    const [messageModalOpen, setMessageModalOpen] = useState(false);
+
 
     useEffect(() => {
         const fetchStudent = async() => {
@@ -59,7 +63,7 @@ const StudentDetails = () => {
 
     return (
         <div className="flex flex-col w-full">
-            <Title>Student's Progress | {student.username}</Title>
+            <CustomTitle student={student} messageModalOpen={messageModalOpen} setMessageModalOpen={setMessageModalOpen}/>
             <StudentDetailsDisplayTable 
                 leftEntries={leftEntries} 
                 rightEntries={rightEntries} 
@@ -72,6 +76,35 @@ const StudentDetails = () => {
         </div> 
     )
 }
+
+const CustomTitle = ( { student, messageModalOpen, setMessageModalOpen}) => {
+    return (
+        <Title>
+            <div className="flex items-center gap-4">
+            Student's Progress | {student.username}
+
+            {/* Message Icon Button */}
+            {student?._id && (
+                <button
+                    onClick={() => setMessageModalOpen(true)}
+                    className="p-2 rounded-full hover:bg-gray-100 transition"
+                    title="Send Message"
+                >
+                <MessageCircle size={22} className="text-blue-600" />
+                </button>
+            )}
+            </div>
+
+            {/* ⭐ The modal */}
+            <MessageModal
+                open={messageModalOpen}
+                onClose={() => setMessageModalOpen(false)}
+                student={student}
+            />
+        </Title>
+    )
+}
+
 
 const NavTab = () => {
     const location = useLocation();
