@@ -1,6 +1,6 @@
 import { Tooltip } from "react-tooltip";
 import { Info } from "lucide-react";
-import { STATUS_STYLES } from "../../constants/statusStyle";
+import { STATUS_STYLES } from "../../constants/progressStatusStyle";
 
 const StatusBadge = ({ status, notes = null }) => {
   const style = STATUS_STYLES[status] || STATUS_STYLES["unknown"];

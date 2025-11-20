@@ -9,11 +9,13 @@ import {
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CourseStatusBadge from '../../constants/courseStatusStyle';
 
 const StudentGraduationRequirement = () => {
-    const { programme_intake_id } = useOutletContext();
+  const { programme_intake_id , academicProfile} = useOutletContext();
   const [ programmeIntake, setProgrammeIntake ] = useState(null);
   const [ graduationRequirements, setGraduationRequirements ] = useState({});
+  const [ coursesTaken, setCoursesTaken ] = useState(academicProfile?.entries || []);
 
   useEffect( () => {
     const fetchProgrammeIntake = async () => {
@@ -45,10 +47,17 @@ const StudentGraduationRequirement = () => {
     }
   }, [programmeIntake]);
 
+  useEffect( () => {
+    if(academicProfile && academicProfile.entries){
+      setCoursesTaken(academicProfile.entries);
+    }
+
+  }, [academicProfile]);
+
   return (
     <div style={{ width: '80%', margin: 'auto', marginTop: '2rem' }}>
         <Header totalCreditHours={programmeIntake?.total_credits_hours}/>
-        <CourseAccordion graduationRequirements={graduationRequirements}/>
+        <CourseAccordion graduationRequirements={graduationRequirements} coursesTaken={coursesTaken}/>
     </div>
   );
 };
@@ -63,7 +72,7 @@ const Header = ({ totalCreditHours }) => {
   )
 }
 
-const CourseAccordion = ({ graduationRequirements }) => {
+const CourseAccordion = ({ graduationRequirements , coursesTaken }) => {
     return (
         <>
             {Object.entries(graduationRequirements).map(([type, data]) => {
@@ -78,11 +87,20 @@ const CourseAccordion = ({ graduationRequirements }) => {
                 </AccordionSummary>
                 <AccordionDetails>
                     {data.courses.length > 0 ? (
-                    data.courses.map((course, idx) => (
-                        <Typography key={idx} variant="body2">
-                        {course.course_code} {course.course_name}
+                    data.courses.map((course, idx) => {
+                      const courseObj = coursesTaken.find(courseTakenObj => courseTakenObj.course.course_code === course.course_code);
+                      return (
+                        <Typography
+                          key={idx}
+                          variant="body2"
+                          style={{ marginBottom: "0.5rem" }} // adds spacing between lines
+                        >
+                          {course.course_code} {course.course_name}{" "}
+                          <span style={{ marginLeft: "0.5rem" }}>
+                            <CourseStatusBadge status={courseObj?.status || "Never Taken"} />
+                          </span>
                         </Typography>
-                    ))
+                        )})
                     ) : (
                     <Typography variant="body2" fontStyle="italic" color="text.secondary">
                         No courses listed

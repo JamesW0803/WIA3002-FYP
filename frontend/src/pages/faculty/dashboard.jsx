@@ -5,7 +5,7 @@ import Title from "../../components/Title";
 import ToolBar from "../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
-import { STATUS_STYLES } from "../../constants/statusStyle";
+import { STATUS_STYLES } from "../../constants/progressStatusStyle";
 import StatusBadge from "../../components/Faculty/StatusBadge";
 
 const Dashboard = () => {

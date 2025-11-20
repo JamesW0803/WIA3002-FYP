@@ -35,7 +35,7 @@ const CourseTable = ({ courses , coursesTaken}) => (
           <TableRow 
             key={index}
             sx={{
-              backgroundColor: taken ? '#a5d6a7' : 'white', // soft green for taken courses
+              backgroundColor: taken ? '#A5D6A7' : 'white', // soft green for taken courses
               transition: 'all 0.3s ease',
               '&:hover': {
                 backgroundColor: taken ? '#c8e6c9' : '#f5f5f5', // subtle hover effect
