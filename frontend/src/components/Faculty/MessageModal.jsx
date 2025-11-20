@@ -51,14 +51,15 @@ const MessageModal = ({ open, onClose, student, coursePlan=false }) => {
           originalSize: file.size,
         });
       }
-
-
-      await sendMessage(null, text, attachments, student._id);
-      const convoId = useChatStore.getState().activeConversationId;
+      const res = await axiosClient.post("/chat/conversations/create-or-get", {
+        studentId: student._id,
+      });
+      const conversation = res.data;
+      await sendMessage(conversation._id, text, attachments);
 
       // 5️⃣ Redirect or show success
       if (redirect) {
-        navigate(`/admin/helpdesk`, { state: { conversationId: convoId }});
+        navigate(`/admin/helpdesk`, { state: { conversationId: conversation._id }});
       } else {
         alert("Message sent!");
       }

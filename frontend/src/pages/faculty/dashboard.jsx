@@ -37,7 +37,6 @@ const Dashboard = () => {
 
     useEffect(() => {
         const latestItem = students.map((student) => {
-            console.log("student: ", student)
             return  (
                 Object.entries(student).map(([key, value]) => {
                     if (key === "status") {

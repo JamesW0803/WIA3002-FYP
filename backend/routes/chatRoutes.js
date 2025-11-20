@@ -35,6 +35,36 @@ router.post("/conversations", authenticate, async (req, res) => {
   }
 });
 
+router.post("/conversations/create-or-get", authenticate, async (req, res) => {
+  try {
+    const me = req.user.user_id;
+    const role = req.user.role;
+    const { subject = "", studentId } = req.body;
+
+    const student = role === "admin" ? studentId || null : me;
+    if (!student)
+      return res.status(400).json({ message: "studentId required" });
+
+    // Try to find an existing open conversation for this student
+    let convo = await Conversation.findOne({
+      student,
+      status: "open",
+      deletedForAdmin: { $ne: true },
+      deletedForStudent: { $ne: true },
+    });
+
+    // If no conversation exists, create one
+    if (!convo) {
+      convo = await Conversation.create({ student, subject });
+    }
+    
+    res.status(201).json(convo);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to create conversation" });
+  }
+});
+
 // Create a conversation OR return an existing open convo with that student
 router.post("/conversations/advise-on-course-plan", authenticate, async (req, res) => {
   try {
