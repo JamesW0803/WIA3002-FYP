@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import useChatStore from "../../stores/useChatStore";
 
-const FeedbackModal = ({ open, onClose, student, coursePlan }) => {
+const MessageModal = ({ open, onClose, student, coursePlan=false }) => {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,42 +15,43 @@ const FeedbackModal = ({ open, onClose, student, coursePlan }) => {
 
   const handleSend = async (redirect = false) => {
     if (!text.trim()) return;
-    if (!coursePlan) return;
 
     setLoading(true);
 
     try {
       const attachments = [];
+      if(coursePlan) {
+        // 2️⃣ Build JSON like SharePlanModal
+        const pretty = JSON.stringify(coursePlan, null, 2);
+        const blob = new Blob([pretty], { type: "application/json" });
 
-      // 2️⃣ Build JSON like SharePlanModal
-      const pretty = JSON.stringify(coursePlan, null, 2);
-      const blob = new Blob([pretty], { type: "application/json" });
+        const filename = `CoursePlan_${coursePlan.name
+          ?.replace(/[^\w.-]+/g, "_")
+          .slice(0, 40)}_${new Date().toISOString().slice(0, 10)}.json`;
 
-      const filename = `CoursePlan_${coursePlan.name
-        ?.replace(/[^\w.-]+/g, "_")
-        .slice(0, 40)}_${new Date().toISOString().slice(0, 10)}.json`;
+        const file = new File([blob], filename, { type: "application/json" });
 
-      const file = new File([blob], filename, { type: "application/json" });
+        // 3️⃣ Upload to Azure (same steps as SharePlanModal)
+        const { uploadUrl, blobUrl } = await getUploadUrl({
+          filename,
+          mimeType: "application/json",
+        });
 
-      // 3️⃣ Upload to Azure (same steps as SharePlanModal)
-      const { uploadUrl, blobUrl } = await getUploadUrl({
-        filename,
-        mimeType: "application/json",
-      });
+        await putToAzure({ uploadUrl, file });
 
-      await putToAzure({ uploadUrl, file });
+        attachments.push({
+          url: blobUrl,
+          name: filename,
+          mimeType: "application/json",
+          size: file.size,
+          caption: "Academic plan export",
+          originalUrl: blobUrl,
+          originalName: filename,
+          originalMimeType: "application/json",
+          originalSize: file.size,
+        });
+      }
 
-      attachments.push({
-        url: blobUrl,
-        name: filename,
-        mimeType: "application/json",
-        size: file.size,
-        caption: "Academic plan export",
-        originalUrl: blobUrl,
-        originalName: filename,
-        originalMimeType: "application/json",
-        originalSize: file.size,
-      });
 
       await sendMessage(null, text, attachments, student._id);
       const convoId = useChatStore.getState().activeConversationId;
@@ -59,14 +60,14 @@ const FeedbackModal = ({ open, onClose, student, coursePlan }) => {
       if (redirect) {
         navigate(`/admin/helpdesk`, { state: { conversationId: convoId }});
       } else {
-        alert("Feedback sent with course plan attached!");
+        alert("Message sent!");
       }
 
       onClose();
       setText("");
     } catch (err) {
       console.error(err);
-      alert("Failed to send feedback");
+      alert("Failed to send message");
     }
 
     setLoading(false);
@@ -83,18 +84,18 @@ const FeedbackModal = ({ open, onClose, student, coursePlan }) => {
         </button>
 
         <h2 className="text-lg font-semibold mb-2">
-          Feedback for Course Plan
+          {coursePlan ? "Feedback with Course Plan" : "Message Student"}
         </h2>
 
         <p className="text-sm text-gray-600 mb-4">
-          This feedback will be sent to <b>{student.username}</b> in Helpdesk.
+          This message will be sent to <b>{student.username}</b> in Helpdesk.
         </p>
 
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={5}
-          placeholder="Write your feedback..."
+          placeholder="Write your message..."
           className="w-full border rounded p-2"
         />
 
@@ -123,4 +124,4 @@ const FeedbackModal = ({ open, onClose, student, coursePlan }) => {
   );
 };
 
-export default FeedbackModal;
+export default MessageModal;

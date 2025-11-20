@@ -11,7 +11,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import { MessageSquare } from "lucide-react";
-import FeedbackModal from "./FeedbackModal"; // ⭐ you'll create this next
+import MessageModal from "./MessageModal"; // ⭐ you'll create this next
 
 const CourseTable = ({ courses , plan=false }) => (
   <TableContainer 
@@ -176,7 +176,7 @@ const StudentAcademicProfile = () => {
       </div>
 
       {/* ⭐ The modal */}
-      <FeedbackModal
+      <MessageModal
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         student={student}
