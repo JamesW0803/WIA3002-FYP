@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
-const CourseTable = ({ courses }) => (
+const CourseTable = ({ courses , coursesTaken}) => (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
       <TableHead>
@@ -30,8 +30,21 @@ const CourseTable = ({ courses }) => (
       </TableHead>
       <TableBody>
         {courses.map((course, index) => {
+          const taken = coursesTaken.find(courseTakenObj => courseTakenObj.course.course_code === course.course_code);
           return (
-          <TableRow key={index}>
+          <TableRow 
+            key={index}
+            sx={{
+              backgroundColor: taken ? '#A5D6A7' : 'white', // soft green for taken courses
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                backgroundColor: taken ? '#c8e6c9' : '#f5f5f5', // subtle hover effect
+                cursor: 'pointer'
+              },
+              borderRadius: 1,
+              mb: 1
+            }}
+          >
             <TableCell>{course.course_code}</TableCell>
             <TableCell>{course.course_name}</TableCell>
             <TableCell>{course.credit_hours}</TableCell>
@@ -45,11 +58,11 @@ const CourseTable = ({ courses }) => (
 );
 
 const DefaultProgrammePlan = () => {
-    const { programme_intake_id } = useOutletContext();
+    const { programme_intake_id , academicProfile} = useOutletContext();
     const [ programmeIntake, setProgrammeIntake ] = useState(null);
     const [ programmePlan, setProgrammePlan ] = useState(null);
     const [ programmePlanSortedByYear, setProgrammePlanSortedByYear ] = useState([]);
-
+    const [ coursesTaken, setCoursesTaken ] = useState(academicProfile?.entries || []);
 
     useEffect( () => {
         const fetchProgrammeIntake = async () => {
@@ -78,6 +91,13 @@ const DefaultProgrammePlan = () => {
 
     }, [programmePlan]);
 
+    useEffect( () => {
+      if(academicProfile && academicProfile.entries){
+        setCoursesTaken(academicProfile.entries);
+      }
+
+    }, [academicProfile]);
+
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
       <Typography variant="body2" gutterBottom>
@@ -104,7 +124,7 @@ const DefaultProgrammePlan = () => {
                     <Typography variant="subtitle1" gutterBottom>
                       {"Semester " + (semIdx + 1)}
                     </Typography>
-                    <CourseTable courses={semesterObj.courses} />
+                    <CourseTable courses={semesterObj.courses} coursesTaken={coursesTaken}/>
                   </div>
                   ))}
               </div>
