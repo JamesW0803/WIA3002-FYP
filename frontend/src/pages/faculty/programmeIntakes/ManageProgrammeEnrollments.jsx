@@ -18,6 +18,7 @@ const ManageProgrammeEnrollment = () => {
     const [selectedProgrammeIntakeCodeToDelete, setSelectedProgrammeIntakeCodeToDelete] = useState(null);
         
     const [searchKeywords, setSearchKeywords] = useState("");
+    const [loading, setLoading] = useState(true);
 
     const header = ["Programme Enrollment Code", "Programme Name", "Enrollment Year", "Enrollment Semester"]
     const order = ["programme_intake_code", "programme_name", "year", "semester"]
@@ -31,6 +32,8 @@ const ManageProgrammeEnrollment = () => {
                 setProgrammeEnrollments(programmeEnrollments)
             } catch (error) {
                 console.error("Error fetching programme enrollment: ", error);
+            }finally{
+                setLoading(false);
             }
         };
         fetchProgrammeEnrollments();
@@ -156,6 +159,7 @@ const ManageProgrammeEnrollment = () => {
                 order={order}
                 tableActionBarButton={programmeEnrollmentsActionBar}
                 identifier={"programme_intake_code"}
+                loading={loading}
                 // index={false}
             />
             <FormDialog

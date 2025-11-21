@@ -1,199 +1,136 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import Title from "../../../components/Title";
-import { useState , useEffect } from "react"
+import { useState, useEffect } from "react";
 import axiosClient from "../../../api/axiosClient";
 import ActionBar from "../../../components/form/ActionBar";
 import TextInputField from "../../../components/form/TextInputField";
 import SelectInputField from "../../../components/form/SelectInputField";
-import { allCourseFields } from "../../../constants/courseFormConfig"
+import { allCourseFields } from "../../../constants/courseFormConfig";
 
 const CourseDetails = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const course_code  = location.state.course_code
+    const course_code = location.state.course_code;
     const [editMode, setEditMode] = useState(location.state?.editMode || false);
-    const [course, setCourse] = useState({})
+    const [course, setCourse] = useState({});
     const [formData, setFormData] = useState({});
 
     useEffect(() => {
-        const fetchCourse = async() => {
-            const response = await axiosClient.get(`/courses/${course_code}`)
-            const currentCourse = response.data
-
-            // Flatten prerequisites if necessary
-            if (currentCourse.prerequisites && currentCourse.prerequisites.length > 0) {
-                currentCourse.prerequisites = currentCourse.prerequisites[0].course_code;
+        const fetchCourse = async () => {
+            try {
+                const response = await axiosClient.get(`/courses/${course_code}`);
+                const currentCourse = response.data;
+                if (currentCourse.prerequisites?.length > 0) {
+                    currentCourse.prerequisites = currentCourse.prerequisites[0].course_code;
+                }
+                setCourse(currentCourse);
+                setFormData(currentCourse);
+            } catch (error) {
+                console.error("Error fetching course:", error);
             }
-            setCourse(currentCourse)
-            setFormData(currentCourse); // initial form data
+        };
+        fetchCourse();
+    }, [course_code]);
 
-        }
-        fetchCourse()
-    }, [course_code])
+    const handleBack = () => navigate("/admin/courses");
+    const handleCancel = () => setEditMode(false);
+    const handleEdit = () => setEditMode(true);
 
-    const handleBack = () => {
-        navigate(`/admin/courses`)
-    }
-
-    const handleCancel = () => {
-        setEditMode(false)
-    }
-
-    const handleEdit = () => {
-        setEditMode(true)
-    }
-
-    const handleSave = async() => {
-        // Submit edit course form
+    const handleSave = async () => {
         try {
             const payload = {
                 ...formData,
-                prerequisites: formData.prerequisites
-                    ? formData.prerequisites  // wrap it in an array
-                    : [],                       // fallback to empty array
+                prerequisites: formData.prerequisites ? formData.prerequisites : [],
             };
-
-            const response = await axiosClient.put(`/courses/${formData.course_code}`, payload);
-            const updatedCourse = response.data
-            setEditMode(false)
-            console.log("Course is updated successfully")
+            await axiosClient.put(`/courses/${formData.course_code}`, payload);
+            setEditMode(false);
+            console.log("Course updated successfully");
         } catch (error) {
-            console.error("Error updating course: ", error);
-        } finally {
-            
-        }      
-    }
-
-    const cancelButton = {
-        title : "Cancel",
-        onClick : handleCancel
-    }
-
-    const saveButton = {
-        title : "Save",
-        onClick : handleSave
-    }
-
-    const backButton = {
-        title : "Back",
-        onClick : handleBack
-    }
-
-    const editButton = {
-        title : "Edit",
-        onClick : handleEdit
-    }
-
-
-    // Handle input changes
-    const handleInputChange = (key) => (event) => {
-        setFormData((prevData) => ({
-            ...prevData,
-            [key]: event.target.value,
-        }));
+            console.error("Error updating course:", error);
+        }
     };
 
-    // Split form data into two columns
-    const entries = Object.entries(formData);
-    const mid = Math.ceil(entries.length / 2);
-    const leftEntries = entries.slice(0, mid);
-    const rightEntries = entries.slice(mid);
+    const actionButtons = editMode
+        ? { button1: { title: "Cancel", onClick: handleCancel }, button2: { title: "Save", onClick: handleSave } }
+        : { button1: { title: "Back", onClick: handleBack }, button2: { title: "Edit", onClick: handleEdit } };
+
+    const handleInputChange = (key) => (event) => {
+        setFormData((prev) => ({ ...prev, [key]: event.target.value }));
+    };
 
     return (
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col items-center min-h-screen w-full bg-gray-50 p-6 space-y-6">
             <Title>Courses | {course.course_code}</Title>
-            <CourseDisplayTable 
-                leftEntries={leftEntries} 
-                rightEntries={rightEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode}
-            />
-            {editMode ?
-                <ActionBar button1={cancelButton} button2={saveButton}/>
-            :   
-                <ActionBar button1={backButton} button2={editButton}/>
-            }
-        </div> 
-    )
-}
 
-const CourseDisplayTable = ({ 
-    leftEntries, 
-    rightEntries, 
-    handleInputChange, 
-    editMode 
-}) => {
-    return (
-        <div id="course-display-table" className="flex flex-row items-center justify-center w-[90%] ml-40">
-            <CourseDisplayColumn  // Left Column
-                entries={leftEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode} 
-            />
-            <CourseDisplayColumn // Right Column
-                entries={rightEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode} 
-            />
-        </div>
-    )
-}
+            <div className="w-full max-w-5xl bg-white shadow-md rounded-xl p-6 flex flex-col md:flex-row gap-6">
+                <CourseColumn entries={formData} handleInputChange={handleInputChange} editMode={editMode} courses={location.state?.courses || []} />
+            </div>
 
-const CourseDisplayColumn = ({ entries, handleInputChange, editMode }) => {
-    console.log("entries: ", entries)
-    const location = useLocation();
-    const [courses, setCourses] = useState(location.state?.courses || [])
-
-    return (
-        <div className="w-1/2">
-            {entries.map(([key, value]) => {
-                const field = allCourseFields.find((field) => field.key === key)
-                if(field == null) return
-                if (key === "prerequisites") {
-                    const options = courses.map((course) => ({
-                        label: course.course_code + " - " + course.course_name,
-                        value: course.course_code
-                    }));
-
-                    return (
-                        <div key={key} id={`form-field-${key}`}>
-                            <SelectInputField 
-                                label={field.label || "Prerequisite"} 
-                                options={options}
-                                value={value}
-                                onChange={handleInputChange(key)}
-                                editMode={editMode}
-                            />
-                        </div>
-                    )
-                }
-                if(field.type === "text") 
-                    return (
-                    <div id={`form-field-${field.key}`}>
-                        <TextInputField 
-                                label={field.label}
-                                value={value}
-                                onChange={handleInputChange(key)}
-                                editMode={editMode}
-                        />
-                    </div>
-                    )
-                else if (field.type === "select")
-                    return (
-                        <div id={`form-field-${field.key}`}>
-                            <SelectInputField 
-                                label={field.label} 
-                                options={field.options}
-                                value={value}
-                                onChange={handleInputChange(key)}
-                                editMode={editMode}
-
-                            />
-                        </div>
-                    )
-            })}
+            <ActionBar button1={actionButtons.button1} button2={actionButtons.button2} />
         </div>
     );
 };
+
+const CourseColumn = ({ entries, handleInputChange, editMode, courses }) => {
+    const leftFields = allCourseFields.filter((f, idx) => idx % 2 === 0);
+    const rightFields = allCourseFields.filter((f, idx) => idx % 2 !== 0);
+
+    return (
+        <div className="flex flex-col md:flex-row w-full gap-6">
+            <FormColumn fields={leftFields} formData={entries} handleInputChange={handleInputChange} editMode={editMode} courses={courses} />
+            <FormColumn fields={rightFields} formData={entries} handleInputChange={handleInputChange} editMode={editMode} courses={courses} />
+        </div>
+    );
+};
+
+const FormColumn = ({ fields, formData, handleInputChange, editMode, courses }) => (
+    <div className="flex-1 flex flex-col gap-4">
+        {fields.map((field) => {
+            if (!field) return null;
+            const value = formData[field.key] ?? "";
+
+            if (field.key === "prerequisites") {
+                const options = courses.map((c) => ({ label: `${c.course_code} - ${c.course_name}`, value: c.course_code }));
+                return (
+                    <SelectInputField
+                        key={field.key}
+                        label={field.label || "Prerequisite"}
+                        options={options}
+                        value={value}
+                        onChange={handleInputChange(field.key)}
+                        editMode={editMode}
+                    />
+                );
+            }
+
+            if (field.type === "text") {
+                return (
+                    <TextInputField
+                        key={field.key}
+                        label={field.label}
+                        value={value}
+                        onChange={handleInputChange(field.key)}
+                        editMode={editMode}
+                    />
+                );
+            }
+
+            if (field.type === "select") {
+                return (
+                    <SelectInputField
+                        key={field.key}
+                        label={field.label}
+                        options={field.options}
+                        value={value}
+                        onChange={handleInputChange(field.key)}
+                        editMode={editMode}
+                    />
+                );
+            }
+
+            return null;
+        })}
+    </div>
+);
 
 export default CourseDetails;

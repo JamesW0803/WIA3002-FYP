@@ -75,9 +75,9 @@ const Table = ({
     loading = false
 }) => {
     return (
-        <div className="w-[90%] mx-auto mt-6 rounded-xl overflow-hidden border border-gray-200 shadow-md">
+        <div className="w-[90%] h-full mx-auto mt-6 rounded-xl overflow-hidden border border-gray-200 shadow-md">
             {/* Outer container – adds padding so table isn't tight to the card edges */}
-            <div className="overflow-auto max-h-[70vh] bg-white">
+            <div className="flex-1 overflow-auto bg-white">
                 
                 <table className="w-full border-collapse text-sm">
                     

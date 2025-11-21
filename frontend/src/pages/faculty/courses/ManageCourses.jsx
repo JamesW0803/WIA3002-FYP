@@ -19,6 +19,8 @@ const ManageCourses = () => {
     const [selectedCourseCodeToDelete, setSelectedCourseCodeToDelete] = useState(null);
 
     const [searchKeywords, setSearchKeywords] = useState("");
+    const [loading, setLoading] = useState(true);
+
 
     const header = ["Course Code", "Course Name", "Credit Hour", "Type", "Offered In"]
     const order = ["course_code", "course_name", "credit_hours", "type", "offered_semester"]
@@ -32,6 +34,8 @@ const ManageCourses = () => {
                 console.log(courses);
             } catch (error) {
                 console.error("Error fetching courses: ", error);
+            }finally{
+                setLoading(false);
             }
         };
         fetchCourses();
@@ -142,7 +146,7 @@ const ManageCourses = () => {
     }
 
     return (
-        <div className="coursesPage">
+        <div className="coursesPage min-h-screen flex flex-col">
             <Title>Courses</Title>
             <Divider sx={{ marginX: 5 }} />
             <ToolBar
@@ -162,6 +166,7 @@ const ManageCourses = () => {
                 order={order}
                 tableActionBarButton={coursesActionBar}
                 identifier={"course_code"}
+                loading={loading}
                 // index={false}
             />
             <FormDialog

@@ -29,7 +29,7 @@ const ManageProgrammes = () => {
     const [selectedProgrammeCodeToDelete, setSelectedProgrammeCodeToDelete] = useState(null);
 
     const [searchKeywords, setSearchKeywords] = useState("");
-
+    const [loading, setLoading] = useState(true);
 
     const header = ["Programme Code", "Programme Name", "Department", "Faculty"]
     const order = ["programme_code", "programme_name", "department", "faculty"]
@@ -42,6 +42,8 @@ const ManageProgrammes = () => {
                 setProgrammes(programmes);
             } catch (error) {
                 console.error("Error fetching programmes: ", error);
+            }finally{
+                setLoading(false);
             }
         };
         fetchProgrammes();
@@ -202,6 +204,7 @@ const ManageProgrammes = () => {
                 order={order}
                 tableActionBarButton={programmesActionBar}
                 identifier={"programme_code"}
+                loading={loading}
                 // index={false}
             />
             <FormDialog
