@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useOutletContext } from "react-router-dom";
 import { READABLE_COURSE_TYPES } from "../../constants/courseType";
 import axiosClient from '../../api/axiosClient';
 import {
@@ -28,7 +27,9 @@ const CourseTable = ({ courses , plan=false }) => (
           <TableCell><strong>Course Code</strong></TableCell>
           <TableCell><strong>Course Name</strong></TableCell>
           <TableCell><strong>Credit</strong></TableCell>
-          <TableCell><strong>Type</strong></TableCell>
+          {plan && <TableCell><strong>Type</strong></TableCell>}
+          {!plan && <TableCell><strong>Status</strong></TableCell>}
+          {!plan && <TableCell><strong>Grade</strong></TableCell>}
         </TableRow>
       </TableHead>
       <TableBody>
@@ -39,7 +40,9 @@ const CourseTable = ({ courses , plan=false }) => (
               <TableCell>{course.course_code}</TableCell>
               <TableCell>{course.course_name}</TableCell>
               <TableCell>{course.credit_hours}</TableCell>
-              <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
+              {plan && <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>}
+              {!plan && <TableCell>{courseObj.status}</TableCell>}
+              {!plan && <TableCell>{courseObj.grade}</TableCell>}
             </TableRow>
           );
         })}
@@ -132,7 +135,7 @@ const StudentAcademicProfile = ({ academicProfile, student }) => {
   if (loading) {
     // ⭐ Skeleton loading
     return (
-      <Stack spacing={2} sx={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
+      <Stack spacing={2} sx={{ width: '90%', margin: 'auto' }}>
         <Skeleton variant="text" height={30} />
         <Skeleton variant="rectangular" height={40} />
         {[...Array(3)].map((_, i) => (
@@ -143,7 +146,7 @@ const StudentAcademicProfile = ({ academicProfile, student }) => {
   }
 
   return (
-    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
+    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '2rem' }}>
       <Typography variant="body1" gutterBottom>
         View the student’s academic courses. You can explore their actual completed courses or see them organized according to a course plan.
       </Typography>
@@ -204,7 +207,7 @@ const StudentAcademicProfile = ({ academicProfile, student }) => {
       {/* Display Semesters */}
       {itemsToDisplay.length > 0 ? (
         itemsToDisplay.map((yearItem, yearIdx) => (
-          <Accordion key={yearIdx} defaultExpanded={yearIdx === 0}>
+          <Accordion key={yearIdx} defaultExpanded={yearIdx === -1}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography fontWeight="bold">{"Year " + (yearIdx + 1)}</Typography>
             </AccordionSummary>
