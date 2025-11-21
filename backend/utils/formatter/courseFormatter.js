@@ -1,5 +1,3 @@
-const { READABLE_COURSE_TYPES } = require("../../constants/courseType");
-
 const formatCourses = (courses) => {
   const formattedCourses = courses.map((course) => {
     return formatCourse(course);

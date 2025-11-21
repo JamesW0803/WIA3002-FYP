@@ -17,18 +17,22 @@ const StatusBadge = ({ status, notes = null }) => {
   );
 };
 
-const Bagde = ({ style , Icon}) => {
+const Bagde = ({ style, Icon }) => {
     return (
-        <div
-            className={`inline-flex items-center px-3 py-1 rounded-full border 
-            ${style.bg} ${style.text} ${style.border} 
-            whitespace-nowrap select-none cursor-default`}
-        >
-            <Icon size={16} className="mr-1" />
-            <span className="text-sm font-medium">{style.label}</span>
+      <div
+          className={`inline-flex items-center rounded-full border
+          ${style.bg} ${style.text} ${style.border}
+          whitespace-nowrap select-none cursor-default
+          h-6 px-2.5 gap-1 justify-center`}
+          style={{ minWidth: "90px" }} // fixed width for all badges
+      >
+          <Icon size={12} />
+          <span className="text-[11px] font-medium leading-none text-center">
+              {style.label}
+          </span>
       </div>
-    )
-}
+    );
+};
 
 const StatusNotes = ({ status , notes }) => {
     return (

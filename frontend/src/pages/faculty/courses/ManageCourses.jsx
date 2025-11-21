@@ -13,7 +13,7 @@ const ManageCourses = () => {
 
     const [courses, setCourses] = useState([]);
     const [items, setItems] = useState([]);
-    const [clickableItems, setClickableItems] = useState(["course_code"])
+    const [clickableItems, setClickableItems] = useState(["course_code", "course_name"])
 
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedCourseCodeToDelete, setSelectedCourseCodeToDelete] = useState(null);
@@ -29,13 +29,13 @@ const ManageCourses = () => {
                 const response = await axiosClient.get("/courses");
                 const courses = response.data;
                 setCourses(courses);
+                console.log(courses);
             } catch (error) {
                 console.error("Error fetching courses: ", error);
             }
         };
         fetchCourses();
     },[])
-
 
     /**
      * courses = [course1, course2, course3]
@@ -47,6 +47,9 @@ const ManageCourses = () => {
                 Object.entries(course).map(([key, value]) => {
                     if(key === "type"){
                         value = READABLE_COURSE_TYPES[value]
+                    }
+                    if(key === "offered_semester"){
+                        value = "Semester " + value.map(sem => sem.replace("Semester ", "")).join(", ");
                     }
                     return {
                         key,
