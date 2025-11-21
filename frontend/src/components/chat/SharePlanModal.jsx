@@ -81,7 +81,8 @@ function PlanPreviewTable({ plan }) {
                             {(c.course.prerequisites || []).join(", ") || "—"}
                           </td>
                           <td className="px-3 py-2 border-b align-top text-gray-600">
-                            {(c.course.offered_semester || []).join(", ") || "—"}
+                            {(c.course.offered_semester || []).join(", ") ||
+                              "—"}
                           </td>
                         </tr>
                       ))}
@@ -106,7 +107,7 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
   const [includeSummary, setIncludeSummary] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const { getUploadUrl, putToAzure, sendMessage } = useChatStore();
+  const { sendMessage } = useChatStore();
 
   useEffect(() => {
     if (!open) return;
@@ -205,30 +206,15 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
       const attachments = [];
 
       if (includeJson) {
-        const pretty = stripMongo(selectedPlan);
-        const blob = new Blob([pretty], { type: "application/json" });
-        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-        const filename = `AcademicPlan_${selectedPlan.name
-          .replace(/[^\w.-]+/g, "_")
-          .slice(0, 40)}_${dateStr}.json`;
-        const file = new File([blob], filename, { type: "application/json" });
-
-        const { uploadUrl, blobUrl } = await getUploadUrl({
-          filename,
-          mimeType: "application/json",
-        });
-        await putToAzure({ uploadUrl, file });
-
         attachments.push({
-          url: blobUrl,
-          name: filename,
-          mimeType: "application/json",
-          size: file.size,
-          caption: "Academic plan export",
-          originalUrl: blobUrl,
-          originalName: filename,
-          originalMimeType: "application/json",
-          originalSize: file.size,
+          url: "",
+          name: selectedPlan.name,
+          mimeType: "application/vnd.academic-plan+json",
+          size: 0,
+          caption: "Academic plan",
+          type: "academic-plan",
+          planId: selectedPlan._id,
+          planName: selectedPlan.name,
         });
       }
 

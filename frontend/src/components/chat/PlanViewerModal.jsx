@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Printer, Search, FileText } from "lucide-react";
+import axiosClient from "../../api/axiosClient";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
-export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
+export default function PlanViewerModal({
+  open,
+  onClose,
+  plan,
+  planUrl,
+  attachment,
+}) {
   const [loading, setLoading] = useState(false);
   const [loadedPlan, setLoadedPlan] = useState(null);
   const [query, setQuery] = useState("");
@@ -13,30 +20,58 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
 
   useEffect(() => {
     if (!open) return;
+
+    // If the modal is given a full plan (e.g. from SharePlanModal), just use it.
     if (plan) {
       setLoadedPlan(null);
+      setLoading(false);
       return;
     }
-    if (!planUrl) return;
+
+    const planId = attachment?.planId;
+    const urlFromAttachment = attachment?.url;
+    const effectiveUrl = planUrl || urlFromAttachment;
+
+    if (!planId && !effectiveUrl) {
+      setLoadedPlan(null);
+      setLoading(false);
+      return;
+    }
 
     let active = true;
+
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(planUrl);
-        const json = await res.json();
+        let json = null;
+
+        if (planId) {
+          // NEW: fetch the latest version of the plan from your API
+          const token = localStorage.getItem("token");
+          const res = await axiosClient.get(`/academic-plans/plans/${planId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          json = res.data?.data || null;
+        } else if (effectiveUrl) {
+          // Legacy: fall back to the stored JSON file
+          const res = await fetch(effectiveUrl);
+          json = await res.json();
+        }
+
         if (!active) return;
         setLoadedPlan(json);
       } catch (e) {
-        console.error("Failed to load plan JSON:", e);
+        console.error("Failed to load plan:", e);
+        if (active) setLoadedPlan(null);
       } finally {
         if (active) setLoading(false);
       }
     })();
+
     return () => {
       active = false;
     };
-  }, [open, plan, planUrl]);
+  }, [open, plan, planUrl, attachment]);
 
   const flatCourses = useMemo(() => {
     if (!data) return [];
@@ -224,7 +259,9 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                                   key={`${c.code}-${i}`}
                                   className="odd:bg-white even:bg-gray-50/60"
                                 >
-                                  <TD className="font-medium">{c.course.course_code}</TD>
+                                  <TD className="font-medium">
+                                    {c.course.course_code}
+                                  </TD>
                                   <TD>{c.course.course_name}</TD>
                                   <TD className="text-right">
                                     {c.course.credit_hours ?? ""}
@@ -233,8 +270,9 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                                     {(c.course.prerequisites || []).join(", ") || "—"}
                                   </TD> */}
                                   <TD className="text-gray-600">
-                                    {(c.course.offered_semester || []).join(", ") ||
-                                      "—"}
+                                    {(c.course.offered_semester || []).join(
+                                      ", "
+                                    ) || "—"}
                                   </TD>
                                 </tr>
                               ))}

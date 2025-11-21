@@ -55,7 +55,9 @@ router.post("/conversations/create-or-get", authenticate, async (req, res) => {
 
     // If admin, student must exist
     if (role === "admin" && !student) {
-      return res.status(400).json({ message: "studentId or studentName required" });
+      return res
+        .status(400)
+        .json({ message: "studentId or studentName required" });
     }
 
     // If student, default to self
@@ -81,61 +83,64 @@ router.post("/conversations/create-or-get", authenticate, async (req, res) => {
   }
 });
 
-
 // Create a conversation OR return an existing open convo with that student
-router.post("/conversations/advise-on-course-plan", authenticate, async (req, res) => {
-  try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Admins only" });
-    }
+router.post(
+  "/conversations/advise-on-course-plan",
+  authenticate,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Admins only" });
+      }
 
-    const { studentId, message } = req.body;
-    if (!studentId || !message) {
-      return res.status(400).json({ message: "studentId and message required" });
-    }
+      const { studentId, message } = req.body;
+      if (!studentId || !message) {
+        return res
+          .status(400)
+          .json({ message: "studentId and message required" });
+      }
 
-    // 1️⃣ Find existing open conversation
-    let convo = await Conversation.findOne({
-      student: studentId,
-      status: "open",
-      deletedForAdmin: { $ne: true },
-      deletedForStudent: { $ne: true }
-    });
-
-    // 2️⃣ If not found → create new conversation
-    if (!convo) {
-      convo = await Conversation.create({
+      // 1️⃣ Find existing open conversation
+      let convo = await Conversation.findOne({
         student: studentId,
-        subject: "General Support"
+        status: "open",
+        deletedForAdmin: { $ne: true },
+        deletedForStudent: { $ne: true },
       });
+
+      // 2️⃣ If not found → create new conversation
+      if (!convo) {
+        convo = await Conversation.create({
+          student: studentId,
+          subject: "General Support",
+        });
+      }
+
+      // 3️⃣ Insert feedback as a new message
+      const newMsg = await Message.create({
+        conversation: convo._id,
+        sender: req.user.user_id,
+        senderRole: "admin",
+        text: message,
+      });
+
+      convo.lastMessage = newMsg._id;
+      await convo.save();
+
+      // // 4️⃣ Notify via WebSocket
+      // const io = getIO && getIO();
+      // if (io) {
+      //   io.to("admins").emit("message:new", { conversationId: convo._id, message: newMsg });
+      //   io.to(`user:${studentId}`).emit("message:new", { conversationId: convo._id, message: newMsg });
+      // }
+
+      res.json(convo);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ message: "Failed to send feedback" });
     }
-
-    // 3️⃣ Insert feedback as a new message
-    const newMsg = await Message.create({
-      conversation: convo._id,
-      sender: req.user.user_id,
-      senderRole: "admin",
-      text: message,
-    });
-
-    convo.lastMessage = newMsg._id;
-    await convo.save();
-
-    // // 4️⃣ Notify via WebSocket
-    // const io = getIO && getIO();
-    // if (io) {
-    //   io.to("admins").emit("message:new", { conversationId: convo._id, message: newMsg });
-    //   io.to(`user:${studentId}`).emit("message:new", { conversationId: convo._id, message: newMsg });
-    // }
-
-    res.json(convo);
-
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: "Failed to send feedback" });
   }
-});
-
+);
 
 // List conversations
 // - student: only their own
@@ -174,7 +179,7 @@ router.get("/conversation/:student_id", authenticate, async (req, res) => {
   try {
     const role = req.user.role;
     const me = req.user.user_id;
-    const { status = "open" } = req.query; 
+    const { status = "open" } = req.query;
     const { student_id } = req.params;
 
     const filter = role === "admin" ? {} : { student: me };
@@ -183,7 +188,7 @@ router.get("/conversation/:student_id", authenticate, async (req, res) => {
     if (role === "admin") filter.deletedForAdmin = { $ne: true };
     else filter.deletedForStudent = { $ne: true };
 
-    if(!student_id){
+    if (!student_id) {
       return res.status(404).json({ message: "Student ID is required" });
     }
 

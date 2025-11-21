@@ -2,8 +2,6 @@ const AcademicPlan = require("../models/StudentAcademicPlan");
 const mongoose = require("mongoose");
 const Course = require("../models/Course");
 
-// ensure every course item has a valid ObjectId in `course`;
-// if not, try to resolve it from `course_code`
 async function hydrateCourseRefs(years) {
   const result = [];
   for (const y of years || []) {

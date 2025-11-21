@@ -79,10 +79,10 @@ function initSocket(server) {
             student: studentId,
             status: "open",
             deletedForAdmin: { $ne: true },
-            deletedForStudent: { $ne: true }
+            deletedForStudent: { $ne: true },
           });
 
-          if(!convo){
+          if (!convo) {
             convo = await Conversation.create({
               student: studentId,
               subject: "",

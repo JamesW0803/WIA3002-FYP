@@ -159,36 +159,91 @@ function MessageGroup({
                   >
                     {atts.map((a, i) => {
                       const isImg = a.mimeType?.startsWith("image/");
-                      return isImg ? (
-                        <motion.button
-                          type="button"
-                          key={i}
-                          id={`msg-${m._id}-img-${i}`}
-                          onClick={() => onOpenImage?.(m, i)}
-                          className="block text-left rounded-lg overflow-hidden border border-gray-200 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand transition-all duration-200 hover:shadow-md"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="relative">
-                            <img
-                              src={a.url}
-                              alt={a.name}
-                              className="w-full h-48 object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                            <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                              <Image className="w-3 h-3 inline mr-1" />
-                              Image
+                      const isPlan = a.type === "academic-plan" && a.planId;
+
+                      if (isImg) {
+                        return (
+                          <motion.button
+                            type="button"
+                            key={i}
+                            id={`msg-${m._id}-img-${i}`}
+                            onClick={() => onOpenImage?.(m, i)}
+                            className="block text-left rounded-lg overflow-hidden border border-gray-200 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand transition-all duration-200 hover:shadow-md"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="relative">
+                              <img
+                                src={a.url}
+                                alt={a.name}
+                                className="w-full h-48 object-cover"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                              <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                <Image className="w-3 h-3 inline mr-1" />
+                                Image
+                              </div>
                             </div>
-                          </div>
-                          {a.caption && (
-                            <div className="px-3 py-2 text-xs text-gray-700 bg-white border-t">
-                              {a.caption}
+                            {a.caption && (
+                              <div className="px-3 py-2 text-xs text-gray-700 bg-white border-t">
+                                {a.caption}
+                              </div>
+                            )}
+                          </motion.button>
+                        );
+                      }
+
+                      if (isPlan) {
+                        return (
+                          <motion.button
+                            key={i}
+                            type="button"
+                            onClick={() => onOpenPlan?.(a)}
+                            className={cls(
+                              "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 w-full group text-left",
+                              mine
+                                ? "bg-brand/90 hover:bg-brand text-white"
+                                : "bg-gray-100 hover:bg-gray-200 border border-gray-200"
+                            )}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <FileText className="w-5 h-5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div
+                                className={cls(
+                                  "font-medium truncate text-sm",
+                                  mine ? "text-white" : "text-gray-800"
+                                )}
+                              >
+                                {a.planName || a.name || "Academic Plan"}
+                              </div>
+                              <div
+                                className={cls(
+                                  "text-xs opacity-70",
+                                  mine ? "text-white/80" : "text-gray-600"
+                                )}
+                              >
+                                Live academic plan preview
+                              </div>
+                              {a.caption && (
+                                <div
+                                  className={cls(
+                                    "mt-1 text-xs truncate",
+                                    mine ? "text-white/90" : "text-gray-700"
+                                  )}
+                                >
+                                  {a.caption}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </motion.button>
-                      ) : (
+                            <ExternalLink className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" />
+                          </motion.button>
+                        );
+                      }
+
+                      return (
                         <motion.a
                           key={i}
                           href={a.url}
@@ -232,24 +287,6 @@ function MessageGroup({
                               </div>
                             )}
                           </div>
-                          {a.mimeType === "application/json" && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                onOpenPlan?.(a.url);
-                              }}
-                              className={cls(
-                                "text-xs px-2 py-1 rounded border",
-                                mine
-                                  ? "bg-white/10 hover:bg-white/20"
-                                  : "bg-white hover:bg-gray-50"
-                              )}
-                              title="Preview"
-                            >
-                              Preview
-                            </button>
-                          )}
                           <ExternalLink className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </motion.a>
                       );

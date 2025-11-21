@@ -90,31 +90,34 @@ const ProgramPlansSection = ({
       const token = localStorage.getItem("token");
       const planId = editingPlan;
 
-      const cleanedYears = (updatedPlanData.years || []).map((y) => ({
-        ...y,
-        semesters: (y.semesters || [])
-          .filter(
-            (s) => !s._isDraft && (s.isGap || (s.courses?.length || 0) > 0)
-          )
-          .map((s, idx) => ({
-            ...s,
-            name: `Year ${y.year} - Semester ${idx + 1}`,
-            courses: (s.courses || []).map((c) => {
-              const cid = resolveCourseId(c);
-              if (!cid) {
-                throw new Error(
-                  `Missing ObjectId for course ${c?.code || "(unknown)"}`
-                );
-              }
-              return {
-                course: cid,
-                credit_at_time: latestCredit(c),
-                course_code: c.code,
-                title_at_time: c.name,
-              };
-            }),
-          })),
-      }));
+      const cleanedYears = (updatedPlanData.years || [])
+        .map((y) => {
+          const cleanedSemesters = (y.semesters || [])
+            .filter(
+              (s) => !s._isDraft && (s.isGap || (s.courses?.length || 0) > 0)
+            )
+            .map((s, idx) => ({
+              ...s,
+              name: `Year ${y.year} - Semester ${idx + 1}`,
+              courses: (s.courses || []).map((c) => {
+                const cid = resolveCourseId(c);
+                if (!cid) {
+                  throw new Error(
+                    `Missing ObjectId for course ${c?.code || "(unknown)"}`
+                  );
+                }
+                return {
+                  course: cid,
+                  credit_at_time: latestCredit(c),
+                  course_code: c.code,
+                  title_at_time: c.name,
+                };
+              }),
+            }));
+
+          return { ...y, semesters: cleanedSemesters };
+        })
+        .filter((y) => y.isGapYear || (y.semesters && y.semesters.length > 0));
 
       const payload = {
         ...updatedPlanData,
