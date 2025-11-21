@@ -104,7 +104,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
   const [selectedId, setSelectedId] = useState(null);
   const [note, setNote] = useState("");
   const [includeJson, setIncludeJson] = useState(true);
-  const [includeSummary, setIncludeSummary] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
 
   const { sendMessage } = useChatStore();
@@ -192,13 +191,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
     return JSON.stringify(obj, replacer, 2);
   };
 
-  const buildText = (plan) => {
-    const header = `Shared academic plan: ${plan.name} (${plan.semesters} semesters, ${plan.credits} credits)`;
-    const notePart = note.trim() ? `\n\nNote: ${note.trim()}` : "";
-    const summaryPart = includeSummary ? `\n\n${planSummary(plan)}` : "";
-    return header + notePart + summaryPart;
-  };
-
   const send = async () => {
     if (!selectedPlan || !conversationId) return;
     setLoading(true);
@@ -217,8 +209,9 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
           planName: selectedPlan.name,
         });
       }
-
-      const text = buildText(selectedPlan);
+      const header = `Shared academic plan: ${selectedPlan.name}`;
+      const notePart = note.trim() ? `\n\nNote: ${note.trim()}` : "";
+      const text = header + notePart;
       await sendMessage(conversationId, text, attachments);
       onClose?.();
     } catch (e) {
@@ -301,15 +294,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
                   <FileText className="w-4 h-4" /> Attach JSON export
                 </span>
               </label>
-              <label className="flex items-center gap-2 text-sm select-none">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4"
-                  checked={includeSummary}
-                  onChange={(e) => setIncludeSummary(e.target.checked)}
-                />
-                <span>Include text summary in message</span>
-              </label>
             </div>
 
             <div className="mt-5">
@@ -329,15 +313,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
           <div className="min-w-0">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm text-gray-700">Preview</div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={doPrint}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
-                  disabled={!selectedPlan}
-                >
-                  <Printer className="w-4 h-4" /> Print
-                </button>
-              </div>
             </div>
 
             <div

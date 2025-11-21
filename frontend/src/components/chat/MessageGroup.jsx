@@ -38,7 +38,14 @@ function MessageGroup({
       >
         {messages.map((m) => {
           const atts = Array.isArray(m.attachments) ? m.attachments : [];
+          const hasPlanAttachment = atts.some(
+            (a) => a.type === "academic-plan" && a.planId
+          );
+          const isPlanOnly = hasPlanAttachment && atts.length === 1 && !m.text;
+
           const hasContent = m.text || atts.length > 0;
+
+          const widthClass = isPlanOnly ? "w-full" : "w-fit";
 
           return (
             <motion.div
@@ -68,13 +75,11 @@ function MessageGroup({
                   <CornerUpLeft className="w-3 h-3" />
                 </button>
               )}
-
               {/* Bubble */}
               <div
                 className={cls(
-                  "w-fit max-w-[min(400px,90vw)]",
-                  "px-4 py-3 rounded-2xl text-sm overflow-hidden",
-                  "min-h-[44px] break-words",
+                  widthClass,
+                  "max-w-[min(400px,90vw)] px-4 py-3 rounded-2xl text-sm overflow-hidden min-h-[44px] break-words",
                   mine
                     ? "bg-brand/90 text-white rounded-br-md"
                     : "bg-white border border-gray-200 rounded-bl-md shadow-sm"
@@ -195,51 +200,58 @@ function MessageGroup({
                       }
 
                       if (isPlan) {
+                        const hasJson = !!a.url;
+
                         return (
-                          <motion.button
+                          <div
                             key={i}
-                            type="button"
-                            onClick={() => onOpenPlan?.(a)}
-                            className={cls(
-                              "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 w-full group text-left",
-                              mine
-                                ? "bg-brand/90 hover:bg-brand text-white"
-                                : "bg-gray-100 hover:bg-gray-200 border border-gray-200"
-                            )}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            className="w-full rounded-2xl overflow-hidden"
                           >
-                            <FileText className="w-5 h-5 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div
-                                className={cls(
-                                  "font-medium truncate text-sm",
-                                  mine ? "text-white" : "text-gray-800"
-                                )}
-                              >
-                                {a.planName || a.name || "Academic Plan"}
-                              </div>
-                              <div
-                                className={cls(
-                                  "text-xs opacity-70",
-                                  mine ? "text-white/80" : "text-gray-600"
-                                )}
-                              >
-                                Live academic plan preview
-                              </div>
-                              {a.caption && (
-                                <div
-                                  className={cls(
-                                    "mt-1 text-xs truncate",
-                                    mine ? "text-white/90" : "text-gray-700"
-                                  )}
-                                >
-                                  {a.caption}
-                                </div>
+                            <div
+                              className={cls(
+                                "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl",
+                                // solid blue strip like your second screenshot
+                                "bg-brand"
                               )}
+                            >
+                              {/* Left: icon + plan name */}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-sm font-semibold text-white truncate">
+                                    {a.planName || "Academic plan"}
+                                  </div>
+                                  <div className="text-xs text-white/70">
+                                    Academic plan
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right: actions */}
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenPlan?.(a)}
+                                  className="px-3 py-1.5 rounded-full bg-white text-brand text-xs font-semibold hover:bg-gray-100"
+                                >
+                                  View
+                                </button>
+
+                                {hasJson && (
+                                  <a
+                                    href={a.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs text-white/80 underline"
+                                  >
+                                    JSON
+                                  </a>
+                                )}
+                              </div>
                             </div>
-                            <ExternalLink className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" />
-                          </motion.button>
+                          </div>
                         );
                       }
 
