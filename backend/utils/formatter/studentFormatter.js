@@ -46,8 +46,8 @@ const formatStudent = async (student, {
  
     return {
         _id: student._id,
-        matric_no : student.matricNo ?? "-",
         username : student.username ?? "-",
+        matric_no : student.matricNo ?? "-",
         programme_name : programme.programme_name ?? "-",
         department: department,
         faculty: faculty,

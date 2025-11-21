@@ -7,26 +7,34 @@ import {
   AccordionSummary,
   AccordionDetails,
   Typography,
+  Stack,
+  Skeleton
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CourseStatusBadge from '../../constants/courseStatusStyle';
 
-const StudentGraduationRequirement = () => {
-  const { programme_intake_id , academicProfile} = useOutletContext();
+const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) => {
   const [ programmeIntake, setProgrammeIntake ] = useState(null);
   const [ graduationRequirements, setGraduationRequirements ] = useState({});
   const [ coursesTaken, setCoursesTaken ] = useState(academicProfile?.entries || []);
+  const [loading, setLoading] = useState(true); 
 
   useEffect( () => {
     const fetchProgrammeIntake = async () => {
-      const response = await axiosClient.get(`/programme-intakes/id/${programme_intake_id}`);
-      setProgrammeIntake(response.data);
+      setLoading(true);
+      try {
+        const response = await axiosClient.get(`/programme-intakes/id/${programme_intake_id}`);
+        setProgrammeIntake(response.data);
+      } catch (error) {
+        console.error("Error fetching programme intake:", error);
+      } finally {
+        setLoading(false);
+      }
     }
 
     if(programme_intake_id) {
       fetchProgrammeIntake();
     }
-
   }, [programme_intake_id]);
 
   useEffect( () => {
@@ -54,8 +62,19 @@ const StudentGraduationRequirement = () => {
 
   }, [academicProfile]);
 
+  if(loading){
+    return (
+      <Stack spacing={2} sx={{ width: '80%', margin: 'auto', marginTop: '2rem' }}>
+        <Skeleton variant="text" height={30} />
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} variant="rectangular" height={80} />
+        ))}
+      </Stack>
+    )
+  }
+
   return (
-    <div style={{ width: '80%', margin: 'auto', marginTop: '2rem' }}>
+    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
         <Header totalCreditHours={programmeIntake?.total_credits_hours}/>
         <CourseAccordion graduationRequirements={graduationRequirements} coursesTaken={coursesTaken}/>
     </div>

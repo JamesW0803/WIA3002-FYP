@@ -6,10 +6,10 @@ import {
   Accordion, AccordionSummary, AccordionDetails, Typography,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper,
-  RadioGroup, FormControlLabel, Radio, Stack
+  RadioGroup, FormControlLabel, Radio, Stack,
+  Skeleton
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-
 import { MessageSquare } from "lucide-react";
 import MessageModal from "./MessageModal"; // ⭐ you'll create this next
 
@@ -48,14 +48,15 @@ const CourseTable = ({ courses , plan=false }) => (
   </TableContainer>
 );
 
-const StudentAcademicProfile = () => {
-  const { academicProfile, student } = useOutletContext();
+const StudentAcademicProfile = ({ academicProfile, student }) => {
   const [coursePlans, setCoursePlans] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [itemsToDisplay, setItemsToDisplay] = useState([]);
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [loading, setLoading] = useState(true); 
+
 
   // Fetch all available course plans for the student
   useEffect(() => {
@@ -67,6 +68,8 @@ const StudentAcademicProfile = () => {
         
       } catch (error) {
         console.error("Error fetching course plans:", error);
+      }finally {
+        setLoading(false);
       }
     };
     if(student && student._id){
@@ -86,6 +89,8 @@ const StudentAcademicProfile = () => {
         setSelectedPlan(response.data.data);
       } catch (error) {
         console.error("Error fetching selected plan:", error);
+      }finally {
+        setLoading(false);
       }
     };
     fetchSelectedPlan();
@@ -123,6 +128,19 @@ const StudentAcademicProfile = () => {
 
     setItemsToDisplay(items);
   }, [academicProfile, selectedPlan]);
+
+  if (loading) {
+    // ⭐ Skeleton loading
+    return (
+      <Stack spacing={2} sx={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
+        <Skeleton variant="text" height={30} />
+        <Skeleton variant="rectangular" height={40} />
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} variant="rectangular" height={150} />
+        ))}
+      </Stack>
+    )
+  }
 
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>

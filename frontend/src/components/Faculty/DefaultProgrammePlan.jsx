@@ -13,7 +13,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Stack,
+  Skeleton
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
@@ -57,19 +59,26 @@ const CourseTable = ({ courses , coursesTaken}) => (
   </TableContainer>
 );
 
-const DefaultProgrammePlan = () => {
-    const { programme_intake_id , academicProfile} = useOutletContext();
+const DefaultProgrammePlan = ({ programme_intake_id, academicProfile}) => {
     const [ programmeIntake, setProgrammeIntake ] = useState(null);
     const [ programmePlan, setProgrammePlan ] = useState(null);
     const [ programmePlanSortedByYear, setProgrammePlanSortedByYear ] = useState([]);
     const [ coursesTaken, setCoursesTaken ] = useState(academicProfile?.entries || []);
+    const [loading, setLoading] = useState(true); 
 
     useEffect( () => {
         const fetchProgrammeIntake = async () => {
-            const response = await axiosClient.get(`/programme-intakes/id/${programme_intake_id}`);
-            const programmeIntakeObj = response.data
-            setProgrammeIntake(programmeIntakeObj);
-            setProgrammePlan(programmeIntakeObj.programme_plan)
+            setLoading(true);
+            try {
+              const response = await axiosClient.get(`/programme-intakes/id/${programme_intake_id}`);
+              const programmeIntakeObj = response.data;
+              setProgrammeIntake(programmeIntakeObj);
+              setProgrammePlan(programmeIntakeObj.programme_plan);
+            } catch (err) {
+              console.error("Error fetching programme intake", err);
+            } finally {
+              setLoading(false);
+            }
         }
 
         if(programme_intake_id) {
@@ -97,6 +106,17 @@ const DefaultProgrammePlan = () => {
       }
 
     }, [academicProfile]);
+
+  if(loading){
+    return (
+      <Stack spacing={2} sx={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
+        <Skeleton variant="text" height={30} />
+        {[...Array(2)].map((_, yearIdx) => (
+          <Skeleton key={yearIdx} variant="rectangular" height={150} />
+        ))}
+      </Stack>
+    )
+  }
 
   return (
     <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
