@@ -1,6 +1,27 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
+const attachmentSchema = new Schema(
+  {
+    url: String,
+    name: String,
+    mimeType: String,
+    size: Number,
+    caption: { type: String, default: "" },
+    originalUrl: String,
+    originalName: String,
+    originalMimeType: String,
+    originalSize: Number,
+    width: Number,
+    height: Number,
+
+    type: { type: String, default: null },
+    planId: { type: Schema.Types.ObjectId, ref: "AcademicPlan" },
+    planName: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const messageSchema = new Schema(
   {
     conversation: {
@@ -12,21 +33,9 @@ const messageSchema = new Schema(
     sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
     senderRole: { type: String, enum: ["student", "admin"], required: true },
     text: { type: String, default: "" },
-    attachments: [
-      {
-        url: String,
-        name: String,
-        mimeType: String,
-        size: Number,
-        caption: { type: String, default: "" },
-        originalUrl: String,
-        originalName: String,
-        originalMimeType: String,
-        originalSize: Number,
-        width: Number,
-        height: Number,
-      },
-    ],
+
+    attachments: [attachmentSchema],
+
     readBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
     clientId: { type: String },
     replyTo: { type: Schema.Types.ObjectId, ref: "Message", default: null },

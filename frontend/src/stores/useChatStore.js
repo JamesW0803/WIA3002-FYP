@@ -330,7 +330,7 @@ const useChatStore = create((set, get) => ({
       attachments,
       replyTo,
       replyToAttachment,
-      createForStudentId : studentId
+      createForStudentId: studentId,
     });
 
     const convKey =

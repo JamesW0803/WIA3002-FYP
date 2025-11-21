@@ -38,7 +38,14 @@ function MessageGroup({
       >
         {messages.map((m) => {
           const atts = Array.isArray(m.attachments) ? m.attachments : [];
+          const hasPlanAttachment = atts.some(
+            (a) => a.type === "academic-plan" && a.planId
+          );
+          const isPlanOnly = hasPlanAttachment && atts.length === 1 && !m.text;
+
           const hasContent = m.text || atts.length > 0;
+
+          const widthClass = isPlanOnly ? "w-full" : "w-fit";
 
           return (
             <motion.div
@@ -68,13 +75,11 @@ function MessageGroup({
                   <CornerUpLeft className="w-3 h-3" />
                 </button>
               )}
-
               {/* Bubble */}
               <div
                 className={cls(
-                  "w-fit max-w-[min(400px,90vw)]",
-                  "px-4 py-3 rounded-2xl text-sm overflow-hidden",
-                  "min-h-[44px] break-words",
+                  widthClass,
+                  "max-w-[min(400px,90vw)] px-4 py-3 rounded-2xl text-sm overflow-hidden min-h-[44px] break-words",
                   mine
                     ? "bg-brand/90 text-white rounded-br-md"
                     : "bg-white border border-gray-200 rounded-bl-md shadow-sm"
@@ -159,36 +164,98 @@ function MessageGroup({
                   >
                     {atts.map((a, i) => {
                       const isImg = a.mimeType?.startsWith("image/");
-                      return isImg ? (
-                        <motion.button
-                          type="button"
-                          key={i}
-                          id={`msg-${m._id}-img-${i}`}
-                          onClick={() => onOpenImage?.(m, i)}
-                          className="block text-left rounded-lg overflow-hidden border border-gray-200 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand transition-all duration-200 hover:shadow-md"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="relative">
-                            <img
-                              src={a.url}
-                              alt={a.name}
-                              className="w-full h-48 object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                            <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                              <Image className="w-3 h-3 inline mr-1" />
-                              Image
+                      const isPlan = a.type === "academic-plan" && a.planId;
+
+                      if (isImg) {
+                        return (
+                          <motion.button
+                            type="button"
+                            key={i}
+                            id={`msg-${m._id}-img-${i}`}
+                            onClick={() => onOpenImage?.(m, i)}
+                            className="block text-left rounded-lg overflow-hidden border border-gray-200 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand transition-all duration-200 hover:shadow-md"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="relative">
+                              <img
+                                src={a.url}
+                                alt={a.name}
+                                className="w-full h-48 object-cover"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                              <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                <Image className="w-3 h-3 inline mr-1" />
+                                Image
+                              </div>
+                            </div>
+                            {a.caption && (
+                              <div className="px-3 py-2 text-xs text-gray-700 bg-white border-t">
+                                {a.caption}
+                              </div>
+                            )}
+                          </motion.button>
+                        );
+                      }
+
+                      if (isPlan) {
+                        const hasJson = !!a.url;
+
+                        return (
+                          <div
+                            key={i}
+                            className="w-full rounded-2xl overflow-hidden"
+                          >
+                            <div
+                              className={cls(
+                                "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl",
+                                // solid blue strip like your second screenshot
+                                "bg-brand"
+                              )}
+                            >
+                              {/* Left: icon + plan name */}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-sm font-semibold text-white truncate">
+                                    {a.planName || "Academic plan"}
+                                  </div>
+                                  <div className="text-xs text-white/70">
+                                    Academic plan
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right: actions */}
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenPlan?.(a)}
+                                  className="px-3 py-1.5 rounded-full bg-white text-brand text-xs font-semibold hover:bg-gray-100"
+                                >
+                                  View
+                                </button>
+
+                                {hasJson && (
+                                  <a
+                                    href={a.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs text-white/80 underline"
+                                  >
+                                    JSON
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          {a.caption && (
-                            <div className="px-3 py-2 text-xs text-gray-700 bg-white border-t">
-                              {a.caption}
-                            </div>
-                          )}
-                        </motion.button>
-                      ) : (
+                        );
+                      }
+
+                      return (
                         <motion.a
                           key={i}
                           href={a.url}
@@ -232,24 +299,6 @@ function MessageGroup({
                               </div>
                             )}
                           </div>
-                          {a.mimeType === "application/json" && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                onOpenPlan?.(a.url);
-                              }}
-                              className={cls(
-                                "text-xs px-2 py-1 rounded border",
-                                mine
-                                  ? "bg-white/10 hover:bg-white/20"
-                                  : "bg-white hover:bg-gray-50"
-                              )}
-                              title="Preview"
-                            >
-                              Preview
-                            </button>
-                          )}
                           <ExternalLink className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </motion.a>
                       );

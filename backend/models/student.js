@@ -70,12 +70,12 @@ const studentSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: PROGRESS_STATUS,
-    default: PROGRESS_STATUS.UNKNOWN
+    default: PROGRESS_STATUS.UNKNOWN,
   },
   status_notes: {
     type: [String],
-    required : false,
-    default : []
+    required: false,
+    default: [],
   },
 });
 

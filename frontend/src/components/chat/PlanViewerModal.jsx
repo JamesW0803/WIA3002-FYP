@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Printer, Search, FileText } from "lucide-react";
+import axiosClient from "../../api/axiosClient";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
-export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
+export default function PlanViewerModal({
+  open,
+  onClose,
+  plan,
+  planUrl,
+  attachment,
+}) {
   const [loading, setLoading] = useState(false);
   const [loadedPlan, setLoadedPlan] = useState(null);
   const [query, setQuery] = useState("");
@@ -11,48 +18,100 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
 
   const data = plan || loadedPlan;
 
+  const hasSearch = query.trim().length > 0;
+
   useEffect(() => {
     if (!open) return;
+
+    // If the modal is given a full plan (e.g. from SharePlanModal), just use it.
     if (plan) {
       setLoadedPlan(null);
+      setLoading(false);
       return;
     }
-    if (!planUrl) return;
+
+    const planId = attachment?.planId;
+    const urlFromAttachment = attachment?.url;
+    const effectiveUrl = planUrl || urlFromAttachment;
+
+    if (!planId && !effectiveUrl) {
+      setLoadedPlan(null);
+      setLoading(false);
+      return;
+    }
 
     let active = true;
+
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(planUrl);
-        const json = await res.json();
+        let json = null;
+
+        if (planId) {
+          // NEW: fetch the latest version of the plan from your API
+          const token = localStorage.getItem("token");
+          const res = await axiosClient.get(`/academic-plans/plans/${planId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.data?.data) {
+            throw new Error("NOT_FOUND");
+          }
+          json = res.data.data;
+        }
+
         if (!active) return;
         setLoadedPlan(json);
       } catch (e) {
-        console.error("Failed to load plan JSON:", e);
+        if (e.message === "NOT_FOUND" || e.response?.status === 404) {
+          setLoadedPlan(null);
+          setTimeout(
+            () => alert("This academic plan is no longer available."),
+            0
+          );
+        } else {
+          console.error("Error loading plan:", e);
+        }
+        console.error("Failed to load plan:", e);
+        if (active) setLoadedPlan(null);
       } finally {
         if (active) setLoading(false);
       }
     })();
+
     return () => {
       active = false;
     };
-  }, [open, plan, planUrl]);
+  }, [open, plan, planUrl, attachment]);
 
   const flatCourses = useMemo(() => {
     if (!data) return [];
     const out = [];
+
     (data.years || []).forEach((y) => {
       (y.semesters || []).forEach((s) => {
         (s.courses || []).forEach((c) => {
+          const courseDoc = c.course || {}; // populated Course document (if any)
+
           out.push({
             year: y.year,
             semesterId: s.id,
             semesterName: s.name,
-            ...c,
+
+            // normalized fields used for search
+            code: courseDoc.course_code || c.course_code || "",
+            name: courseDoc.course_name || c.title_at_time || "",
+            prerequisites: courseDoc.prerequisites || [],
+            offered_semester: courseDoc.offered_semester || [],
+
+            credit: courseDoc.credit_hours ?? c.credit_at_time ?? null,
+
+            // keep full course doc in case we need it for display
+            course: courseDoc,
           });
         });
       });
     });
+
     return out;
   }, [data]);
 
@@ -165,7 +224,7 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
             <div className="text-sm text-gray-500">
               {loading ? "Loading plan…" : "No data found."}
             </div>
-          ) : filteredCourses.length === 0 ? (
+          ) : hasSearch && filteredCourses.length === 0 ? (
             <div className="text-sm text-gray-500">
               No courses match your search.
             </div>
@@ -175,22 +234,41 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                 <div key={y.year} className="mb-6">
                   <div className="text-sm font-semibold text-gray-800 mb-2">
                     Year {y.year}
+                    {y.isGapYear && (
+                      <span className="ml-2 text-xs font-normal text-gray-500">
+                        • Gap year
+                      </span>
+                    )}
                   </div>
                   {(y.semesters || []).map((s) => {
-                    const rows = (s.courses || [])
-                      .map((c) => ({
-                        year: y.year,
-                        semesterName: s.name,
-                        ...c,
-                      }))
-                      .filter((c) =>
-                        filteredCourses.some(
-                          (fc) =>
-                            fc.code === c.code &&
-                            fc.semesterName === c.semesterName &&
-                            fc.year === c.year
-                        )
+                    const rows = filteredCourses.filter(
+                      (c) => c.year === y.year && c.semesterName === s.name
+                    );
+
+                    const isGapSemester = !!s.isGap;
+
+                    // If user is searching: only show semesters that actually have matches
+                    if (hasSearch && rows.length === 0) return null;
+
+                    // No search, no courses, but this semester is explicitly marked as a gap
+                    if (!hasSearch && rows.length === 0 && isGapSemester) {
+                      return (
+                        <div key={s.id} className="mb-3">
+                          <div className="text-xs text-gray-600 mb-1">
+                            {s.name}
+                            <span className="ml-2 text-gray-400">
+                              • Gap semester
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 italic px-3 py-2 bg-gray-50 border border-dashed rounded-lg">
+                            This semester is marked as a gap semester (no
+                            courses planned).
+                          </div>
+                        </div>
                       );
+                    }
+
+                    // Still no rows and not a gap semester → nothing to render
                     if (rows.length === 0) return null;
 
                     const semTotal = rows.reduce(
@@ -214,7 +292,6 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                                 <TH>Code</TH>
                                 <TH>Course</TH>
                                 <TH className="w-20 text-right">Credit</TH>
-                                {/* <TH>Prerequisites</TH> */}
                                 <TH>Offered</TH>
                               </tr>
                             </thead>
@@ -224,17 +301,19 @@ export default function PlanViewerModal({ open, onClose, plan, planUrl }) {
                                   key={`${c.code}-${i}`}
                                   className="odd:bg-white even:bg-gray-50/60"
                                 >
-                                  <TD className="font-medium">{c.course.course_code}</TD>
-                                  <TD>{c.course.course_name}</TD>
-                                  <TD className="text-right">
-                                    {c.course.credit_hours ?? ""}
+                                  <TD className="font-medium">
+                                    {c.course?.course_code || c.code}
                                   </TD>
-                                  {/* <TD className="text-gray-600">
-                                    {(c.course.prerequisites || []).join(", ") || "—"}
-                                  </TD> */}
+                                  <TD>{c.course?.course_name || c.name}</TD>
+                                  <TD className="text-right">
+                                    {c.course?.credit_hours ?? c.credit ?? ""}
+                                  </TD>
                                   <TD className="text-gray-600">
-                                    {(c.course.offered_semester || []).join(", ") ||
-                                      "—"}
+                                    {(
+                                      c.course?.offered_semester ||
+                                      c.offered_semester ||
+                                      []
+                                    ).join(", ") || "—"}
                                   </TD>
                                 </tr>
                               ))}

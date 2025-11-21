@@ -54,7 +54,7 @@ export function ContactAdvisorPage() {
   const [viewerIndex, setViewerIndex] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
-  const [planUrl, setPlanUrl] = useState(null);
+  const [planAttachment, setPlanAttachment] = useState(null);
 
   // NEW: detect "mobile" (tailwind md breakpoint)
   const isMobile = useMediaQuery("(max-width: 767px)");
@@ -191,8 +191,8 @@ export function ContactAdvisorPage() {
     setViewerOpen(true);
   };
 
-  const openPlanViewer = (url) => {
-    setPlanUrl(url);
+  const openPlanViewer = (attachment) => {
+    setPlanAttachment(attachment || null);
     setPlanOpen(true);
   };
 
@@ -430,7 +430,7 @@ export function ContactAdvisorPage() {
         <PlanViewerModal
           open={planOpen}
           onClose={() => setPlanOpen(false)}
-          planUrl={planUrl}
+          attachment={planAttachment}
         />
       </main>
     </div>
