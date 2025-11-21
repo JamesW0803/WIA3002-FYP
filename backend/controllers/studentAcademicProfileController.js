@@ -2,7 +2,9 @@ const AcademicProfile = require("../models/StudentAcademicProfile");
 const AcademicSession = require("../models/AcademicSession");
 const Course = require("../models/Course");
 const mongoose = require("mongoose");
-const { updateStudentProgressStatus  } = require("../controllers/studentController")
+const {
+  updateStudentProgressStatus,
+} = require("../controllers/studentController");
 
 const Student = require("../models/Student");
 const ProgrammeIntake = require("../models/ProgrammeIntake");
@@ -181,7 +183,7 @@ exports.saveAcademicProfile = async (req, res) => {
       });
     }
 
-    await updateStudentProgressStatus(studentId, savedProfile)
+    await updateStudentProgressStatus(studentId, savedProfile);
 
     res.json({
       message: "Academic profile saved successfully",

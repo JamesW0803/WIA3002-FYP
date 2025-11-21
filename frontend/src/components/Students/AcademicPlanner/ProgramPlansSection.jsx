@@ -260,6 +260,29 @@ const ProgramPlansSection = ({
     return planIdx < startIdx;
   };
 
+  const handleSetCurrentPlan = async (plan) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axiosClient.patch(
+        `/academic-plans/plans/${plan.id}/set-default`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setProgramPlans((prev) =>
+        prev.map((p) => ({
+          ...p,
+          isDefault: p.id === plan.id,
+        }))
+      );
+
+      alert(`“${plan.name}” is now your current plan!`);
+    } catch (err) {
+      console.error("Failed to set current plan", err);
+      alert("Could not set this plan as current. Please try again.");
+    }
+  };
+
   return (
     <>
       {/* Saved Plans Section */}
@@ -283,6 +306,7 @@ const ProgramPlansSection = ({
                   handleDeletePlan(plan);
                 }}
                 onView={() => handleViewPlan(plan)}
+                onSetCurrent={() => handleSetCurrentPlan(plan)}
               />
             ))}
 
