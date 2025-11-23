@@ -236,7 +236,7 @@ function App() {
               path="courses/add-course"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <AddCourse />
+                  <CourseDetails addCourse={true} />
                 </ProtectedRoute>
               }
             />
