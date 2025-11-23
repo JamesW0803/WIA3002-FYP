@@ -16,7 +16,7 @@ const formatCourse = (course) => {
     description: course.description ?? "-",
     prerequisites: course.prerequisites ?? [],
     faculty: course.faculty ?? "-",
-    department: course.department ?? "-",
+    department: course.department ?? "No department assigned",
     offered_semester: course.offered_semester ?? "-",
     study_level: course.study_level ?? "-",
   };
