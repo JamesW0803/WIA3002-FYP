@@ -56,7 +56,7 @@ const addCourse = async (req, res) => {
       type,
       credit_hours,
       description,
-      prerequisites,
+      prerequisites = [], // default to []
       faculty,
       department,
       offered_semester,
@@ -65,13 +65,17 @@ const addCourse = async (req, res) => {
 
     let prerequisitesCourseIds = [];
 
-    if (prerequisites?.length > 0) {
+    // Remove empty / falsy values
+    const cleanedPrerequisiteCodes = (prerequisites || []).filter(Boolean);
+
+    if (cleanedPrerequisiteCodes.length > 0) {
       const prerequisiteCourses = await Promise.all(
-        prerequisites.map((code) => Course.findOne({ course_code: code }))
+        cleanedPrerequisiteCodes.map((code) =>
+          Course.findOne({ course_code: code })
+        )
       );
 
-      // Check for invalid prerequisite course codes
-      if (prerequisiteCourses.includes(null)) {
+      if (prerequisiteCourses.some((c) => !c)) {
         return res.status(400).json({
           error: "One or more prerequisite course codes are invalid.",
         });
