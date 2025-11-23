@@ -4,13 +4,14 @@ import {
   Edit2,
   Save,
   X,
+  Trash 
 } from "lucide-react";
-
 import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
 import { formSessions } from "../../../constants/courseFormConfig";
 import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import PrerequisitesSession from "../../../components/Faculty/Courses/PrerequisitesSession";
+import FormDialog from "../../../components/dialog/FormDialog"
 
 const CourseDetails = ({ addCourse = false}) => {
   const location = useLocation();
@@ -19,6 +20,7 @@ const CourseDetails = ({ addCourse = false}) => {
   const course_code = location.state.course_code;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
+  const [openDialog, setOpenDialog] = useState(false);
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,13 +79,29 @@ const CourseDetails = ({ addCourse = false}) => {
   }, [course_code]);
 
   const handleBack = () => navigate("/admin/courses");
+
   const handleCancel = () => {
     if(addCourse){
       navigate("/admin/courses")
     }
     setEditMode(false)
   };
+
   const handleEdit = () => setEditMode(true);
+
+  const handleDelete = () => {
+    setOpenDialog(true);
+  }
+
+  const confirmDeleteCourse = async () => {
+    try {
+        await axiosClient.delete(`/courses/${formData.course_code}`);
+    } catch (error) {
+        console.error("Error deleting course:", error);
+    } finally {
+        navigate("/admin/courses")
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -102,6 +120,8 @@ const CourseDetails = ({ addCourse = false}) => {
       }
     } catch (err) {
       console.error(err);
+      // show notification
+      navigate("/admin/courses")
     }finally{
       setEditMode(false);
     }
@@ -187,15 +207,36 @@ const CourseDetails = ({ addCourse = false}) => {
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={handleEdit}
-                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                    >
-                      <Edit2 size={16} /> Edit
-                    </button>
+                    <>
+                      <button
+                        onClick={handleEdit}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <Edit2 size={16} /> Edit
+                      </button>
+                      {!addCourse && (
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                        >
+                          <Trash size={16} /> Delete
+                        </button>
+                      )}
+                    </>
+                    
                   )}
                 </div>
               </div>
+
+              <FormDialog
+                open={openDialog}
+                onClose={() => setOpenDialog(false)}
+                onConfirm={confirmDeleteCourse}
+                title="Delete Course"
+                content={`Are you sure you want to delete course ${formData.course_name} with code "${formData.course_code}"?`}
+                confirmText="Delete"
+                cancelText="Cancel"
+              />
 
               {/* ORIGINAL CONTENT */}
               <div className="p-8 space-y-12 bg-white">
