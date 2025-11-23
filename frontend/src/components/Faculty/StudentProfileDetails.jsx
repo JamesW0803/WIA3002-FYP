@@ -34,7 +34,8 @@ const StudentDetailsDisplayColumn = ({ entries }) => (
 
 // Individual field component with refined style
 const StudentInfoField = ({ icon: Icon, label, value }) => (
-  <div className="flex items-start gap-3 p-3 rounded-lg bg-white shadow-sm border border-gray-100">
+  // <div className="flex items-start gap-3 p-3 rounded-lg bg-white shadow-sm border border-gray-100">
+  <div className="flex items-start gap-3 p-3 rounded-lg bg-white"> {/* without border and shadow*/}
     {Icon && <Icon className="text-gray-400 flex-shrink-0 mt-1" size={18} />}
     <div className="flex-1">
       <p className="text-xs text-gray-500">{label}</p>

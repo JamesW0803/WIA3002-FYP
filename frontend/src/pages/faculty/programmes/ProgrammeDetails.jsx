@@ -12,6 +12,7 @@ const ProgrammeDetails = () => {
   const programme_code = location.state.programme_code;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(true);
 
   // Load programme details
   useEffect(() => {
@@ -21,6 +22,8 @@ const ProgrammeDetails = () => {
         setFormData(res.data);
       } catch (err) {
         console.error(err);
+      }finally{
+        setLoading(false)
       }
     };
     fetchProgramme();
@@ -53,62 +56,76 @@ const ProgrammeDetails = () => {
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
 
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
-            <div>
-              <h1 className="text-3xl font-bold">{formData.programme_name || "-"}</h1>
-              <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2">
-                {formData.programme_code || "-"}
+          {loading ? (
+            <>
+              <SkeletonHeader />
+
+              <div className="p-8 space-y-12 bg-white">
+                <SkeletonSection />
               </div>
-            </div>
+            </>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
+                <div>
+                  <h1 className="text-3xl font-bold">{formData.programme_name || "-"}</h1>
+                  <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2">
+                    {formData.programme_code || "-"}
+                  </div>
+                </div>
 
-            <div className="flex gap-2 mt-4 md:mt-0">
-              {editMode ? (
-                <>
-                  <button
-                    onClick={handleCancel}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                  >
-                    <X size={16} /> Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
-                  >
-                    <Save size={16} /> Save
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                >
-                  <Edit2 size={16} /> Edit
-                </button>
-              )}
-            </div>
-          </div>
+                <div className="flex gap-2 mt-4 md:mt-0">
+                  {editMode ? (
+                    <>
+                      <button
+                        onClick={handleCancel}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <X size={16} /> Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                      >
+                        <Save size={16} /> Save
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleEdit}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                    >
+                      <Edit2 size={16} /> Edit
+                    </button>
+                  )}
+                </div>
+              </div>
 
-          {/* Content */}
-          <div className="p-8 space-y-12 bg-white">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {programmeFormFields.map((field) => (
-                <ProgrammeField
-                  key={field.key}
-                  icon={field.icon}
-                  label={field.label}
-                  value={formData[field.key] ?? ""}
-                  type={field.type}
-                  options={field.options}
-                  multiline={field.multiline}
-                  placeholder={field.placeholder}
-                  editMode={editMode}
-                  onChange={handleInputChange(field.key)}
-                />
-              ))}
-            </div>
-          </div>
+              {/* Content */}
+              <div className="p-8 space-y-12 bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {programmeFormFields.map((field) => (
+                    <ProgrammeField
+                      key={field.key}
+                      icon={field.icon}
+                      label={field.label}
+                      value={formData[field.key] ?? ""}
+                      type={field.type}
+                      options={field.options}
+                      multiline={field.multiline}
+                      placeholder={field.placeholder}
+                      editMode={editMode}
+                      onChange={handleInputChange(field.key)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
         </div>
+
       </div>
     </div>
   );
@@ -144,11 +161,38 @@ const ProgrammeField = ({ icon: Icon, label, value, type, options, editMode, mul
             />
           )
         ) : (
-          <p className="font-medium text-gray-900 whitespace-pre-line">{value || "-"}</p>
+          <p className="font-semibold text-sm text-gray-900 whitespace-pre-line">{value || "-"}</p>
         )}
       </div>
     </div>
   );
 };
+
+const SkeletonHeader = () => (
+  <div className="animate-pulse bg-gradient-to-r from-blue-600 to-blue-700 p-8">
+    <div className="h-6 w-48 bg-white/30 rounded mb-3"></div>
+    <div className="h-4 w-24 bg-white/30 rounded"></div>
+  </div>
+);
+
+const SkeletonField = () => (
+  <div className="flex items-start gap-3 animate-pulse">
+    <div className="w-5 h-5 bg-gray-300 rounded mt-2"></div>
+    <div className="w-full">
+      <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
+      <div className="h-8 w-full bg-gray-200 rounded"></div>
+    </div>
+  </div>
+);
+
+const SkeletonSection = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <SkeletonField />
+    <SkeletonField />
+    <SkeletonField />
+    <SkeletonField />
+  </div>
+);
+
 
 export default ProgrammeDetails;

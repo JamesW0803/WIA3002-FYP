@@ -71,7 +71,6 @@ const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) =
         return acc;
       }, {});
       setCoursesTaken(coursesByCategory);
-      console.log(coursesByCategory);
     }
     
   }, [academicProfile]);

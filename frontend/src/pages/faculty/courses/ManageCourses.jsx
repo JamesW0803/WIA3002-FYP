@@ -31,7 +31,6 @@ const ManageCourses = () => {
                 const response = await axiosClient.get("/courses");
                 const courses = response.data;
                 setCourses(courses);
-                console.log(courses);
             } catch (error) {
                 console.error("Error fetching courses: ", error);
             }finally{

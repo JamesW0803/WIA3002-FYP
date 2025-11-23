@@ -8,9 +8,8 @@ import {
 
 import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
-import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
-
 import { formSessions } from "../../../constants/courseFormConfig";
+import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 
 const CourseDetails = () => {
   const location = useLocation();
@@ -20,22 +19,16 @@ const CourseDetails = () => {
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
   const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // ----------------------------------------
-  // LOAD COURSE DETAILS
-  // ----------------------------------------
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         const res = await axiosClient.get(`/courses/${course_code}`);
         const course = res.data;
 
-        // Flatten prerequisites
-        if (course.prerequisites?.length > 0) {
-          course.prerequisites = course.prerequisites[0].course_code;
-        }
-
         setFormData(course);
+        console.log("course", course);
       } catch (err) {
         console.error(err);
       }
@@ -50,14 +43,12 @@ const CourseDetails = () => {
       }
     };
 
-    fetchCourse();
-    fetchAllCourses();
+    Promise.all([fetchCourse(), fetchAllCourses()]).finally(() => {
+      setLoading(false);
+    });
+
   }, [course_code]);
 
-
-  // ----------------------------------------
-  // HANDLERS
-  // ----------------------------------------
   const handleBack = () => navigate("/admin/courses");
   const handleCancel = () => setEditMode(false);
   const handleEdit = () => setEditMode(true);
@@ -67,14 +58,15 @@ const CourseDetails = () => {
       const payload = {
         ...formData,
         prerequisites: formData.prerequisites
-          ? [formData.prerequisites]
+          ? formData.prerequisites
           : [],
       };
-
+      
       await axiosClient.put(`/courses/${formData.course_code}`, payload);
-      setEditMode(false);
     } catch (err) {
       console.error(err);
+    }finally{
+      setEditMode(false);
     }
   };
 
@@ -85,10 +77,6 @@ const CourseDetails = () => {
     }));
   };
 
-
-  // ----------------------------------------
-  // Inject prerequisite course options dynamically
-  // ----------------------------------------
   const processedSessions = formSessions.map((session) => ({
     ...session,
     fields: session.fields.map((f) => {
@@ -105,10 +93,6 @@ const CourseDetails = () => {
     }),
   }));
 
-
-  // ----------------------------------------
-  // Render helpers
-  // ----------------------------------------
   const renderField = (field) => {
     const {
       key,
@@ -120,14 +104,12 @@ const CourseDetails = () => {
       placeholder,
     } = field;
 
-    const value = key == "type" ? READABLE_COURSE_TYPES[formData[key]] : formData[key] ?? "";
-
     return (
       <CourseInfoField
-        key={key}
+        fieldKey={key}
         icon={Icon ? <Icon size={18} /> : null}
         label={label}
-        value={value}
+        value={formData[key]}
         editMode={editMode}
         type={type}
         multiline={multiline}
@@ -146,72 +128,77 @@ const CourseDetails = () => {
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
 
-          {/* HEADER BAR */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">{formData.course_name}</h1>
-              <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2">
-                {formData.course_code}
+          {loading ? (
+            <>
+              <SkeletonHeader />
+
+              <div className="p-8 space-y-12 bg-white">
+                <SkeletonSection />
+                <SkeletonSection />
               </div>
-            </div>
-
-            <div className="flex gap-2 mt-4 md:mt-0">
-              {editMode ? (
-                <>
-                  <button
-                    onClick={handleCancel}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                  >
-                    <X size={16} /> Cancel
-                  </button>
-
-                  <button
-                    onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
-                  >
-                    <Save size={16} /> Save
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                >
-                  <Edit2 size={16} /> Edit
-                </button>
-              )}
-            </div>
-          </div>
-
-
-          {/* CONTENT */}
-          <div className="p-8 space-y-12 bg-white">
-
-            {processedSessions.map((session) => (
-              <div key={session.title}>
-                <h2 className="text-lg font-bold text-gray-700 mb-4">
-                  {session.title}
-                </h2>
-
-                {/* GRID LAYOUT */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {session.fields.map(renderField)}
+            </>
+          ) : (
+            <>
+              {/* ORIGINAL HEADER BAR */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold">{formData.course_name || "-"}</h1>
+                    <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
+                        {formData.course_code || "-"}
+                    </div>
+                </div>
+                <div className="flex gap-2 mt-4 md:mt-0">
+                  {editMode ? (
+                    <>
+                      <button
+                        onClick={handleCancel}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <X size={16} /> Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                      >
+                        <Save size={16} /> Save
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleEdit}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                    >
+                      <Edit2 size={16} /> Edit
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
 
-          </div>
+              {/* ORIGINAL CONTENT */}
+              <div className="p-8 space-y-12 bg-white">
+                {processedSessions.map((session) => (
+                  <div key={session.title}>
+                    <h2 className="text-lg font-bold text-gray-700 mb-4">
+                      {session.title}
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {session.fields.map(renderField)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
+
       </div>
     </div>
   );
 };
 
-
-// =========================================================
-// Reusable Dynamic Field Component
-// =========================================================
 const CourseInfoField = ({
+  fieldKey,
   icon,
   label,
   value,
@@ -222,6 +209,15 @@ const CourseInfoField = ({
   placeholder,
   onChange,
 }) => {
+
+  let displayValue = value ?? "-";
+  if(fieldKey == "type"){
+    displayValue = READABLE_COURSE_TYPES[value] || "-";
+  }
+  if(fieldKey == "offered_semester"){
+    displayValue = READABLE_COURSE_TYPES[value] || "-";
+  }
+
   return (
     <div className="flex items-start mb-3">
       {icon && <div className="mr-3 mt-1 text-gray-400">{icon}</div>}
@@ -255,12 +251,43 @@ const CourseInfoField = ({
           )
         ) : (
           <p className="font-semibold text-sm text-gray-900 whitespace-pre-line">
-            {value || "-"}
+            {displayValue ?? "-"}
           </p>
         )}
       </div>
     </div>
   );
 };
+
+const SkeletonHeader = () => (
+  <div className="animate-pulse bg-gradient-to-r from-blue-600 to-blue-700 p-8">
+    <div className="h-6 w-48 bg-white/30 rounded mb-3"></div>
+    <div className="h-4 w-24 bg-white/30 rounded"></div>
+  </div>
+);
+
+const SkeletonField = () => (
+  <div className="flex items-start mb-3 animate-pulse">
+    <div className="mr-3 mt-1 w-5 h-5 bg-gray-300 rounded"></div>
+    <div className="w-full">
+      <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
+      <div className="h-8 w-full bg-gray-200 rounded"></div>
+    </div>
+  </div>
+);
+
+const SkeletonSection = () => (
+  <div className="space-y-6">
+    <div className="h-5 w-40 bg-gray-300 rounded"></div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <SkeletonField />
+      <SkeletonField />
+      <SkeletonField />
+      <SkeletonField />
+    </div>
+  </div>
+);
+
 
 export default CourseDetails;

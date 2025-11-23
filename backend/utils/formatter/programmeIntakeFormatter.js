@@ -31,6 +31,8 @@ const formatProgrammeIntake = (programmeIntake) => {
 
     // Optionally include academic_session_id as well
     academic_session_id: programmeIntake.academic_session_id?._id ?? null,
+    academic_session: programmeIntake.academic_session_id ?? null,
+
 
     graduation_requirements: programmeIntake.graduation_requirements,
     programme_plan: programmeIntake.programme_plan,

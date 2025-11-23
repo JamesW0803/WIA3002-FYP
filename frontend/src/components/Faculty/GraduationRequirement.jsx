@@ -8,8 +8,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useOutletContext } from 'react-router-dom';
 
-const GraduationRequirement = () => {
-  const { graduationRequirements } = useOutletContext(); // flat array
+const GraduationRequirement = ({ graduationRequirements }) => {
+  // const { graduationRequirements } = useOutletContext(); // flat array
   
   // Group courses by category
   const grouped = graduationRequirements.reduce((acc, course) => {
