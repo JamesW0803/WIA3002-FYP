@@ -90,31 +90,34 @@ const ProgramPlansSection = ({
       const token = localStorage.getItem("token");
       const planId = editingPlan;
 
-      const cleanedYears = (updatedPlanData.years || []).map((y) => ({
-        ...y,
-        semesters: (y.semesters || [])
-          .filter(
-            (s) => !s._isDraft && (s.isGap || (s.courses?.length || 0) > 0)
-          )
-          .map((s, idx) => ({
-            ...s,
-            name: `Year ${y.year} - Semester ${idx + 1}`,
-            courses: (s.courses || []).map((c) => {
-              const cid = resolveCourseId(c);
-              if (!cid) {
-                throw new Error(
-                  `Missing ObjectId for course ${c?.code || "(unknown)"}`
-                );
-              }
-              return {
-                course: cid,
-                credit_at_time: latestCredit(c),
-                course_code: c.code,
-                title_at_time: c.name,
-              };
-            }),
-          })),
-      }));
+      const cleanedYears = (updatedPlanData.years || [])
+        .map((y) => {
+          const cleanedSemesters = (y.semesters || [])
+            .filter(
+              (s) => !s._isDraft && (s.isGap || (s.courses?.length || 0) > 0)
+            )
+            .map((s, idx) => ({
+              ...s,
+              name: `Year ${y.year} - Semester ${idx + 1}`,
+              courses: (s.courses || []).map((c) => {
+                const cid = resolveCourseId(c);
+                if (!cid) {
+                  throw new Error(
+                    `Missing ObjectId for course ${c?.code || "(unknown)"}`
+                  );
+                }
+                return {
+                  course: cid,
+                  credit_at_time: latestCredit(c),
+                  course_code: c.code,
+                  title_at_time: c.name,
+                };
+              }),
+            }));
+
+          return { ...y, semesters: cleanedSemesters };
+        })
+        .filter((y) => y.isGapYear || (y.semesters && y.semesters.length > 0));
 
       const payload = {
         ...updatedPlanData,
@@ -260,6 +263,29 @@ const ProgramPlansSection = ({
     return planIdx < startIdx;
   };
 
+  const handleSetCurrentPlan = async (plan) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axiosClient.patch(
+        `/academic-plans/plans/${plan.id}/set-default`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setProgramPlans((prev) =>
+        prev.map((p) => ({
+          ...p,
+          isDefault: p.id === plan.id,
+        }))
+      );
+
+      alert(`“${plan.name}” is now your current plan!`);
+    } catch (err) {
+      console.error("Failed to set current plan", err);
+      alert("Could not set this plan as current. Please try again.");
+    }
+  };
+
   return (
     <>
       {/* Saved Plans Section */}
@@ -283,6 +309,7 @@ const ProgramPlansSection = ({
                   handleDeletePlan(plan);
                 }}
                 onView={() => handleViewPlan(plan)}
+                onSetCurrent={() => handleSetCurrentPlan(plan)}
               />
             ))}
 

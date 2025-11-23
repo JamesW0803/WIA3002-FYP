@@ -18,6 +18,7 @@ const CourseDetails = () => {
   const course_code = location.state.course_code;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
+
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 

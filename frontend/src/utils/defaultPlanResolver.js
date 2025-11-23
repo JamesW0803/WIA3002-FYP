@@ -1,8 +1,3 @@
-/**
- * Build a quick lookup: course_code -> course object
- * @param {Array} allCourses - API /courses response (full version)
- * @returns {Map<string, object>}
- */
 export function buildCourseIndex(allCourses = []) {
   const idx = new Map();
   for (const c of allCourses) {
@@ -11,34 +6,6 @@ export function buildCourseIndex(allCourses = []) {
   return idx;
 }
 
-/**
- * Resolve semesterMapping to UI-friendly structure with real course objects.
- * - Non-specialization codes are looked up from allCourses.
- * - SPECIALIZATION_* become a standardized "programme_elective" placeholder.
- *
- * @param {object} semesterMapping - your constants/semesterMapping.js
- * @param {Array} allCourses - /courses response (full, not minimal)
- * @param {object} [opts]
- * @param {number} [opts.electiveCreditHours=3] - default credit for elective placeholder
- * @param {string} [opts.electiveLabel='Specialization Elective'] - label for placeholder
- * @returns {{
- *   years: Array<{
- *     year: string,
- *     semesters: Array<{
- *       name: string,
- *       totalCredits: number,
- *       courses: Array<{
- *         course_code: string,
- *         course_name: string,
- *         credit_hours: number,
- *         type: string,
- *         placeholder?: boolean
- *       }>
- *     }>
- *   }>,
- *   missingCodes: string[]
- * }}
- */
 export function resolveDefaultPlanCourses(
   semesterMapping,
   allCourses,

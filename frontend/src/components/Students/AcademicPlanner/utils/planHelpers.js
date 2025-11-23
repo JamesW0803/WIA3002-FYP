@@ -106,7 +106,10 @@ export const validateCourseAddition = (
   }
 
   // Check if course is offered in this semester
-  const semesterNum = Number(semester.name.split(" ")[3]); // 1 or 2
+  const parts = String(semester.name || "")
+    .trim()
+    .split(" ");
+  const semesterNum = Number(parts[parts.length - 1]);
   const offeredList = Array.isArray(course.offered_semester)
     ? course.offered_semester
     : [];

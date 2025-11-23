@@ -8,7 +8,7 @@ const formatCourses = (courses) => {
 
 const formatCourse = (course) => {
   return {
-    _id : course._id ?? "-",
+    _id: course._id ?? "-",
     course_code: course.course_code ?? "-",
     course_name: course.course_name ?? "-",
     type: course.type ?? "-",

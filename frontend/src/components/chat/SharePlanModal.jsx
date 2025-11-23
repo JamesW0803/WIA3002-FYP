@@ -81,7 +81,8 @@ function PlanPreviewTable({ plan }) {
                             {(c.course.prerequisites || []).join(", ") || "—"}
                           </td>
                           <td className="px-3 py-2 border-b align-top text-gray-600">
-                            {(c.course.offered_semester || []).join(", ") || "—"}
+                            {(c.course.offered_semester || []).join(", ") ||
+                              "—"}
                           </td>
                         </tr>
                       ))}
@@ -103,10 +104,9 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
   const [selectedId, setSelectedId] = useState(null);
   const [note, setNote] = useState("");
   const [includeJson, setIncludeJson] = useState(true);
-  const [includeSummary, setIncludeSummary] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const { getUploadUrl, putToAzure, sendMessage } = useChatStore();
+  const { sendMessage } = useChatStore();
 
   useEffect(() => {
     if (!open) return;
@@ -191,13 +191,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
     return JSON.stringify(obj, replacer, 2);
   };
 
-  const buildText = (plan) => {
-    const header = `Shared academic plan: ${plan.name} (${plan.semesters} semesters, ${plan.credits} credits)`;
-    const notePart = note.trim() ? `\n\nNote: ${note.trim()}` : "";
-    const summaryPart = includeSummary ? `\n\n${planSummary(plan)}` : "";
-    return header + notePart + summaryPart;
-  };
-
   const send = async () => {
     if (!selectedPlan || !conversationId) return;
     setLoading(true);
@@ -205,34 +198,20 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
       const attachments = [];
 
       if (includeJson) {
-        const pretty = stripMongo(selectedPlan);
-        const blob = new Blob([pretty], { type: "application/json" });
-        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-        const filename = `AcademicPlan_${selectedPlan.name
-          .replace(/[^\w.-]+/g, "_")
-          .slice(0, 40)}_${dateStr}.json`;
-        const file = new File([blob], filename, { type: "application/json" });
-
-        const { uploadUrl, blobUrl } = await getUploadUrl({
-          filename,
-          mimeType: "application/json",
-        });
-        await putToAzure({ uploadUrl, file });
-
         attachments.push({
-          url: blobUrl,
-          name: filename,
-          mimeType: "application/json",
-          size: file.size,
-          caption: "Academic plan export",
-          originalUrl: blobUrl,
-          originalName: filename,
-          originalMimeType: "application/json",
-          originalSize: file.size,
+          url: "",
+          name: selectedPlan.name,
+          mimeType: "application/vnd.academic-plan+json",
+          size: 0,
+          caption: "Academic plan",
+          type: "academic-plan",
+          planId: selectedPlan._id,
+          planName: selectedPlan.name,
         });
       }
-
-      const text = buildText(selectedPlan);
+      const header = `Shared academic plan: ${selectedPlan.name}`;
+      const notePart = note.trim() ? `\n\nNote: ${note.trim()}` : "";
+      const text = header + notePart;
       await sendMessage(conversationId, text, attachments);
       onClose?.();
     } catch (e) {
@@ -315,15 +294,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
                   <FileText className="w-4 h-4" /> Attach JSON export
                 </span>
               </label>
-              <label className="flex items-center gap-2 text-sm select-none">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4"
-                  checked={includeSummary}
-                  onChange={(e) => setIncludeSummary(e.target.checked)}
-                />
-                <span>Include text summary in message</span>
-              </label>
             </div>
 
             <div className="mt-5">
@@ -343,15 +313,6 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
           <div className="min-w-0">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm text-gray-700">Preview</div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={doPrint}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
-                  disabled={!selectedPlan}
-                >
-                  <Printer className="w-4 h-4" /> Print
-                </button>
-              </div>
             </div>
 
             <div
