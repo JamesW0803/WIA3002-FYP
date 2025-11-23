@@ -1,232 +1,266 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { useParams } from "react-router-dom";
-import { Outlet, Link } from 'react-router-dom';
-import Title from "../../../components/Title";
-import { useState , useEffect } from "react"
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Edit2, Save, X } from "lucide-react";
+
+import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
-import ActionBar from "../../../components/form/ActionBar";
-import TextInputField from "../../../components/form/TextInputField";
-import SelectInputField from "../../../components/form/SelectInputField";
-import { programmeIntakeFormFields } from "../../../constants/programmeIntakeFormConfig"
-import { formatDateToLocaleString } from "../../../utils/dateFormatter"
+import { programmeIntakeFormFields } from "../../../constants/programmeIntakeFormConfig";
+import { formatDateToLocaleString } from "../../../utils/dateFormatter";
+
+import GraduationRequirement from "../../../components/Faculty/GraduationRequirement";
+import CoursePlan from "../../../components/Faculty/CoursePlan";
 
 const ProgrammeEnrollmentDetails = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    // const programme_intake_code  = location.state.programme_intake_code
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { programme_intake_code } = useParams();
 
-    const { programme_intake_code } = useParams();
-    const [editMode, setEditMode] = useState(location.state?.editMode || false);
-    const [programmeEnrollment, setProgrammeEnrollment] = useState({})
-    const [formData, setFormData] = useState({});
-    const [graduationRequirements, setGraduationRequirements] = useState([])
+  const [editMode, setEditMode] = useState(location.state?.editMode || false);
+  const [formData, setFormData] = useState({});
+  const [graduationRequirements, setGraduationRequirements] = useState([]);
+  const [activeTab, setActiveTab] = useState("graduation-requirement");
+  const [ loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchProgrammeEnrollment = async() => {
-        const response = await axiosClient.get(`/programme-intakes/${programme_intake_code}`)
-            const hold = response.data
-            const currentProgrammeEnrollment = {
-                ... hold,
-                createdAt : formatDateToLocaleString(hold.createdAt),
-                updatedAt : formatDateToLocaleString(hold.updatedAt)
-            }
-            setProgrammeEnrollment(currentProgrammeEnrollment)
-            setFormData(currentProgrammeEnrollment); // initial form data
-            setGraduationRequirements(currentProgrammeEnrollment.graduation_requirements)
-            
-        }
-        fetchProgrammeEnrollment()
-    }, [programme_intake_code])
-
-    const handleBack = () => {
-        navigate(`/admin/programme-intakes`)
-    }
-
-    const handleCancel = () => {
-        setEditMode(false)
-    }
-
-    const handleEdit = () => {
-        setEditMode(true)
-    }
-
-    const handleSave = async() => {
-        // Submit edit course form
-        try {
-            const payload = {
-                ...formData
-            };
-
-            const response = await axiosClient.put(`/programme-intakes/${formData.programme_intake_code}`, payload);
-            setEditMode(false)
-
-        } catch (error) {
-            console.error("Error updating programme enrollment: ", error);
-        } finally {
-            
-        }      
-    }
-
-    const cancelButton = {
-        title : "Cancel",
-        onClick : handleCancel
-    }
-
-    const saveButton = {
-        title : "Save",
-        onClick : handleSave
-    }
-
-    const backButton = {
-        title : "Back",
-        onClick : handleBack
-    }
-
-    const editButton = {
-        title : "Edit",
-        onClick : handleEdit
-    }
-
-
-    // Handle input changes
-    const handleInputChange = (key) => (event) => {
-        setFormData((prevData) => ({
-            ...prevData,
-            [key]: event.target.value,
-        }));
+  // ----------------------------------------
+  // LOAD PROGRAMME ENROLLMENT DETAILS
+  // ----------------------------------------
+  useEffect(() => {
+    const fetchProgrammeEnrollment = async () => {
+      try {
+        const res = await axiosClient.get(`/programme-intakes/${programme_intake_code}`);
+        const data = {
+          ...res.data,
+          createdAt: formatDateToLocaleString(res.data.createdAt),
+          updatedAt: formatDateToLocaleString(res.data.updatedAt),
+        };
+        setFormData(data);
+        setGraduationRequirements(data.graduation_requirements || []);
+      } catch (err) {
+        console.error(err);
+      }finally{
+        setLoading(false);
+      }
     };
+    fetchProgrammeEnrollment();
+  }, [programme_intake_code]);
 
-    // Split form data into two columns
-    const allowedKeys = programmeIntakeFormFields.map(field => field.key);
+  // ----------------------------------------
+  // HANDLERS
+  // ----------------------------------------
+  const handleBack = () => navigate("/admin/programme-intakes");
+  const handleCancel = () => setEditMode(false);
+  const handleEdit = () => setEditMode(true);
+  const handleSave = async () => {
+    try {
+      await axiosClient.put(`/programme-intakes/${formData.programme_intake_code}`, formData);
+      setEditMode(false);
+    } catch (err) {
+      console.error("Error saving programme enrollment:", err);
+    }
+  };
+  const handleInputChange = (key) => (e) => {
+    setFormData((prev) => ({ ...prev, [key]: e.target.value }));
+  };
 
-    const entries = Object.entries(formData).filter(
-    ([key, _]) => allowedKeys.includes(key)
-    );
-    const mid = Math.ceil(entries.length / 2);
-    const leftEntries = entries.slice(0, mid);
-    const rightEntries = entries.slice(mid);
+  // ----------------------------------------
+  // SPLIT FORM DATA INTO TWO COLUMNS
+  // ----------------------------------------
+  const allowedKeys = programmeIntakeFormFields.map((f) => f.key);
+  const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
+  const mid = Math.ceil(entries.length / 2);
+  const leftEntries = entries.slice(0, mid);
+  const rightEntries = entries.slice(mid);
 
-    return (
-        <div className="flex flex-col w-full">
-            <Title>Programme Enrollment | {programmeEnrollment.programme_intake_code}</Title>
-            <ProgrammeEnrollmentDisplayTable 
-                leftEntries={leftEntries} 
-                rightEntries={rightEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode}
-            />
-            <NavTab/>
-                <ChildrenContent 
-                    graduationRequirements={graduationRequirements} 
-                    programmeEnrollment={programmeEnrollment}
-                />
-            {editMode ?
-                <ActionBar button1={cancelButton} button2={saveButton}/>
-            :   
-                <ActionBar button1={backButton} button2={null}/>
-            }
-        </div> 
-    )
-}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-12">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <GeneralCardHeader handleBack={handleBack} title="Back to Programme Intakes" />
 
-const NavTab = () => {
-    const location = useLocation();
-    const isActive = (path) => {
-        return location.pathname.includes(path);
-    };
+          {loading ? (
+            <>
+              <SkeletonHeader />
 
-    return (
-        <div className="flex gap-4 mt-8 border-b border-gray-200 ml-10 w-[90%]">
-            <Link 
-                to="graduation-requirement"
-                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
-                    isActive('graduation-requirement') 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-                Graduation Requirement
-            </Link>
-            <Link 
-                to="course-plan"
-                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
-                    isActive('course-plan') 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-                Course Plan
-            </Link>
-        </div>
-    )
-}
-
-const ChildrenContent = ({ graduationRequirements , programmeEnrollment }) => {
-    return (
-      <div className="p-4">
-        <Outlet context={{ graduationRequirements, programmeEnrollment }} />
-      </div>
-    )
-}
-
-const ProgrammeEnrollmentDisplayTable = ({ 
-    leftEntries, 
-    rightEntries, 
-    handleInputChange, 
-    editMode 
-}) => {
-    return (
-        <div id="programme-enrollment-display-table" className="flex flex-row items-center justify-center w-[90%] ml-40">
-            <ProgrammeEnrollmentDisplayColumn  // Left Column
-                entries={leftEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode} 
-            />
-            <ProgrammeEnrollmentDisplayColumn // Right Column
-                entries={rightEntries} 
-                handleInputChange={handleInputChange} 
-                editMode={editMode} 
-            />
-        </div>
-    )
-}
-
-const ProgrammeEnrollmentDisplayColumn = ({ entries, handleInputChange, editMode }) => {
-    const location = useLocation();
-
-    return (
-        <div className="w-1/2">
-            {entries.map(([key, value]) => {
-                const field = programmeIntakeFormFields.find((field) => field.key === key)
-                if(!field) return
-                if(field.type === "text") 
-                    return (
-                    <div id={`form-field-${field.key}`} className="h-[50px]">
-                        <TextInputField 
-                                label={field.label}
-                                value={value}
-                                onChange={handleInputChange(key)}
-                                editMode={editMode}
-                                size={"small"}
-                        />
+              <div className="p-8 space-y-12 bg-white">
+                <SkeletonSection />
+                <SkeletonSection />
+              </div>
+            </>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              {/* HEADER */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold">{formData.programme_intake_code || "-"}</h1>
+                    <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
+                        {formData.programme_name || "-"}
                     </div>
-                    )
-                else if (field.type === "select")
-                    return (
-                        <div id={`form-field-${field.key}`} className="h-[50px]">
-                            <SelectInputField 
-                                label={field.label} 
-                                options={field.options}
-                                value={value}
-                                onChange={handleInputChange(key)}
-                                editMode={editMode}
+                    <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 ml-2">
+                        {`${formData.academic_session?.year}-${formData.academic_session?.semester}` || "-"}
+                    </div>
+                </div>
+                <div className="flex gap-2 mt-4 md:mt-0">
+                  {editMode ? (
+                    <>
+                      <button
+                        onClick={handleCancel}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <X size={16} /> Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                      >
+                        <Save size={16} /> Save
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleEdit}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                    >
+                      <Edit2 size={16} /> Edit
+                    </button>
+                  )}
+                </div>
+              </div>
 
-                            />
-                        </div>
-                    )
-            })}
-        </div>
-    );
+              {/* FORM CONTENT */}
+              <div className="p-8 space-y-12 bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {leftEntries.map(([key, value]) => (
+                    <FormField
+                      key={key}
+                      field={programmeIntakeFormFields.find((f) => f.key === key)}
+                      value={value}
+                      editMode={editMode}
+                      onChange={handleInputChange(key)}
+                    />
+                  ))}
+                  {rightEntries.map(([key, value]) => (
+                    <FormField
+                      key={key}
+                      field={programmeIntakeFormFields.find((f) => f.key === key)}
+                      value={value}
+                      editMode={editMode}
+                      onChange={handleInputChange(key)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* TABS */}
+              <div className="flex gap-4 border-b border-gray-200 px-8">
+                <button
+                  className={`pb-2 text-sm font-medium ${
+                    activeTab === "graduation-requirement"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => setActiveTab("graduation-requirement")}
+                >
+                  Graduation Requirement
+                </button>
+                <button
+                  className={`pb-2 text-sm font-medium ${
+                    activeTab === "course-plan"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => setActiveTab("course-plan")}
+                >
+                  Course Plan
+                </button>
+              </div>
+
+              {/* TAB CONTENT */}
+              <div className="p-8">
+                {activeTab === "graduation-requirement" && (
+                  <GraduationRequirement graduationRequirements={graduationRequirements} />
+                )}
+                {activeTab === "course-plan" && (
+                  <CoursePlan programmeEnrollment={formData} />
+                )}
+              </div>
+            </div>
+          )}
+      </div>
+    </div>
+  );
 };
+
+// =========================================================
+// FORM FIELD COMPONENT
+// =========================================================
+const FormField = ({ field, value, editMode, onChange }) => {
+  if (!field) return null;
+  const { label, icon: Icon, type, multiline, options, placeholder } = field;
+
+  return (
+    <div className="flex items-start mb-3">
+      {Icon && <div className="mr-3 mt-1 text-gray-400">{<Icon size={18} />}</div>}
+      <div className="w-full">
+        <p className="text-sm text-gray-500 mb-1">{label}</p>
+        {editMode ? (
+          type === "select" ? (
+            <select
+              className="border border-gray-300 rounded-lg p-2 w-full text-sm"
+              value={value || ""}
+              onChange={onChange}
+            >
+              <option value="">-- Select --</option>
+              {options?.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <textarea
+              rows={multiline ? 3 : 1}
+              className="border border-gray-300 rounded-lg p-2 w-full text-sm resize-none"
+              placeholder={placeholder || ""}
+              value={value || ""}
+              onChange={onChange}
+            />
+          )
+        ) : (
+          <p className="text-sm font-semibold text-gray-900 whitespace-pre-line">{value || "-"}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const SkeletonHeader = () => (
+  <div className="animate-pulse bg-gradient-to-r from-blue-600 to-blue-700 p-8">
+    <div className="h-6 w-48 bg-white/30 rounded mb-3"></div>
+    <div className="h-4 w-24 bg-white/30 rounded"></div>
+  </div>
+);
+
+const SkeletonField = () => (
+  <div className="flex items-start mb-3 animate-pulse">
+    <div className="mr-3 mt-1 w-5 h-5 bg-gray-300 rounded"></div>
+    <div className="w-full">
+      <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
+      <div className="h-8 w-full bg-gray-200 rounded"></div>
+    </div>
+  </div>
+);
+
+const SkeletonSection = () => (
+  <div className="space-y-6">
+    <div className="h-5 w-40 bg-gray-300 rounded"></div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <SkeletonField />
+      <SkeletonField />
+      <SkeletonField />
+      <SkeletonField />
+    </div>
+  </div>
+);
+
 
 export default ProgrammeEnrollmentDetails;

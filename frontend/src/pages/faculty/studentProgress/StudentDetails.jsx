@@ -1,14 +1,14 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
-import { Outlet, Link } from 'react-router-dom';
-import Title from "../../../components/Title";
 import { useState , useEffect } from "react"
 import axiosClient from "../../../api/axiosClient";
-import ActionBar from "../../../components/form/ActionBar";
 import { studentDetailFields } from "../../../constants/studentDetailsFormConfig"
-import StatusBadge from "../../../components/Faculty/StatusBadge";
-import { MessageCircle } from "lucide-react";
-import MessageModal from "../../../components/Faculty/MessageModal";
+import StudentProfileHeader from "../../../components/Faculty/StudentProfileHeader";
+import StudentDetailsDisplayTable from "../../../components/Faculty/StudentProfileDetails";
+import StudentNavTabs from "../../../components/Faculty/StudentNavTabs";
+import StudentAcademicProfile from "../../../components/Faculty/StudentAcademicProfile";
+import StudentGraduationRequirement from "../../../components/Faculty/StudentGraduationRequirement";
+import DefaultProgrammePlan from "../../../components/Faculty/DefaultProgrammePlan";
 
 const StudentDetails = () => {
     const location = useLocation();
@@ -19,7 +19,13 @@ const StudentDetails = () => {
     const [student, setStudent] = useState({})
     const [formData, setFormData] = useState({});
     const [messageModalOpen, setMessageModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("academic-profile");
 
+    const tabs = [
+        { id: "academic-profile", label: "Academic Profile" },
+        { id: "graduation-requirement", label: "Graduation Requirement" },
+        { id: "default-programme-plan", label: "Default Programme Plan" },
+    ];
 
     useEffect(() => {
         const fetchStudent = async() => {
@@ -50,7 +56,6 @@ const StudentDetails = () => {
         }));
     };
 
-
     // Split form data into two columns
     const allowedKeys = studentDetailFields.map(field => field.key);
 
@@ -62,150 +67,39 @@ const StudentDetails = () => {
     const rightEntries = entries.slice(mid);
 
     return (
-        <div className="flex flex-col w-full">
-            <CustomTitle student={student} messageModalOpen={messageModalOpen} setMessageModalOpen={setMessageModalOpen}/>
+        <div className="flex flex-col h-screen w-full">
+            <StudentProfileHeader student={student} messageModalOpen={messageModalOpen} setMessageModalOpen={setMessageModalOpen} handleBack={backButton.onClick}/>
             <StudentDetailsDisplayTable 
                 leftEntries={leftEntries} 
                 rightEntries={rightEntries} 
                 handleInputChange={handleInputChange} 
                 editMode={editMode}
             />
-            <NavTab/>
-            <ChildrenContent academicProfile={student.academicProfile} programme_intake_id={student.programme_intake_id} student={student}/>   
-            <ActionBar button1={backButton} button2={null}/>
+            <StudentNavTabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            {/*Tabs*/}
+            {activeTab === "academic-profile" && (
+            <StudentAcademicProfile
+                academicProfile={student.academicProfile}
+                student={student}
+            />
+            )}
+
+            {activeTab === "graduation-requirement" && (
+            <StudentGraduationRequirement
+                academicProfile={student.academicProfile}
+                programme_intake_id={student.programme_intake_id}
+            />
+            )}
+
+            {activeTab === "default-programme-plan" && (
+            <DefaultProgrammePlan
+                academicProfile={student.academicProfile}
+                programme_intake_id={student.programme_intake_id}
+            />
+            )}
         </div> 
     )
 }
-
-const CustomTitle = ( { student, messageModalOpen, setMessageModalOpen}) => {
-    return (
-        <Title>
-            <div className="flex items-center gap-4">
-            Student's Progress | {student.username}
-
-            {/* Message Icon Button */}
-            {student?._id && (
-                <button
-                    onClick={() => setMessageModalOpen(true)}
-                    className="p-2 rounded-full hover:bg-gray-100 transition"
-                    title="Send Message"
-                >
-                <MessageCircle size={22} className="text-blue-600" />
-                </button>
-            )}
-            </div>
-
-            {/* ⭐ The modal */}
-            <MessageModal
-                open={messageModalOpen}
-                onClose={() => setMessageModalOpen(false)}
-                student={student}
-            />
-        </Title>
-    )
-}
-
-
-const NavTab = () => {
-    const location = useLocation();
-    const isActive = (path) => {
-        return location.pathname.includes(path);
-    };
-
-    return (
-        <div className="flex gap-4 mt-8 border-b border-gray-200 ml-10 w-[90%]">
-            <Link 
-                to="academic-profile"
-                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
-                    isActive('academic-profile') 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-                Academic Profile
-            </Link>
-            <Link 
-                to="graduation-requirement"
-                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
-                    isActive('graduation-requirement') 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-                Graduation Requirement
-            </Link>
-            <Link 
-                to="default-programme-plan"
-                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
-                    isActive('default-programme-plan') 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-                Default Programme Plan
-            </Link>
-            {/* <Link 
-                to="course-plan"
-                className={`pb-2 px-1 text-sm font-medium transition-colors duration-200 ${
-                    isActive('course-plan') 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-                Course Plans
-            </Link> */}
-        </div>
-    )
-}
-
-const ChildrenContent = ({ academicProfile , programme_intake_id , student }) => {
-    return (
-      <div className="p-4">
-        <Outlet context={{ academicProfile , programme_intake_id , student }}/>
-      </div>
-    )
-}
-
-// Table component
-const StudentDetailsDisplayTable = ({ leftEntries, rightEntries }) => (
-  <div id="student-details-display-table" className="flex flex-row items-start justify-center w-[90%] ml-40 gap-6">
-    <StudentDetailsDisplayColumn entries={leftEntries} />
-    <StudentDetailsDisplayColumn entries={rightEntries} />
-  </div>
-);
-
-// Column component
-const StudentDetailsDisplayColumn = ({ entries }) => (
-  <div className="w-1/2">
-    {entries.map(([key, value]) => {
-      const field = studentDetailFields.find((f) => f.key === key);
-      if (!field) return null;
-
-      const isStatusField = key.toLowerCase() === "status";
-
-      return (
-        <StudentInfoField
-          key={key}
-          icon={field.icon} // optionally add an icon in your config
-          label={field.label}
-          value={
-            isStatusField ? <StatusBadge status={value.status} notes={value.status_notes} /> : value
-          }        
-        />
-      );
-    })}
-  </div>
-);
-
-// Reusable component for student info display
-const StudentInfoField = ({ icon: Icon, label, value, color }) => (
-  <div className="flex items-start mb-3">
-    {Icon && <Icon className={`mr-3 mt-1 text-gray-400 ${color || ""}`} size={18} />}
-    <div>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="font-semibold text-gray-900">{value}</p>
-    </div>
-  </div>
-);
 
 export default StudentDetails;

@@ -7,13 +7,15 @@ import Divider from '@mui/material/Divider';
 import FormDialog from "../../../components/dialog/FormDialog"
 import AddProgrammeModal from "../../../components/form/AddProgrammeModal";
 import { useNavigate } from "react-router-dom";
+import { ALL_SHORT_FORMS } from "../../../constants/shortForm";
 
 const ManageProgrammes = () => {
     const navigate = useNavigate();
 
     const [programmes, setProgrammes] = useState([]);
     const [items, setItems] = useState([]);
-    const [clickableItems, setClickableItems] = useState(["programme_code"])
+    const [clickableItems, setClickableItems] = useState(["programme_code", "programme_name"])
+    const short_forms = ["faculty","programme_name"]
 
     const [openModal, setOpenModal] = useState(false);
     const [formData, setFormData] = useState({
@@ -27,7 +29,7 @@ const ManageProgrammes = () => {
     const [selectedProgrammeCodeToDelete, setSelectedProgrammeCodeToDelete] = useState(null);
 
     const [searchKeywords, setSearchKeywords] = useState("");
-
+    const [loading, setLoading] = useState(true);
 
     const header = ["Programme Code", "Programme Name", "Department", "Faculty"]
     const order = ["programme_code", "programme_name", "department", "faculty"]
@@ -40,6 +42,8 @@ const ManageProgrammes = () => {
                 setProgrammes(programmes);
             } catch (error) {
                 console.error("Error fetching programmes: ", error);
+            }finally{
+                setLoading(false);
             }
         };
         fetchProgrammes();
@@ -49,6 +53,9 @@ const ManageProgrammes = () => {
         const latestItem = programmes.map((programme) => {
             return  (
                 Object.entries(programme).map(([key, value]) => {
+                    if(short_forms.includes(key)){
+                        value = ALL_SHORT_FORMS[value] || value;
+                    }
                     return {
                         key,
                         value,
@@ -197,6 +204,7 @@ const ManageProgrammes = () => {
                 order={order}
                 tableActionBarButton={programmesActionBar}
                 identifier={"programme_code"}
+                loading={loading}
                 // index={false}
             />
             <FormDialog

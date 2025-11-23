@@ -13,12 +13,14 @@ const ManageCourses = () => {
 
     const [courses, setCourses] = useState([]);
     const [items, setItems] = useState([]);
-    const [clickableItems, setClickableItems] = useState(["course_code"])
+    const [clickableItems, setClickableItems] = useState(["course_code", "course_name"])
 
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedCourseCodeToDelete, setSelectedCourseCodeToDelete] = useState(null);
 
     const [searchKeywords, setSearchKeywords] = useState("");
+    const [loading, setLoading] = useState(true);
+
 
     const header = ["Course Code", "Course Name", "Credit Hour", "Type", "Offered In"]
     const order = ["course_code", "course_name", "credit_hours", "type", "offered_semester"]
@@ -31,11 +33,12 @@ const ManageCourses = () => {
                 setCourses(courses);
             } catch (error) {
                 console.error("Error fetching courses: ", error);
+            }finally{
+                setLoading(false);
             }
         };
         fetchCourses();
     },[])
-
 
     /**
      * courses = [course1, course2, course3]
@@ -47,6 +50,9 @@ const ManageCourses = () => {
                 Object.entries(course).map(([key, value]) => {
                     if(key === "type"){
                         value = READABLE_COURSE_TYPES[value]
+                    }
+                    if(key === "offered_semester"){
+                        value = "Semester " + value.map(sem => sem.replace("Semester ", "")).join(", ");
                     }
                     return {
                         key,
@@ -139,7 +145,7 @@ const ManageCourses = () => {
     }
 
     return (
-        <div className="coursesPage">
+        <div className="coursesPage min-h-screen flex flex-col">
             <Title>Courses</Title>
             <Divider sx={{ marginX: 5 }} />
             <ToolBar
@@ -159,6 +165,7 @@ const ManageCourses = () => {
                 order={order}
                 tableActionBarButton={coursesActionBar}
                 identifier={"course_code"}
+                loading={loading}
                 // index={false}
             />
             <FormDialog

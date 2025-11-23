@@ -164,16 +164,8 @@ function App() {
                   <StudentDetails />
                 </ProtectedRoute>
               }
-            >
-              <Route
-                index
-                element={<Navigate to="academic-profile" replace />}
-              />
-              <Route path="academic-profile" element={<StudentAcademicProfile />} />
-              <Route path="graduation-requirement" element={<StudentGraduationRequirement />}/>
-              <Route path="default-programme-plan" element={<DefaultProgrammePlan />} />
-              <Route path="course-plan" element={<StudentCoursePlan />} />
-            </Route>
+            />
+
             <Route
               path="programmes"
               element={

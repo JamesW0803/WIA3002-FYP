@@ -7,44 +7,74 @@ import MessageIcon from "@mui/icons-material/Message"; // import a message icon
 
 const TableActionBar = ({ viewButton, editButton, deleteButton, messageButton, identifier}) => {
   return (
-    <div id="action-bar" className="flex flex-row justify-center items-center gap-2">
-      {viewButton && (
-        <IconButton
-          onClick={() => {viewButton.onClick(identifier)}}
-          sx={{ color: "#1E3A8A" }}
-          title="View"
-        >
-          <VisibilityIcon />
-        </IconButton>
-      )}
-      {editButton && (
-        <IconButton
-          onClick={() => {editButton.onClick(identifier)}}
-          sx={{ color: "#065F46" }} // green-800
-          title="Edit"
-        >
-          <EditIcon />
-        </IconButton>
-      )}
-      {deleteButton && (
-        <IconButton
-          onClick={() => {deleteButton.onClick(identifier)}}
-          sx={{ color: "#B91C1C" }} // red-700
-          title="Delete"
-        >
-          <DeleteIcon />
-        </IconButton>
-      )}
-      {messageButton && (
-        <IconButton
-          onClick={() => messageButton.onClick(identifier)}
-          sx={{ color: "#2563EB" }} // blue-600
-          title="Message"
-        >
-          <MessageIcon />
-        </IconButton>
-      )}
-    </div>
+    <td className="px-6 py-4">
+      <div className="flex flex-row justify-center items-center gap-1">
+        {viewButton && (
+          <IconButton
+            onClick={() => {viewButton.onClick(identifier)}}
+            size="small"
+            sx={{ 
+              color: "#3B82F6",
+              "&:hover": { 
+                backgroundColor: "#EFF6FF",
+                color: "#1E40AF"
+              }
+            }}
+            title="View"
+          >
+            <VisibilityIcon fontSize="small" />
+          </IconButton>
+        )}
+        {messageButton && (
+          <IconButton
+            onClick={() => messageButton.onClick(identifier)}
+            size="small"
+            sx={{ 
+              color: "#8B5CF6",
+              "&:hover": { 
+                backgroundColor: "#F5F3FF",
+                color: "#6D28D9"
+              }
+            }}
+            title="Message"
+          >
+            <MessageIcon fontSize="small" />
+          </IconButton>
+        )}
+        {editButton && (
+          <IconButton
+            onClick={() => {editButton.onClick(identifier)}}
+            size="small"
+            sx={{ 
+              color: "#10B981",
+              "&:hover": { 
+                backgroundColor: "#ECFDF5",
+                color: "#059669"
+              }
+            }}
+            title="Edit"
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+        )}
+        {deleteButton && (
+          <IconButton
+            onClick={() => {deleteButton.onClick(identifier)}}
+            size="small"
+            sx={{ 
+              color: "#EF4444",
+              "&:hover": { 
+                backgroundColor: "#FEF2F2",
+                color: "#DC2626"
+              }
+            }}
+            title="Delete"
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        )}
+      </div>
+    </td>
   );
 };
 

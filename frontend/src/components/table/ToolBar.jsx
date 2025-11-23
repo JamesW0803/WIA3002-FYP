@@ -7,7 +7,7 @@ const ToolBar = ({searchBar, filter, button, addButton = true}) => {
 
 
     return (
-        <div id="tool-bar" className="flex flex-row justify-between mx-10 mt-10">
+        <div id="tool-bar" className="flex flex-row justify-between mx-10 ml-20 mt-10 pr-10">
             <SearchBar
                 value = {searchBar.searchKeywords}
                 onChange = {searchBar.onChange}

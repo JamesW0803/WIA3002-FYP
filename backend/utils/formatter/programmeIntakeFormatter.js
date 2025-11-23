@@ -20,6 +20,7 @@ const formatProgrammeIntake = (programmeIntake) => {
     number_of_students_enrolled: programmeIntake.number_of_students_enrolled,
     number_of_students_graduated: programmeIntake.number_of_students_graduated,
     graduation_rate: programmeIntake.graduation_rate,
+    total_credit_hours: programmeIntake.total_credit_hours,
 
     createdAt: programmeIntake.createdAt,
     updatedAt: programmeIntake.updatedAt,
@@ -30,6 +31,8 @@ const formatProgrammeIntake = (programmeIntake) => {
 
     // Optionally include academic_session_id as well
     academic_session_id: programmeIntake.academic_session_id?._id ?? null,
+    academic_session: programmeIntake.academic_session_id ?? null,
+
 
     graduation_requirements: programmeIntake.graduation_requirements,
     programme_plan: programmeIntake.programme_plan,

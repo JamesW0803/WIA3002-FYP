@@ -1,220 +1,294 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import Title from "../../../components/Title";
 import { useState, useEffect } from "react";
+import {
+  Edit2,
+  Save,
+  X,
+} from "lucide-react";
+
+import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
-import ActionBar from "../../../components/form/ActionBar";
-import TextInputField from "../../../components/form/TextInputField";
-import SelectInputField from "../../../components/form/SelectInputField";
-import { allCourseFields } from "../../../constants/courseFormConfig";
+import { formSessions } from "../../../constants/courseFormConfig";
+import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 
 const CourseDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
   const course_code = location.state.course_code;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
-  const [course, setCourse] = useState({});
   const [formData, setFormData] = useState({});
+
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCourse = async () => {
-      const response = await axiosClient.get(`/courses/${course_code}`);
-      const currentCourse = response.data;
+      try {
+        const res = await axiosClient.get(`/courses/${course_code}`);
+        const course = res.data;
 
-      // Flatten prerequisites if necessary
-      if (
-        currentCourse.prerequisites &&
-        currentCourse.prerequisites.length > 0
-      ) {
-        currentCourse.prerequisites =
-          currentCourse.prerequisites[0].course_code;
+        setFormData(course);
+        console.log("course", course);
+      } catch (err) {
+        console.error(err);
       }
-      setCourse(currentCourse);
-      setFormData(currentCourse); // initial form data
     };
-    fetchCourse();
+
+    const fetchAllCourses = async () => {
+      try {
+        const res = await axiosClient.get("/courses");
+        setCourses(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    Promise.all([fetchCourse(), fetchAllCourses()]).finally(() => {
+      setLoading(false);
+    });
+
   }, [course_code]);
 
-  const handleBack = () => {
-    navigate(`/admin/courses`);
-  };
-
-  const handleCancel = () => {
-    setEditMode(false);
-  };
-
-  const handleEdit = () => {
-    setEditMode(true);
-  };
+  const handleBack = () => navigate("/admin/courses");
+  const handleCancel = () => setEditMode(false);
+  const handleEdit = () => setEditMode(true);
 
   const handleSave = async () => {
     try {
-      let offered_semester = formData.offered_semester;
-
-      if (!Array.isArray(offered_semester)) {
-        if (offered_semester === "Semester 1 & 2") {
-          offered_semester = ["Semester 1", "Semester 2"];
-        } else if (offered_semester) {
-          offered_semester = [offered_semester];
-        } else {
-          offered_semester = [];
-        }
-      } else {
-        offered_semester = offered_semester.flatMap((sem) => {
-          if (sem === "Semester 1 & 2") return ["Semester 1", "Semester 2"];
-          return [sem];
-        });
-      }
-
       const payload = {
         ...formData,
-        offered_semester,
-        prerequisites: formData.prerequisites ? formData.prerequisites : [],
+        prerequisites: formData.prerequisites
+          ? formData.prerequisites
+          : [],
       };
-
-      const response = await axiosClient.put(
-        `/courses/${formData.course_code}`,
-        payload
-      );
-      const updatedCourse = response.data;
+      
+      await axiosClient.put(`/courses/${formData.course_code}`, payload);
+    } catch (err) {
+      console.error(err);
+    }finally{
       setEditMode(false);
-      console.log("Course is updated successfully");
-    } catch (error) {
-      console.error("Error updating course: ", error);
-    } finally {
     }
   };
 
-  const cancelButton = {
-    title: "Cancel",
-    onClick: handleCancel,
-  };
-
-  const saveButton = {
-    title: "Save",
-    onClick: handleSave,
-  };
-
-  const backButton = {
-    title: "Back",
-    onClick: handleBack,
-  };
-
-  const editButton = {
-    title: "Edit",
-    onClick: handleEdit,
-  };
-
-  // Handle input changes
-  const handleInputChange = (key) => (event) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      [key]: event.target.value,
+  const handleInputChange = (key) => (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      [key]: e.target.value,
     }));
   };
 
-  // Split form data into two columns
-  const entries = Object.entries(formData);
-  const mid = Math.ceil(entries.length / 2);
-  const leftEntries = entries.slice(0, mid);
-  const rightEntries = entries.slice(mid);
+  const processedSessions = formSessions.map((session) => ({
+    ...session,
+    fields: session.fields.map((f) => {
+      if (f.key === "prerequisites") {
+        return {
+          ...f,
+          options: courses.map((c) => ({
+            label: `${c.course_code} - ${c.course_name}`,
+            value: c.course_code,
+          })),
+        };
+      }
+      return f;
+    }),
+  }));
+
+  const renderField = (field) => {
+    const {
+      key,
+      label,
+      icon: Icon,
+      type,
+      multiline,
+      options,
+      placeholder,
+    } = field;
+
+    return (
+      <CourseInfoField
+        fieldKey={key}
+        icon={Icon ? <Icon size={18} /> : null}
+        label={label}
+        value={formData[key]}
+        editMode={editMode}
+        type={type}
+        multiline={multiline}
+        options={options}
+        placeholder={placeholder}
+        onChange={handleInputChange(key)}
+      />
+    );
+  };
+
 
   return (
-    <div className="flex flex-col w-full">
-      <Title>Courses | {course.course_code}</Title>
-      <CourseDisplayTable
-        leftEntries={leftEntries}
-        rightEntries={rightEntries}
-        handleInputChange={handleInputChange}
-        editMode={editMode}
-      />
-      {editMode ? (
-        <ActionBar button1={cancelButton} button2={saveButton} />
-      ) : (
-        <ActionBar button1={backButton} button2={editButton} />
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-12">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <GeneralCardHeader handleBack={handleBack} title={"Back to Courses"} />
+
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+
+          {loading ? (
+            <>
+              <SkeletonHeader />
+
+              <div className="p-8 space-y-12 bg-white">
+                <SkeletonSection />
+                <SkeletonSection />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* ORIGINAL HEADER BAR */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold">{formData.course_name || "-"}</h1>
+                    <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
+                        {formData.course_code || "-"}
+                    </div>
+                </div>
+                <div className="flex gap-2 mt-4 md:mt-0">
+                  {editMode ? (
+                    <>
+                      <button
+                        onClick={handleCancel}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <X size={16} /> Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                      >
+                        <Save size={16} /> Save
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleEdit}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                    >
+                      <Edit2 size={16} /> Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ORIGINAL CONTENT */}
+              <div className="p-8 space-y-12 bg-white">
+                {processedSessions.map((session) => (
+                  <div key={session.title}>
+                    <h2 className="text-lg font-bold text-gray-700 mb-4">
+                      {session.title}
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {session.fields.map(renderField)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 };
 
-const CourseDisplayTable = ({
-  leftEntries,
-  rightEntries,
-  handleInputChange,
+const CourseInfoField = ({
+  fieldKey,
+  icon,
+  label,
+  value,
   editMode,
+  type,
+  multiline,
+  options,
+  placeholder,
+  onChange,
 }) => {
+
+  let displayValue = value ?? "-";
+  if(fieldKey == "type"){
+    displayValue = READABLE_COURSE_TYPES[value] || "-";
+  }
+  if(fieldKey == "offered_semester"){
+    displayValue = READABLE_COURSE_TYPES[value] || "-";
+  }
+
   return (
-    <div
-      id="course-display-table"
-      className="flex flex-row items-center justify-center w-[90%] ml-40"
-    >
-      <CourseDisplayColumn // Left Column
-        entries={leftEntries}
-        handleInputChange={handleInputChange}
-        editMode={editMode}
-      />
-      <CourseDisplayColumn // Right Column
-        entries={rightEntries}
-        handleInputChange={handleInputChange}
-        editMode={editMode}
-      />
+    <div className="flex items-start mb-3">
+      {icon && <div className="mr-3 mt-1 text-gray-400">{icon}</div>}
+
+      <div className="w-full">
+        <p className="text-sm text-gray-500 mb-1">{label}</p>
+
+        {editMode ? (
+          type === "select" ? (
+            <select
+              className="border border-gray-300 rounded-lg p-2 w-full text-sm"
+              value={value}
+              onChange={onChange}
+            >
+              <option value="">-- Select --</option>
+              {options?.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <textarea
+              rows={multiline ? 3 : 1}
+              placeholder={placeholder}
+              className="border border-gray-300 rounded-lg p-2 w-full text-sm resize-none"
+              value={value}
+              onChange={onChange}
+
+            />
+          )
+        ) : (
+          <p className="font-semibold text-sm text-gray-900 whitespace-pre-line">
+            {displayValue ?? "-"}
+          </p>
+        )}
+      </div>
     </div>
   );
 };
 
-const CourseDisplayColumn = ({ entries, handleInputChange, editMode }) => {
-  console.log("entries: ", entries);
-  const location = useLocation();
-  const [courses, setCourses] = useState(location.state?.courses || []);
+const SkeletonHeader = () => (
+  <div className="animate-pulse bg-gradient-to-r from-blue-600 to-blue-700 p-8">
+    <div className="h-6 w-48 bg-white/30 rounded mb-3"></div>
+    <div className="h-4 w-24 bg-white/30 rounded"></div>
+  </div>
+);
 
-  return (
-    <div className="w-1/2">
-      {entries.map(([key, value]) => {
-        const field = allCourseFields.find((field) => field.key === key);
-        if (field == null) return;
-        if (key === "prerequisites") {
-          const options = courses.map((course) => ({
-            label: course.course_code + " - " + course.course_name,
-            value: course.course_code,
-          }));
-
-          return (
-            <div key={key} id={`form-field-${key}`}>
-              <SelectInputField
-                label={field.label || "Prerequisite"}
-                options={options}
-                value={value}
-                onChange={handleInputChange(key)}
-                editMode={editMode}
-              />
-            </div>
-          );
-        }
-        if (field.type === "text")
-          return (
-            <div id={`form-field-${field.key}`}>
-              <TextInputField
-                label={field.label}
-                value={value}
-                onChange={handleInputChange(key)}
-                editMode={editMode}
-              />
-            </div>
-          );
-        else if (field.type === "select")
-          return (
-            <div id={`form-field-${field.key}`}>
-              <SelectInputField
-                label={field.label}
-                options={field.options}
-                value={value}
-                onChange={handleInputChange(key)}
-                editMode={editMode}
-              />
-            </div>
-          );
-      })}
+const SkeletonField = () => (
+  <div className="flex items-start mb-3 animate-pulse">
+    <div className="mr-3 mt-1 w-5 h-5 bg-gray-300 rounded"></div>
+    <div className="w-full">
+      <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
+      <div className="h-8 w-full bg-gray-200 rounded"></div>
     </div>
-  );
-};
+  </div>
+);
+
+const SkeletonSection = () => (
+  <div className="space-y-6">
+    <div className="h-5 w-40 bg-gray-300 rounded"></div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <SkeletonField />
+      <SkeletonField />
+      <SkeletonField />
+      <SkeletonField />
+    </div>
+  </div>
+);
+
 
 export default CourseDetails;

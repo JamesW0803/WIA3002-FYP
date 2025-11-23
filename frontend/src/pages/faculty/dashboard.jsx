@@ -5,22 +5,26 @@ import Title from "../../components/Title";
 import ToolBar from "../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import { useNavigate } from "react-router-dom";
-import { STATUS_STYLES } from "../../constants/progressStatusStyle";
 import StatusBadge from "../../components/Faculty/StatusBadge";
+import { ALL_SHORT_FORMS } from "../../constants/shortForm";
 
 const Dashboard = () => {
     const navigate = useNavigate();
 
     const [students, setStudents] = useState([]);
     const [items, setItems] = useState([]);
-    // const [clickableItems, setClickableItems] = useState(["username"])
-    const [clickableItems, setClickableItems] = useState([""]) // just for bypass purpose for now
+    const [clickableItems, setClickableItems] = useState(["username", "matric_no"])
+    const short_forms = ["programme_name"]
+
+    // const [clickableItems, setClickableItems] = useState([""]) // just for bypass purpose for now
     
 
     const [searchKeywords, setSearchKeywords] = useState("");
+    const [loading, setLoading] = useState(true);
 
-    const header = ["Name", "Programme", "Intake Session" ,"Current Semester", "Expected Graduation", "Progress", "Status"]
-    const order = ["username", "programme_name", "intakeSession", "currentSemester", "expectedGraduation", "progress", "status"]
+
+    const header = ["Name", "Matric No", "Programme", "Intake Session" ,"Current Semester", "Expected Graduation", "Status"]
+    const order = ["username", "matric_no", "programme_name", "intakeSession", "currentSemester", "expectedGraduation", "status"]
     
     useEffect(() => {
         const fetchStudents = async () =>{
@@ -30,6 +34,8 @@ const Dashboard = () => {
                 setStudents(students);
             }catch(error){
                 console.error("Error fetching students.")
+            }finally {
+                setLoading(false);
             }
         }
         fetchStudents();
@@ -41,6 +47,9 @@ const Dashboard = () => {
                 Object.entries(student).map(([key, value]) => {
                     if (key === "status") {
                         value = <StatusBadge status={value.status} />;
+                    }
+                    if(short_forms.includes(key)){
+                        value = ALL_SHORT_FORMS[value] || value;
                     }
                     return {
                         key,
@@ -117,7 +126,7 @@ const Dashboard = () => {
     
     return (
         <div className="dashboard">
-            <Title>Students' Progress</Title>
+        <Title>Students' Progress</Title>
             <Divider sx={{ marginX: 5 }} />
             <ToolBar 
                 searchBar = {{
@@ -132,6 +141,7 @@ const Dashboard = () => {
                 order={order}
                 tableActionBarButton={StudentsActionBar}
                 identifier={"username"}
+                loading={loading}
                 // index={false}
             />
         </div> 

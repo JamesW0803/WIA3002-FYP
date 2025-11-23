@@ -31,7 +31,19 @@ const CourseTable = ({ courses }) => (
       <TableBody>
         {courses.map((course, index) => {
           return (
-          <TableRow key={index}>
+          <TableRow 
+            key={index}
+            sx={{
+              backgroundColor: 'white', 
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                backgroundColor: '#f5f5f5', 
+                cursor: 'pointer'
+              },
+              borderRadius: 1,
+              mb: 1
+            }}
+          >
             <TableCell>{course.course_code}</TableCell>
             <TableCell>{course.course_name}</TableCell>
             <TableCell>{course.credit_hours}</TableCell>
@@ -44,8 +56,8 @@ const CourseTable = ({ courses }) => (
   </TableContainer>
 );
 
-const CoursePlan = () => {
-  const { programmeEnrollment } = useOutletContext();
+const CoursePlan = ({ programmeEnrollment }) => {
+  // const { programmeEnrollment } = useOutletContext();
   const [ completeProgrammePlan, setCompleteProgrammePlan ] = useState({});
   
   useEffect(() => {
@@ -71,36 +83,40 @@ const CoursePlan = () => {
   }
 
   return (
-    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem' }}>
-      <Typography variant="body2" gutterBottom>
-        Reference course plan for students enrolled in {programmeEnrollment.programme_name} session {programmeEnrollment.year} {programmeEnrollment.semester}
+    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '1.5rem' }}>
+      <Typography variant="body1" gutterBottom style={{ marginBottom: "2rem"}}>
+        Default Programme Plan for {programmeEnrollment?.programme_name}  
+        {" "}session {programmeEnrollment?.year} {programmeEnrollment?.semester}
       </Typography>
 
-      {yearGroups.map((yearSemesters, yearIndex) => (
-        <Accordion key={yearIndex} defaultExpanded={yearIndex === 0}>
+      {yearGroups.map((yearItem, yearIdx) => (
+        <Accordion key={yearIdx} defaultExpanded={yearIdx === -1}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography fontWeight="bold">Year {yearIndex + 1}</Typography>
+            <Typography fontWeight="bold">{"Year " + (yearIdx+1)}</Typography>
           </AccordionSummary>
-
           <AccordionDetails>
-            {yearSemesters.map((semesterPlan, semIdx) => (
-              <div key={semesterPlan._id || semIdx} style={{ marginBottom: '1.5rem' }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Semester {semIdx + 1}
-                </Typography>
-                {semesterPlan.courses && semesterPlan.courses.length > 0 ? (
-                  <CourseTable courses={semesterPlan.courses} />
-                ) : (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    fontStyle="italic"
-                  >
-                    No courses listed
-                  </Typography>
-                )}
+            {yearItem.length > 0 ? (
+              <div 
+                style={{ 
+                  display: "flex", 
+                  gap: "2rem", 
+                  flexWrap: "wrap"  // allows wrapping on small screens
+                }}
+              >
+                {yearItem.map((semesterObj, semIdx) => (
+                  <div key={semIdx} style={{ flex: "1 1 45%" }}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      {"Semester " + (semIdx + 1)}
+                    </Typography>
+                    <CourseTable courses={semesterObj.courses}/>
+                  </div>
+                  ))}
               </div>
-            ))}
+              ) : (
+                <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                  No semesters listed
+                </Typography>
+              )}
           </AccordionDetails>
         </Accordion>
       ))}
