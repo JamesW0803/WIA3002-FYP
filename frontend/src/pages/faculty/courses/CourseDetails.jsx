@@ -6,7 +6,7 @@ import {
   X,
 } from "lucide-react";
 
-import CourseHeader from "../../../components/Faculty/Courses/CourseHeader";
+import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
 import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 
@@ -142,7 +142,7 @@ const CourseDetails = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-12">
       <div className="max-w-6xl mx-auto space-y-6">
-        <CourseHeader handleBack={handleBack} />
+        <GeneralCardHeader handleBack={handleBack} title={"Back to Courses"} />
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
 

@@ -1,7 +1,7 @@
 import { ChevronLeft } from "lucide-react";
 
 
-const CourseHeader = ({ handleBack }) => {
+const GeneralCardHeader = ({ title , handleBack }) => {
     return (
         <div className="flex items-center justify-between">
           <button 
@@ -9,10 +9,10 @@ const CourseHeader = ({ handleBack }) => {
             onClick={handleBack}
             >
             <ChevronLeft className="w-5 h-5" />
-            <span className="font-semibold">Back to Courses</span>
+            <span className="font-semibold">{title}</span>
           </button>
         </div>
     )
 }
 
-export default CourseHeader;
+export default GeneralCardHeader;
