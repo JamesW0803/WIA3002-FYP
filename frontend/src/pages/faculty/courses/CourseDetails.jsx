@@ -13,11 +13,12 @@ import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import PrerequisitesSession from "../../../components/Faculty/Courses/PrerequisitesSession";
 import FormDialog from "../../../components/dialog/FormDialog"
 
-const CourseDetails = ({ addCourse = false}) => {
+const CourseDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
   const course_code = location.state.course_code;
+  const addCourse = location.state?.addCourse || false;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
   const [openDialog, setOpenDialog] = useState(false);
@@ -121,7 +122,9 @@ const CourseDetails = ({ addCourse = false}) => {
     } catch (err) {
       console.error(err);
       // show notification
-      navigate("/admin/courses")
+      if(addCourse){
+        navigate("/admin/courses")
+      }
     }finally{
       setEditMode(false);
     }
@@ -187,7 +190,7 @@ const CourseDetails = ({ addCourse = false}) => {
                 <div>
                     <h1 className="text-3xl font-bold">{formData.course_name || "--Add New Course--"}</h1>
                     <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
-                        {formData.course_code || "new course code"}
+                        {formData.course_code || "new_course_code"}
                     </div>
                 </div>
                 <div className="flex gap-2 mt-4 md:mt-0">
