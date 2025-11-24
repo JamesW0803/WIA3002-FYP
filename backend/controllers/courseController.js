@@ -146,10 +146,10 @@ const deleteCourseByCode = async (req, res) => {
 const editCourse = async (req, res) => {
   const { course_code } = req.params;
   const updatedData = req.body;
-  const prereqCourses = []
+  const prereqCourses = [];
 
   try {
-    for(const code of updatedData.prerequisites){
+    for (const code of updatedData.prerequisites) {
       const prereqCourse = await Course.findOne({
         course_code: code,
       });
