@@ -16,6 +16,7 @@ const ProgrammeEnrollmentDetails = () => {
   const { programme_intake_code } = useParams();
 
   const addProgrammeIntake = location.state?.addProgrammeIntake || false;
+  const [originalFormData, setOriginalFormData] = useState({});
   const [ editMode, setEditMode] = useState(location.state?.editMode || false);
   const [ formData, setFormData] = useState({});
   const [ graduationRequirements, setGraduationRequirements] = useState([]);
@@ -36,6 +37,7 @@ const ProgrammeEnrollmentDetails = () => {
           updatedAt: formatDateToLocaleString(res.data.updatedAt),
         };
         setFormData(data);
+        setOriginalFormData(data)
         setGraduationRequirements(data.graduation_requirements || []);
       } catch (err) {
         console.error(err);
@@ -158,7 +160,11 @@ const ProgrammeEnrollmentDetails = () => {
 
   const handleBack = () => navigate("/admin/programme-intakes");
 
-  const handleCancel = () => setEditMode(false);
+  const handleCancel = () => {
+    setFormData(originalFormData); // restore original data
+    setGraduationRequirements(originalFormData.graduation_requirements || []);
+    setEditMode(false);
+  }
 
   const handleEdit = () => setEditMode(true);
 
@@ -167,7 +173,14 @@ const ProgrammeEnrollmentDetails = () => {
       if(!addProgrammeIntake){
         const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
         setEditMode(false);
-        setFormData(res.data)
+        const data = {
+          ...res.data,
+          createdAt: formatDateToLocaleString(res.data.createdAt),
+          updatedAt: formatDateToLocaleString(res.data.updatedAt),
+        };
+        setFormData(data)
+        setOriginalFormData(data)
+        setGraduationRequirements(data.graduation_requirements || []);
       }else{
         // const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
         // setEditMode(false);
@@ -196,6 +209,14 @@ const ProgrammeEnrollmentDetails = () => {
   const handleInputChange = (key) => (e) => {
     setFormData((prev) => ({ ...prev, [key]: e.target.value }));
   };
+
+  const handleGraduationRequirementsOnChange = (updatedRequirements) => {
+    setFormData(prev => ({
+      ...prev,
+      graduation_requirements: updatedRequirements
+    }));
+    setGraduationRequirements(updatedRequirements); // if you still need local state
+  }
 
   const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
@@ -337,7 +358,7 @@ const ProgrammeEnrollmentDetails = () => {
               {/* TAB CONTENT */}
               <div className="p-8">
                 {activeTab === "graduation-requirement" && (
-                  <GraduationRequirement graduationRequirements={graduationRequirements} />
+                  <GraduationRequirement graduationRequirements={graduationRequirements} editMode={editMode} onChange={handleGraduationRequirementsOnChange}/>
                 )}
                 {activeTab === "course-plan" && (
                   <CoursePlan programmeEnrollment={formData} />
