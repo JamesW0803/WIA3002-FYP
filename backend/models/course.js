@@ -32,6 +32,21 @@ const courseSchema = new mongoose.Schema(
         ref: "Course",
       },
     ],
+    prerequisitesByProgramme: [
+      {
+        programme: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Programme",
+          required: true,
+        },
+        prerequisites: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Course",
+          },
+        ],
+      },
+    ],
     faculty: {
       type: String,
       default: "Faculty of Computer Science and Information Technology",

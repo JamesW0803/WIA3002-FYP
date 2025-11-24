@@ -1,3 +1,4 @@
+// CourseEditor.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import CourseListSelector from "./CourseListSelector";
 import CourseStatusSelector from "./CourseStatusSelector";
@@ -188,6 +189,12 @@ const CourseEditor = (props) => {
     );
   };
 
+  // --- single flag for "prerequisites not met for this non-retake" ---
+  const prereqsNotMet =
+    prerequisiteCheck.hasPrerequisites &&
+    !editingEntry?.isRetake &&
+    !prerequisiteCheck.allPrerequisitesMet;
+
   const handleSave = async () => {
     if (!isOffered) {
       showNotification(
@@ -222,7 +229,7 @@ const CourseEditor = (props) => {
     }
 
     const unmet = getUnmetLocalPrereqs();
-    if (unmet.length > 0) {
+    if (!editingEntry.isRetake && unmet.length > 0) {
       showNotification(
         `Cannot add ${editingEntry.code}. Missing prerequisites: ${unmet.join(
           ", "
@@ -232,7 +239,7 @@ const CourseEditor = (props) => {
       return;
     }
 
-    if (hasSameSemesterPrerequisites()) {
+    if (!editingEntry.isRetake && hasSameSemesterPrerequisites()) {
       showNotification(
         `Cannot add ${editingEntry.code}. Some prerequisites are in the same semester. 
       Prerequisites must be completed in earlier semesters.`,
@@ -364,10 +371,16 @@ const CourseEditor = (props) => {
             disabledCodes={disabledCourseCodes}
             targetSemester={semester}
             allowRetake={!!editingEntry?.isRetake}
+            blockedCode={prereqsNotMet ? editingEntry.code : null}
           />
         </div>
 
-        <div className="relative z-20">
+        {/* Status – block interaction when prereqs not met */}
+        <div
+          className={`relative z-20 ${
+            prereqsNotMet ? "opacity-50 pointer-events-none" : ""
+          }`}
+        >
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Status
           </label>
@@ -389,9 +402,14 @@ const CourseEditor = (props) => {
           />
         </div>
 
+        {/* Grade – also blocked when prereqs not met */}
         {(editingEntry.status === "Passed" ||
           editingEntry.status === "Failed") && (
-          <div>
+          <div
+            className={`${
+              prereqsNotMet ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Grade
             </label>
@@ -413,8 +431,7 @@ const CourseEditor = (props) => {
               (isFutureSemester(editingEntry.year, editingEntry.semester) &&
                 editingEntry.status !== "Planned") ||
               !isOffered ||
-              (!editingEntry.isRetake &&
-                !prerequisiteCheck.allPrerequisitesMet) ||
+              prereqsNotMet ||
               isCheckingPrerequisites ||
               !editingEntry.code ||
               isCourseAlreadyAdded(editingEntry.code, editingEntry?.id) ||
@@ -422,11 +439,11 @@ const CourseEditor = (props) => {
               ((editingEntry.status === "Passed" ||
                 editingEntry.status === "Failed") &&
                 !editingEntry.grade) ||
-              getUnmetLocalPrereqs().length > 0 ||
+              (!editingEntry.isRetake && getUnmetLocalPrereqs().length > 0) ||
               (!editingEntry.isRetake && hasSameSemesterPrerequisites())
             }
             className={`px-4 py-2 rounded-md flex-1 border transition-colors ${
-              prerequisiteCheck.allPrerequisitesMet &&
+              !prereqsNotMet &&
               !isCheckingPrerequisites &&
               editingEntry.code &&
               editingEntry.status &&
@@ -451,12 +468,24 @@ const CourseEditor = (props) => {
 
       {/* Alerts below the grid, with wider max width on larger screens */}
       <div className="mt-3 lg:max-w-md">
+        {prereqsNotMet && (
+          <AlertBox variant="error" title="Prerequisites not met">
+            You have not yet completed all required prerequisite courses for{" "}
+            <strong>{editingEntry.code}</strong>. Missing:{" "}
+            {prerequisiteCheck.unmetPrerequisites.length > 0
+              ? prerequisiteCheck.unmetPrerequisites.join(", ")
+              : "one or more required courses"}
+            .
+          </AlertBox>
+        )}
+
         {editingEntry.code && hasPriorExcellentGrade(editingEntry.code) && (
           <AlertBox variant="error" title="Retake Not Allowed">
             You previously achieved grade <strong>A</strong> or{" "}
             <strong>A+</strong> for this course. Retakes are disabled for A/A+.
           </AlertBox>
         )}
+
         {isCourseAlreadyAdded(editingEntry.code, editingEntry?.id) && (
           <AlertBox variant="error" title="Duplicate in This Semester">
             This course is already added in{" "}

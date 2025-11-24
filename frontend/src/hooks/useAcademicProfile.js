@@ -549,8 +549,13 @@ export const useAcademicProfile = () => {
 
     if (!isRetake) {
       const prerequisiteCheck = await checkCoursePrerequisites(
-        editingEntry.code
+        editingEntry.code,
+        {
+          year: editingEntry.year,
+          semester: editingEntry.semester,
+        }
       );
+
       if (!prerequisiteCheck.allPrerequisitesMet) {
         showNotification(
           `Cannot add ${
@@ -1132,19 +1137,30 @@ export const useAcademicProfile = () => {
     return grouped;
   }, [entries]);
 
-  const checkCoursePrerequisites = async (courseCode) => {
+  const checkCoursePrerequisites = async (
+    courseCode,
+    { year, semester } = {}
+  ) => {
     try {
       const userId = getUserIdFromStorage();
+
       const response = await axiosClient.get(
-        `/courses/${courseCode}/check-prerequisites/${userId}`
+        `/courses/${courseCode}/check-prerequisites/${userId}`,
+        {
+          params: { year, semester },
+        }
       );
+
       return response.data;
     } catch (error) {
       console.error("Prerequisite check failed:", error);
+
+      // IMPORTANT CHANGE: fall back to "ok" so we don't block saves
       return {
         hasPrerequisites: false,
         unmetPrerequisites: [],
         allPrerequisitesMet: true,
+        requiredCourses: [],
       };
     }
   };

@@ -186,53 +186,90 @@ const checkCoursePrerequisites = async (req, res) => {
     const { courseCode, studentId } = req.params;
     const { year, semester } = req.query;
 
-    // 1. Get the course with prerequisites
-    const course = await Course.findOne({ course_code: courseCode }).populate({
-      path: "prerequisites",
-      select: "course_code course_name",
-    });
+    // 1. Get course with all prerequisite info
+    const course = await Course.findOne({ course_code: courseCode })
+      .populate("prerequisites", "course_code course_name")
+      .populate(
+        "prerequisitesByProgramme.prerequisites",
+        "course_code course_name"
+      );
 
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // 2. Get student's academic profile
-    const profile = await AcademicProfile.findOne({
-      student: studentId,
-    }).populate("entries.course");
+    // 2. Get student's academic profile + student + student's programme
+    const profile = await AcademicProfile.findOne({ student: studentId })
+      .populate({
+        path: "student",
+        populate: {
+          path: "programme", // Student.programme -> Programme doc
+          model: "Programme",
+        },
+      })
+      .populate("entries.course");
 
-    const isRetake = profile?.entries?.some(
+    if (!profile) {
+      return res.status(404).json({ message: "Academic profile not found" });
+    }
+
+    const studentProgrammeId = profile.student?.programme?._id;
+
+    // 3. Choose applicable prerequisites
+    let applicablePrereqs = [];
+
+    if (studentProgrammeId) {
+      const programmeConfig = (course.prerequisitesByProgramme || []).find(
+        (p) => p.programme.toString() === studentProgrammeId.toString()
+      );
+
+      if (programmeConfig) {
+        // use programme-specific prerequisites
+        applicablePrereqs = programmeConfig.prerequisites || [];
+      } else {
+        // fall back to global prerequisites
+        applicablePrereqs = course.prerequisites || [];
+      }
+    } else {
+      // no programme on student → fallback to global
+      applicablePrereqs = course.prerequisites || [];
+    }
+
+    // 4. Retake: if student already failed this course, allow without prereq check
+    const isRetake = profile.entries?.some(
       (entry) =>
         entry.course.course_code === courseCode && entry.status === "Failed"
     );
 
     if (isRetake) {
       return res.status(200).json({
-        hasPrerequisites: course.prerequisites.length > 0,
+        hasPrerequisites: applicablePrereqs.length > 0,
         unmetPrerequisites: [],
         allPrerequisitesMet: true,
-        requiredCourses: course.prerequisites.map((p) => p.course_code),
+        requiredCourses: applicablePrereqs.map((p) => p.course_code),
       });
     }
 
-    // 3. Check prerequisites
-    const unmetPrerequisites = (course.prerequisites || []).filter((prereq) => {
-      return !profile?.entries?.some(
-        (entry) =>
-          entry.status === "Passed" &&
-          entry.course.course_code === prereq.course_code &&
-          (year
-            ? entry.year < year ||
-              (entry.year === year && entry.semester < semester)
-            : true)
-      );
+    // 5. Check which prerequisites are unmet
+    const unmetPrerequisites = (applicablePrereqs || []).filter((prereq) => {
+      return !profile.entries?.some((entry) => {
+        const passed = entry.status === "Passed";
+        const sameCourse = entry.course.course_code === prereq.course_code;
+
+        const beforeCurrentSem = year
+          ? entry.year < year ||
+            (entry.year === year && entry.semester < semester)
+          : true;
+
+        return passed && sameCourse && beforeCurrentSem;
+      });
     });
 
     res.status(200).json({
-      hasPrerequisites: course.prerequisites.length > 0,
+      hasPrerequisites: applicablePrereqs.length > 0,
       unmetPrerequisites: unmetPrerequisites.map((p) => p.course_code),
       allPrerequisitesMet: unmetPrerequisites.length === 0,
-      requiredCourses: course.prerequisites,
+      requiredCourses: applicablePrereqs.map((p) => p.course_code),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

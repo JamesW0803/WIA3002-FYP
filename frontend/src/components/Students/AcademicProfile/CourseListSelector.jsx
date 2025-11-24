@@ -8,6 +8,7 @@ const CourseListSelector = ({
   disabledCodes = [],
   targetSemester,
   allowRetake = false,
+  blockedCode = null,
 }) => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -78,19 +79,33 @@ const CourseListSelector = ({
   const isOfferedIn = (offeredArr = [], semNum) => {
     if (!semNum) return true;
     const norm = offeredArr.map((s) => String(s).toLowerCase());
-    return (
+
+    if (
       norm.includes(`semester ${semNum}`) ||
       norm.includes("both") ||
       norm.includes("all") ||
       norm.includes("any")
-    );
+    ) {
+      return true;
+    }
+
+    // handle "semester 1 & 2" style strings gracefully
+    return norm.some((s) => {
+      if (!s.startsWith("semester")) return false;
+      // extract numbers from the string
+      const nums = s.match(/\d+/g) || [];
+      return nums.includes(String(semNum));
+    });
   };
 
   const renderCourseItem = (course) => {
     const notOffered =
       targetSemester && !isOfferedIn(course.offered_semester, targetSemester);
+    const prereqBlocked = blockedCode && course.code === blockedCode;
     const isDisabled =
-      (!allowRetake && disabledCodes.includes(course.code)) || notOffered;
+      (!allowRetake && disabledCodes.includes(course.code)) ||
+      notOffered ||
+      prereqBlocked;
     const hasPrerequisites =
       course.prerequisites && course.prerequisites.length > 0;
 
@@ -126,6 +141,11 @@ const CourseListSelector = ({
             {notOffered && (
               <div className="text-xs text-red-500 mt-1 font-medium">
                 Not offered in Semester {targetSemester}
+              </div>
+            )}
+            {prereqBlocked && (
+              <div className="text-xs text-red-500 mt-1 font-medium">
+                Prerequisites not yet fulfilled
               </div>
             )}
             {!allowRetake && disabledCodes.includes(course.code) && (

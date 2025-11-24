@@ -102,10 +102,30 @@ const CourseDetails = () => {
 
   const handleSave = async () => {
     try {
+      // normalize offered_semester just like AddCourse
+      let offered_semester = formData.offered_semester;
+
+      if (!Array.isArray(offered_semester)) {
+        if (offered_semester === "Semester 1 & 2") {
+          offered_semester = ["Semester 1", "Semester 2"];
+        } else if (offered_semester) {
+          offered_semester = [offered_semester];
+        } else {
+          offered_semester = [];
+        }
+      } else {
+        offered_semester = offered_semester.flatMap((sem) => {
+          if (sem === "Semester 1 & 2") return ["Semester 1", "Semester 2"];
+          return [sem];
+        });
+      }
+
       const payload = {
         ...formData,
+        offered_semester,
         prerequisites: formData.prerequisites ? formData.prerequisites : [],
       };
+
       if (!addCourse) {
         await axiosClient.put(`/courses/${formData.course_code}`, payload);
       } else {
@@ -121,7 +141,6 @@ const CourseDetails = () => {
       }
     } catch (err) {
       console.error(err);
-      // show notification
       if (addCourse) {
         navigate("/admin/courses");
       }
