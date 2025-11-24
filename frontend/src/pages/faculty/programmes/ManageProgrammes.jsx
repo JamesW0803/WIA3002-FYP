@@ -108,7 +108,7 @@ const ManageProgrammes = () => {
     }
 
     const handleButtonAddProgrammeOnClick = () => {
-        setOpenModal(true)
+        navigate("/admin/programmes/add-programme" , { state : { addProgramme : true}});
     }
 
     const handleSaveNewProgramme = async() => {

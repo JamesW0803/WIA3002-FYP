@@ -3,16 +3,19 @@ import { useState, useEffect } from "react";
 import axiosClient from "../../../api/axiosClient";
 import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import { programmeFormFields } from "../../../constants/programmeFormConfig";
-import { Edit2, Save, X } from "lucide-react";
+import { Edit2, Save, X, Trash } from "lucide-react";
+import FormDialog from "../../../components/dialog/FormDialog"
 
 const ProgrammeDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const programme_code = location.state.programme_code;
+  const programme_code = location.state?.programme_code;
+  const addProgramme = location.state?.addProgramme || false;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
 
   // Load programme details
   useEffect(() => {
@@ -22,26 +25,75 @@ const ProgrammeDetails = () => {
         setFormData(res.data);
       } catch (err) {
         console.error(err);
-      }finally{
-        setLoading(false)
       }
     };
-    fetchProgramme();
+
+    const run = async () => {
+      try {
+        if (!addProgramme) {
+          await fetchProgramme();
+        } else {
+          setEditMode(true);
+          setFormData({
+            programme_name : "",
+            programme_code : "",
+            description : "",
+            faculty : "",
+            department : ""
+          })
+        }
+
+      } finally {
+        setLoading(false);
+      }
+    }
+    run();
+
   }, [programme_code]);
 
   // Handlers
   const handleBack = () => navigate("/admin/programmes");
-  const handleCancel = () => setEditMode(false);
+
+  const handleCancel = () => {
+    if(addProgramme){
+      navigate("/admin/programmes")
+    }
+    setEditMode(false);
+  }
+
   const handleEdit = () => setEditMode(true);
 
   const handleSave = async () => {
     try {
-      const res = await axiosClient.put(`/programmes/${formData.programme_code}`, formData);
-      setFormData(res.data);
-      setEditMode(false);
-      console.log("Programme updated successfully");
+      if(!addProgramme){
+        const res = await axiosClient.put(`/programmes/${formData.programme_code}`, formData);
+        setFormData(res.data);
+      }else{
+        const res = await axiosClient.post(`/programmes`, formData);
+        const savedCProgramme = res.data;
+        navigate(`/admin/programmes/${savedCProgramme.programme_code}`, { state : { programme_code : savedCProgramme.programme_code , editMode : false}})
+      }
     } catch (err) {
       console.error(err);
+      if(addProgramme){
+        navigate("/admin/programmes")
+      }
+    }finally{
+      setEditMode(false);
+    }
+  };
+
+  const handleDelete = () => {
+    setOpenDialog(true);
+  }
+
+  const confirmDeleteProgramme = async () => {
+    try {
+        await axiosClient.delete(`/programmes/${formData.programme_code}`);
+    } catch (error) {
+        console.error("Error deleting programme:", error);
+    } finally {
+        navigate("/admin/programmes")
     }
   };
 
@@ -69,9 +121,9 @@ const ProgrammeDetails = () => {
               {/* Header */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
                 <div>
-                  <h1 className="text-3xl font-bold">{formData.programme_name || "-"}</h1>
+                  <h1 className="text-3xl font-bold">{formData.programme_name || "--Add New Programme--"}</h1>
                   <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2">
-                    {formData.programme_code || "-"}
+                    {formData.programme_code || "new_programme_code"}
                   </div>
                 </div>
 
@@ -92,15 +144,36 @@ const ProgrammeDetails = () => {
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={handleEdit}
-                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                    >
-                      <Edit2 size={16} /> Edit
-                    </button>
+                    <>
+                      <button
+                        onClick={handleEdit}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <Edit2 size={16} /> Edit
+                      </button>
+                      {!addProgramme && (
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                        >
+                          <Trash size={16} /> Delete
+                        </button>
+                      )}
+                    </>
+
                   )}
                 </div>
               </div>
+
+              <FormDialog
+                open={openDialog}
+                onClose={() => setOpenDialog(false)}
+                onConfirm={confirmDeleteProgramme}
+                title="Delete Programme"
+                content={`Are you sure you want to delete programme ${formData.programme_name} with code "${formData.programme_code}"?`}
+                confirmText="Delete"
+                cancelText="Cancel"
+              />
 
               {/* Content */}
               <div className="p-8 space-y-12 bg-white">

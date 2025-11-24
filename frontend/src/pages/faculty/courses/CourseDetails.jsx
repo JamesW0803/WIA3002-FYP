@@ -4,20 +4,24 @@ import {
   Edit2,
   Save,
   X,
+  Trash 
 } from "lucide-react";
-
 import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
 import { formSessions } from "../../../constants/courseFormConfig";
 import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
+import PrerequisitesSession from "../../../components/Faculty/Courses/PrerequisitesSession";
+import FormDialog from "../../../components/dialog/FormDialog"
 
 const CourseDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
   const course_code = location.state.course_code;
+  const addCourse = location.state?.addCourse || false;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
+  const [openDialog, setOpenDialog] = useState(false);
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +31,8 @@ const CourseDetails = () => {
       try {
         const res = await axiosClient.get(`/courses/${course_code}`);
         const course = res.data;
-
+        course.prerequisites = course.prerequisites.map((prerequisiteCourse) => prerequisiteCourse.course_code)
         setFormData(course);
-        console.log("course", course);
       } catch (err) {
         console.error(err);
       }
@@ -44,15 +47,62 @@ const CourseDetails = () => {
       }
     };
 
-    Promise.all([fetchCourse(), fetchAllCourses()]).finally(() => {
-      setLoading(false);
-    });
+    const run = async () => {
+      try {
+        if (!addCourse) {
+          // Only fetch course if NOT adding a new one
+          await fetchCourse();
+        } else {
+          // If adding new course, initialize empty form
+          setEditMode(true);
+          setFormData({
+            course_code: "",
+            course_name: "",
+            type: "",
+            credit_hours: "",
+            offered_semester: [],
+            prerequisites: [],
+            description: "",
+            study_level: "",
+            department: "",
+            faculty: "",
+          });
+        }
+
+        // Always fetch available courses (for prerequisites)
+        await fetchAllCourses();
+      } finally {
+        setLoading(false);
+      }
+    }
+    run();
 
   }, [course_code]);
 
   const handleBack = () => navigate("/admin/courses");
-  const handleCancel = () => setEditMode(false);
+
+  const handleCancel = () => {
+    if(addCourse){
+      navigate("/admin/courses")
+    }
+    setEditMode(false)
+  };
+
   const handleEdit = () => setEditMode(true);
+
+  const handleDelete = () => {
+    setOpenDialog(true);
+  }
+
+  const confirmDeleteCourse = async () => {
+    try {
+        await axiosClient.delete(`/courses/${formData.course_code}`);
+    } catch (error) {
+        console.error("Error deleting course:", error);
+    } finally {
+        navigate("/admin/courses")
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -62,10 +112,19 @@ const CourseDetails = () => {
           ? formData.prerequisites
           : [],
       };
-      
-      await axiosClient.put(`/courses/${formData.course_code}`, payload);
+      if(!addCourse){
+        await axiosClient.put(`/courses/${formData.course_code}`, payload);
+      }else{
+        const res = await axiosClient.post(`/courses`, payload);
+        const savedCourse = res.data;
+        navigate(`/admin/courses/${savedCourse.course_code}`, { state : { course_code : savedCourse.course_code , editMode : false , courses}})
+      }
     } catch (err) {
       console.error(err);
+      // show notification
+      if(addCourse){
+        navigate("/admin/courses")
+      }
     }finally{
       setEditMode(false);
     }
@@ -78,21 +137,7 @@ const CourseDetails = () => {
     }));
   };
 
-  const processedSessions = formSessions.map((session) => ({
-    ...session,
-    fields: session.fields.map((f) => {
-      if (f.key === "prerequisites") {
-        return {
-          ...f,
-          options: courses.map((c) => ({
-            label: `${c.course_code} - ${c.course_name}`,
-            value: c.course_code,
-          })),
-        };
-      }
-      return f;
-    }),
-  }));
+  const processedSessions = formSessions.filter((session) => session.title !== "Prerequisites")
 
   const renderField = (field) => {
     const {
@@ -143,9 +188,9 @@ const CourseDetails = () => {
               {/* ORIGINAL HEADER BAR */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">{formData.course_name || "-"}</h1>
+                    <h1 className="text-3xl font-bold">{formData.course_name || "--Add New Course--"}</h1>
                     <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
-                        {formData.course_code || "-"}
+                        {formData.course_code || "new_course_code"}
                     </div>
                 </div>
                 <div className="flex gap-2 mt-4 md:mt-0">
@@ -165,15 +210,36 @@ const CourseDetails = () => {
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={handleEdit}
-                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                    >
-                      <Edit2 size={16} /> Edit
-                    </button>
+                    <>
+                      <button
+                        onClick={handleEdit}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <Edit2 size={16} /> Edit
+                      </button>
+                      {!addCourse && (
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                        >
+                          <Trash size={16} /> Delete
+                        </button>
+                      )}
+                    </>
+                    
                   )}
                 </div>
               </div>
+
+              <FormDialog
+                open={openDialog}
+                onClose={() => setOpenDialog(false)}
+                onConfirm={confirmDeleteCourse}
+                title="Delete Course"
+                content={`Are you sure you want to delete course ${formData.course_name} with code "${formData.course_code}"?`}
+                confirmText="Delete"
+                cancelText="Cancel"
+              />
 
               {/* ORIGINAL CONTENT */}
               <div className="p-8 space-y-12 bg-white">
@@ -188,6 +254,7 @@ const CourseDetails = () => {
                     </div>
                   </div>
                 ))}
+                <PrerequisitesSession courses={courses} formData={formData} setFormData={setFormData} editMode={editMode}/>
               </div>
             </>
           )}
@@ -215,8 +282,8 @@ const CourseInfoField = ({
   if(fieldKey == "type"){
     displayValue = READABLE_COURSE_TYPES[value] || "-";
   }
-  if(fieldKey == "offered_semester"){
-    displayValue = READABLE_COURSE_TYPES[value] || "-";
+  if(fieldKey == "offered_semester" && Array.isArray(value)){
+    displayValue = value.length > 0 ? value.join(", ") : "-";
   }
 
   return (
@@ -259,6 +326,8 @@ const CourseInfoField = ({
     </div>
   );
 };
+
+
 
 const SkeletonHeader = () => (
   <div className="animate-pulse bg-gradient-to-r from-blue-600 to-blue-700 p-8">

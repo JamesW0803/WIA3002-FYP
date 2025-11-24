@@ -11,6 +11,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { MessageSquare } from "lucide-react";
 import MessageModal from "./MessageModal"; // ⭐ you'll create this next
+import CourseStatusBadge from '../../constants/courseStatusStyle';
 
 const CourseTable = ({ courses , plan=false }) => (
   <TableContainer 
@@ -41,7 +42,7 @@ const CourseTable = ({ courses , plan=false }) => (
               <TableCell>{course.course_name}</TableCell>
               <TableCell>{course.credit_hours}</TableCell>
               {plan && <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>}
-              {!plan && <TableCell>{courseObj.status}</TableCell>}
+              {!plan && <TableCell><CourseStatusBadge status={courseObj.status}/></TableCell>}
               {!plan && <TableCell>{courseObj.grade}</TableCell>}
             </TableRow>
           );

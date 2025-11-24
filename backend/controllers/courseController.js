@@ -146,20 +146,23 @@ const deleteCourseByCode = async (req, res) => {
 const editCourse = async (req, res) => {
   const { course_code } = req.params;
   const updatedData = req.body;
+  const prereqCourses = []
 
   try {
-    if (updatedData.prerequisites.length > 0) {
+    for(const code of updatedData.prerequisites){
       const prereqCourse = await Course.findOne({
-        course_code: updatedData.prerequisites[0],
+        course_code: code,
       });
+
       if (!prereqCourse) {
         return res
           .status(400)
           .json({ message: "Invalid prerequisite course code" });
       }
-      updatedData.prerequisites = [prereqCourse._id];
+      prereqCourses.push(prereqCourse._id);
     }
 
+    updatedData.prerequisites = prereqCourses;
     const updatedCourse = await Course.findOneAndUpdate(
       { course_code }, // filter
       updatedData, // updated fields

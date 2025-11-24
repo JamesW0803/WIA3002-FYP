@@ -175,6 +175,14 @@ function App() {
               }
             />
             <Route
+              path="programmes/add-programme"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ProgrammeDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="programme-intakes"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
@@ -236,7 +244,7 @@ function App() {
               path="courses/add-course"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <AddCourse />
+                  <CourseDetails />
                 </ProtectedRoute>
               }
             />
