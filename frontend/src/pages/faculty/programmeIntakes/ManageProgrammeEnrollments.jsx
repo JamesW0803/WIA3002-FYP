@@ -102,7 +102,7 @@ const ManageProgrammeEnrollment = () => {
     }
 
     const handleButtonAddProgrammeEnrollmentOnClick = () => {
-        navigate(`/admin/programme-intakes/add-programme-intake`, { state : { programmeEnrollments }})
+        navigate(`/admin/programme-intakes/add-programme-intake`, { state : { programmeEnrollments , addProgrammeIntake : true} })
     }
 
     const handleDeleteButtonOnClick = (programme_intake_code) => {

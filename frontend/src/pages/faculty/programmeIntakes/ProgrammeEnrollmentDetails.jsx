@@ -90,6 +90,32 @@ const ProgrammeEnrollmentDetails = () => {
       try{
         if (!addProgrammeIntake) {
           await fetchProgrammeEnrollment();
+        }else{
+          setEditMode(true)
+          setFormData({
+            _id: "",
+            programme_intake_code: "",
+            programme_name: "",
+            academic_session_id: "",
+            academic_session: null,
+            year: "",
+            semester: "",
+            department: "",
+            faculty: "",
+            min_semester: "",
+            max_semester: "",
+            number_of_students_enrolled: "",
+            number_of_students_graduated: "",
+            graduation_rate: "",
+            total_credit_hours: "",
+            createdAt: "",
+            updatedAt: "",
+            programme_id: "",
+            programme_code: "",
+            graduation_requirements: [],
+            programme_plan: []
+          });
+
         }
 
         await fetchProgrammes();
@@ -110,6 +136,9 @@ const ProgrammeEnrollmentDetails = () => {
     const { programme_name, year, semester } = formData;
 
     const programme = programmes.find(programme => programme.programme_name == formData.programme_name)
+    setFormData(prev => ({ ...prev, department: programme.department }));
+    setFormData(prev => ({ ...prev, faculty: programme.faculty }));
+
 
     if (programme_name && year && semester) {
       const code = generateProgrammeIntakeCode(programme, year, semester);
@@ -135,9 +164,16 @@ const ProgrammeEnrollmentDetails = () => {
 
   const handleSave = async () => {
     try {
-      const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
-      setEditMode(false);
-      setFormData(res.data)
+      if(!addProgrammeIntake){
+        const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
+        setEditMode(false);
+        setFormData(res.data)
+      }else{
+        // const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
+        // setEditMode(false);
+        // setFormData(res.data)
+      }
+
     } catch (err) {
       console.error("Error saving programme enrollment:", err);
     }

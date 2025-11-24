@@ -37,29 +37,19 @@ export const programmeIntakeFormFields = [
     options: [], // fill dynamically
     placeholder: "Select intake session",
   },
-//   {
-//     type: "select",
-//     key: "semester",
-//     label: "Enrollment Semester",
-//     icon: Calendar,
-//     options: [],
-//     placeholder: "Select semester",
-//   },
   {
-    type: "select",
+    type: "text",
     key: "department",
     label: "Department",
     icon: Building,
-    options: DEPARTMENTS.map((department) => ({ label: department, value: department })),
-    placeholder: "Select department",
+    readonly: true, 
   },
   {
-    type: "select",
+    type: "text",
     key: "faculty",
     label: "Faculty",
     icon: Building,
-    options: faculties.map((faculty) => ({ label: faculty, value: faculty })),
-    placeholder: "Select faculty",
+    readonly: true,
   },
   {
     type: "select",
