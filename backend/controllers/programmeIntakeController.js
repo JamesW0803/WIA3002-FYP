@@ -511,6 +511,52 @@ const getProgrammePlanMappingByCode = async (req, res) => {
   }
 };
 
+const editProgrammeIntake = async (req, res) => {
+  const { programme_intake_id } = req.params;
+  const updatedData = req.body;
+
+  try {
+    const academicSession = await AcademicSession.findById(updatedData.academic_session_id)
+    const programme = await Programme.findOne({
+      programme_name : updatedData.programme_name
+    })
+
+    if(!programme){
+      return res.status(404).json({ message: "Invalid programme name" });
+    }
+
+    if(!academicSession){
+      return res.status(404).json({ message: "Invalid academic session" });
+    }
+
+    updatedData.programme_id = programme._id
+    
+    const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(
+      programme_intake_id, // filter
+      updatedData, // updated fields
+      { new: true } // return updated document
+    ).populate("programme_id")
+      .populate("academic_session_id")
+      .populate({
+        path: "programme_plan",
+        populate: {
+          path: "semester_plans",
+          populate: [{ path: "courses" }, { path: "academic_session_id" }],
+        },
+    });;
+
+    if (!updatedProgrammeIntake) {
+      return res.status(404).json({ message: "Programme intake not exist" });
+    }
+
+    res.status(200).json(formatProgrammeIntake(updatedProgrammeIntake));
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Failed to update programme intake", details: err.message });
+  }
+};
+
 module.exports = {
   getAllProgrammeIntakes,
   addProgrammeIntake,
@@ -520,4 +566,5 @@ module.exports = {
   updateProgrammeIntake,
   getGraduationRequirementsForStudent,
   getProgrammePlanMappingByCode,
+  editProgrammeIntake
 };

@@ -1,29 +1,31 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Edit2, Save, X } from "lucide-react";
-
+import { Edit2, Save, X, Trash } from "lucide-react";
 import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
 import { programmeIntakeFormFields } from "../../../constants/programmeIntakeFormConfig";
 import { formatDateToLocaleString } from "../../../utils/dateFormatter";
-
 import GraduationRequirement from "../../../components/Faculty/GraduationRequirement";
 import CoursePlan from "../../../components/Faculty/CoursePlan";
+import FormDialog from "../../../components/dialog/FormDialog"
+import { generateProgrammeIntakeCode } from "../../../utils/programmeIntakeCodeGenerator";
 
 const ProgrammeEnrollmentDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { programme_intake_code } = useParams();
 
-  const [editMode, setEditMode] = useState(location.state?.editMode || false);
-  const [formData, setFormData] = useState({});
-  const [graduationRequirements, setGraduationRequirements] = useState([]);
-  const [activeTab, setActiveTab] = useState("graduation-requirement");
+  const addProgrammeIntake = location.state?.addProgrammeIntake || false;
+  const [ editMode, setEditMode] = useState(location.state?.editMode || false);
+  const [ formData, setFormData] = useState({});
+  const [ graduationRequirements, setGraduationRequirements] = useState([]);
+  const [ activeTab, setActiveTab] = useState("graduation-requirement");
   const [ loading, setLoading] = useState(true);
+  const [ openDialog, setOpenDialog] = useState(false);
+  const [ intakeFields, setIntakeFields] = useState(programmeIntakeFormFields);
+  const [ academicSessions, setAcademicSessions] = useState([]);
+  const [ programmes, setProgrammes] = useState([]);
 
-  // ----------------------------------------
-  // LOAD PROGRAMME ENROLLMENT DETAILS
-  // ----------------------------------------
   useEffect(() => {
     const fetchProgrammeEnrollment = async () => {
       try {
@@ -41,31 +43,125 @@ const ProgrammeEnrollmentDetails = () => {
         setLoading(false);
       }
     };
-    fetchProgrammeEnrollment();
+
+    const fetchProgrammes = async () => {
+      try {
+        const res = await axiosClient.get(`/programmes`);
+        setProgrammes(res.data);
+        const programmeOptions = res.data.map(p => ({
+          label: p.programme_name,
+          value: p.programme_name
+        }));
+
+        setIntakeFields(prev =>
+          prev.map(field =>
+            field.key === "programme_name"
+              ? { ...field, options: programmeOptions }
+              : field
+          )
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const fetchAcademicSessions = async () => {
+      try {
+        const res = await axiosClient.get(`/academic-sessions`);
+        setAcademicSessions(res.data);
+
+        const academicSessionOptions = res.data.map(academicSession => ({
+          label: `${academicSession.year} ${academicSession.semester}`,
+          value: academicSession._id
+        }));
+
+        setIntakeFields((prev) => (prev.map(field => {
+          if(field.key === "academic_session_id"){
+            return { ... field, options : academicSessionOptions };
+          }
+          return field
+        }))) 
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    const run = async () => {
+      try{
+        if (!addProgrammeIntake) {
+          await fetchProgrammeEnrollment();
+        }
+
+        await fetchProgrammes();
+        await fetchAcademicSessions();
+      }catch(err){
+        console.error(err);
+      }finally{
+        setLoading(false);
+      }
+    }
+
+    run();
+
   }, [programme_intake_code]);
 
-  // ----------------------------------------
-  // HANDLERS
-  // ----------------------------------------
+  useEffect(() => {
+  if(editMode) {
+    const { programme_name, year, semester } = formData;
+
+    const programme = programmes.find(programme => programme.programme_name == formData.programme_name)
+
+    if (programme_name && year && semester) {
+      const code = generateProgrammeIntakeCode(programme, year, semester);
+      setFormData(prev => ({ ...prev, programme_intake_code: code }));
+    }
+  }
+}, [formData.programme_name, formData.year, formData.semester]);
+
+  useEffect(() => {
+  if(editMode) {
+    const session = academicSessions.find(academicSession => academicSession._id == formData.academic_session_id);
+    setFormData(prev => ({ ...prev, year: session.year, semester: session.semester, academic_session: session }));
+
+  }
+
+}, [formData.academic_session_id]);
+
   const handleBack = () => navigate("/admin/programme-intakes");
+
   const handleCancel = () => setEditMode(false);
+
   const handleEdit = () => setEditMode(true);
+
   const handleSave = async () => {
     try {
-      await axiosClient.put(`/programme-intakes/${formData.programme_intake_code}`, formData);
+      const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
       setEditMode(false);
+      setFormData(res.data)
     } catch (err) {
       console.error("Error saving programme enrollment:", err);
     }
   };
+
+  const handleDelete = () => {
+    setOpenDialog(true);
+  }
+
+  const confirmDeleteProgrammeIntake = async () => {
+    try {
+        await axiosClient.delete(`/programme-intakes/${formData.programme_intake_code}`);
+    } catch (error) {
+        console.error("Error deleting course:", error);
+    } finally {
+        navigate("/admin/programme-intakes")
+    }
+  };
+
   const handleInputChange = (key) => (e) => {
     setFormData((prev) => ({ ...prev, [key]: e.target.value }));
   };
 
-  // ----------------------------------------
-  // SPLIT FORM DATA INTO TWO COLUMNS
-  // ----------------------------------------
-  const allowedKeys = programmeIntakeFormFields.map((f) => f.key);
+  const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
   const mid = Math.ceil(entries.length / 2);
   const leftEntries = entries.slice(0, mid);
@@ -115,37 +211,66 @@ const ProgrammeEnrollmentDetails = () => {
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={handleEdit}
-                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                    >
-                      <Edit2 size={16} /> Edit
-                    </button>
+                    <>
+                      <button
+                        onClick={handleEdit}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <Edit2 size={16} /> Edit
+                      </button>
+                      {!addProgrammeIntake && (
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                        >
+                          <Trash size={16} /> Delete
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
 
+              <FormDialog
+                open={openDialog}
+                onClose={() => setOpenDialog(false)}
+                onConfirm={confirmDeleteProgrammeIntake}
+                title="Delete Course"
+                content={`Are you sure you want to delete programme intake  with code "${formData.programme_intake_code}"?`}
+                confirmText="Delete"
+                cancelText="Cancel"
+              />
+
               {/* FORM CONTENT */}
-              <div className="p-8 space-y-12 bg-white">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {leftEntries.map(([key, value]) => (
-                    <FormField
-                      key={key}
-                      field={programmeIntakeFormFields.find((f) => f.key === key)}
-                      value={value}
-                      editMode={editMode}
-                      onChange={handleInputChange(key)}
-                    />
-                  ))}
-                  {rightEntries.map(([key, value]) => (
-                    <FormField
-                      key={key}
-                      field={programmeIntakeFormFields.find((f) => f.key === key)}
-                      value={value}
-                      editMode={editMode}
-                      onChange={handleInputChange(key)}
-                    />
-                  ))}
+              <div className="p-8 bg-white rounded-b-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  {/* Left Column */}
+                  <div className="flex flex-col gap-6">
+                    {leftEntries.map(([key, value]) => (
+                      <FormField
+                        key={key}
+                        field={intakeFields.find((f) => f.key === key)}
+                        value={value}
+                        editMode={editMode}
+                        onChange={handleInputChange(key)}
+                        academicSessions={academicSessions}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="flex flex-col gap-6">
+                    {rightEntries.map(([key, value]) => (
+                      <FormField
+                        key={key}
+                        field={intakeFields.find((f) => f.key === key)}
+                        value={value}
+                        editMode={editMode}
+                        onChange={handleInputChange(key)}
+                        academicSessions={academicSessions}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -189,12 +314,27 @@ const ProgrammeEnrollmentDetails = () => {
   );
 };
 
-// =========================================================
-// FORM FIELD COMPONENT
-// =========================================================
-const FormField = ({ field, value, editMode, onChange }) => {
+const FormField = ({ field, value, editMode, onChange, academicSessions }) => {
   if (!field) return null;
   const { label, icon: Icon, type, multiline, options, placeholder } = field;
+
+  let displayValue = value;
+  if(field.key === "academic_session_id" ) {
+    const session = academicSessions.find(session => session._id === value);
+    displayValue = session ? `${session.year} - ${session.semester}` : "";
+  }
+
+  if (field.readonly) {
+    return (
+      <div className="flex items-start mb-3">
+        {Icon && <div className="mr-3 mt-1 text-gray-400"><Icon size={18} /></div>}
+        <div className="w-full">
+          <p className="text-sm text-gray-500 mb-1">{label}</p>
+          <p className="text-sm font-semibold text-gray-900">{displayValue ?? "-"}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-start mb-3">
@@ -225,7 +365,7 @@ const FormField = ({ field, value, editMode, onChange }) => {
             />
           )
         ) : (
-          <p className="text-sm font-semibold text-gray-900 whitespace-pre-line">{value || "-"}</p>
+          <p className="text-sm font-semibold text-gray-900 whitespace-pre-line">{displayValue ?? "-"}</p>
         )}
       </div>
     </div>

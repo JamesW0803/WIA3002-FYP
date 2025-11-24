@@ -11,6 +11,8 @@ const formatProgrammeIntake = (programmeIntake) => {
     _id: programmeIntake._id,
     programme_intake_code: programmeIntake.programme_intake_code,
     programme_name: programmeIntake.programme_id?.programme_name ?? null,
+    academic_session_id: programmeIntake.academic_session_id?._id ?? null,
+    academic_session: programmeIntake.academic_session_id ?? null,
     year: programmeIntake.academic_session_id?.year ?? null,
     semester: programmeIntake.academic_session_id?.semester ?? null,
     department: programmeIntake.programme_id?.department ?? null,
@@ -28,11 +30,6 @@ const formatProgrammeIntake = (programmeIntake) => {
     // Flatten programme_id
     programme_id: programmeIntake.programme_id?._id ?? null,
     programme_code: programmeIntake.programme_id?.programme_code ?? null,
-
-    // Optionally include academic_session_id as well
-    academic_session_id: programmeIntake.academic_session_id?._id ?? null,
-    academic_session: programmeIntake.academic_session_id ?? null,
-
 
     graduation_requirements: programmeIntake.graduation_requirements,
     programme_plan: programmeIntake.programme_plan,
