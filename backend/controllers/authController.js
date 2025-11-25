@@ -45,17 +45,22 @@ const register = async (req, res) => {
 
       // 4) discriminator
       if (req.body.role === "student") {
+        const intake = await ProgrammeIntake.findOne({
+          programme_id: req.body.programme,
+          academic_session_id: req.body.academicSession,
+        }).session(session);
         newUserDoc = new Student({
           username: req.body.name,
           email: req.body.email,
           password: hashed,
-          role: "student", // discriminatorKey
+          role: "Student", // discriminatorKey
           contact: req.body.contact,
           faculty: req.body.faculty,
           department: req.body.department,
           programme: req.body.programme,
           academicSession: req.body.academicSession,
           semester: req.body.semester,
+          programme_intake: intake?._id || null,
         });
       } else if (req.body.role === "admin") {
         newUserDoc = new Admin({

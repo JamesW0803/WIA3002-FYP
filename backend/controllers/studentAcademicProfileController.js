@@ -19,12 +19,6 @@ exports.saveAcademicProfile = async (req, res) => {
 
   try {
     const currentSession = await AcademicSession.findOne({ isCurrent: true });
-    console.log(
-      currentSession && {
-        year: currentSession.year,
-        semester: currentSession.semester,
-      }
-    );
     if (!currentSession) {
       return res
         .status(400)
@@ -42,6 +36,11 @@ exports.saveAcademicProfile = async (req, res) => {
           message: `Cannot add courses for future semesters (Year ${entry.year} Semester ${entry.semester})`,
         });
       }
+    }
+
+    const student = await Student.findById(studentId).populate("programme");
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
     }
 
     const yearGaps = new Set(
@@ -141,19 +140,47 @@ exports.saveAcademicProfile = async (req, res) => {
     );
 
     let completed_credits = 0;
+
     for (const entry of entries) {
-      const course = await Course.findOne({ course_code: entry.code });
-      if (course?.prerequisites?.length > 0) {
-        const sameSemesterPrereqs = await Course.find({
-          course_code: { $in: course.prerequisites.map((p) => p.course_code) },
-        }).then((prereqs) => {
-          return entries.some(
-            (e) =>
-              prereqs.some((p) => p.course_code === e.code) &&
-              e.year === entry.year &&
-              e.semester === entry.semester
-          );
-        });
+      // Fetch course with populated prerequisites so we can see course_code
+      const course = await Course.findOne({ course_code: entry.code })
+        .populate("prerequisites", "course_code")
+        .populate("prerequisitesByProgramme.prerequisites", "course_code");
+
+      if (!course) continue;
+
+      // -------- programme-aware prerequisites --------
+      let applicablePrereqs = [];
+
+      if (student?.programme) {
+        // find matching programme-specific config
+        const cfg = (course.prerequisitesByProgramme || []).find(
+          (p) =>
+            p.programme &&
+            p.programme.toString() === student.programme._id.toString()
+        );
+
+        if (cfg) {
+          applicablePrereqs = cfg.prerequisites || [];
+        } else {
+          // fallback to global prerequisites
+          applicablePrereqs = course.prerequisites || [];
+        }
+      } else {
+        // no programme on student → fallback to global
+        applicablePrereqs = course.prerequisites || [];
+      }
+
+      // -------- "no same semester as prereqs" rule --------
+      if (applicablePrereqs.length > 0) {
+        const prereqCodes = applicablePrereqs.map((p) => p.course_code);
+
+        const sameSemesterPrereqs = entries.some(
+          (e) =>
+            e.year === entry.year &&
+            e.semester === entry.semester &&
+            prereqCodes.includes(e.code)
+        );
 
         if (sameSemesterPrereqs) {
           return res.status(400).json({
@@ -161,8 +188,10 @@ exports.saveAcademicProfile = async (req, res) => {
           });
         }
       }
-      if (entry.status === "Passed" && course) {
-        completed_credits += course.credit_hours;
+
+      // -------- credit hours --------
+      if (entry.status === "Passed") {
+        completed_credits += course.credit_hours || 0;
       }
     }
 
@@ -206,9 +235,6 @@ exports.saveAcademicProfile = async (req, res) => {
 
 exports.getAcademicProfile = async (req, res) => {
   const studentId = req.params.id;
-  if (!mongoose.Types.ObjectId.isValid(studentId)) {
-    return res.status(400).json({ message: "Invalid student ID format" });
-  }
 
   try {
     // 1) Academic profile (courses, gaps, etc.)
@@ -300,5 +326,70 @@ exports.getAcademicProfile = async (req, res) => {
   } catch (err) {
     console.error("Error fetching academic profile:", err.message, err.stack);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getStudentIntakeInfo = async (req, res) => {
+  const studentId = req.params.id;
+
+  if (!mongoose.Types.ObjectId.isValid(studentId)) {
+    return res.status(400).json({ message: "Invalid student ID format" });
+  }
+
+  try {
+    const student = await Student.findById(studentId)
+      .populate("programme_intake")
+      .populate("academicSession");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    let intakeYear = null;
+    let intakeSemester = null;
+
+    // 1) Prefer programme_intake → its academic_session_id
+    if (student.programme_intake) {
+      const intake = await ProgrammeIntake.findById(
+        student.programme_intake._id || student.programme_intake
+      ).populate("academic_session_id");
+
+      if (intake && intake.academic_session_id) {
+        intakeYear = intake.academic_session_id.year;
+        intakeSemester = intake.academic_session_id.semester;
+      }
+    } else {
+      console.log(
+        "[getStudentIntakeInfo] Student has NO programme_intake; will fallback to academicSession."
+      );
+    }
+
+    // 2) Fallback to student's academicSession
+    if (!intakeYear && student.academicSession) {
+      const session = await AcademicSession.findById(
+        student.academicSession._id || student.academicSession
+      );
+      if (session) {
+        intakeYear = session.year;
+        intakeSemester = session.semester;
+      }
+    } else if (!intakeYear) {
+      console.log(
+        "[getStudentIntakeInfo] Student has NO academicSession on doc either."
+      );
+    }
+
+    if (!intakeYear || !intakeSemester) {
+      return res
+        .status(404)
+        .json({ message: "Intake info not found for this student" });
+    }
+
+    return res.json({
+      intakeYear,
+      intakeSemester,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
   }
 };

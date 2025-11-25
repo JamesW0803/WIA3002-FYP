@@ -1,5 +1,5 @@
 const AcademicSession = require("../models/AcademicSession");
-const { SEMESTER_1 , SEMESTER_2 } = require("../constants/semesters")
+const { SEMESTER_1, SEMESTER_2 } = require("../constants/semesters");
 
 const addAcademicSession = async (req, res) => {
   try {
@@ -103,36 +103,42 @@ const getAcademicSessionById = async (req, res) => {
 };
 
 const createNextAcademicSession = async (currentAcademicSession) => {
-  if (!currentAcademicSession) throw new Error("Current academic session is required");
+  if (!currentAcademicSession)
+    throw new Error("Current academic session is required");
 
   // Extract current year and semester
-  const [startYear, endYear] = currentAcademicSession.year.split("/").map(Number);
+  const [startYear, endYear] = currentAcademicSession.year
+    .split("/")
+    .map(Number);
   const currentSemester = currentAcademicSession.semester;
 
   // Determine next semester and year
   let nextSemester = "";
-  let nextStartYear = startYear
+  let nextStartYear = startYear;
   let nextEndYear = endYear;
 
-  if(currentSemester === SEMESTER_1){
-    nextSemester = SEMESTER_2
-  }else if(currentSemester === SEMESTER_2){
-    nextSemester = SEMESTER_1
-    nextStartYear  +=1
-    nextEndYear  +=1
+  if (currentSemester === SEMESTER_1) {
+    nextSemester = SEMESTER_2;
+  } else if (currentSemester === SEMESTER_2) {
+    nextSemester = SEMESTER_1;
+    nextStartYear += 1;
+    nextEndYear += 1;
   }
 
   const nextYear = `${nextStartYear}/${nextEndYear}`;
 
   // Check if session already exists
-  let nextSession = await AcademicSession.findOne({ year: nextYear, semester: nextSemester });
+  let nextSession = await AcademicSession.findOne({
+    year: nextYear,
+    semester: nextSemester,
+  });
   if (!nextSession) {
     nextSession = await AcademicSession.create({
       year: nextYear,
       semester: nextSemester,
       previous: currentAcademicSession._id,
-      next : null,
-      isCurrent : false
+      next: null,
+      isCurrent: false,
     });
 
     // Link current session to next
@@ -148,5 +154,5 @@ module.exports = {
   getAllAcademicSessions,
   getCurrentAcademicSession,
   getAcademicSessionById,
-  createNextAcademicSession
+  createNextAcademicSession,
 };
