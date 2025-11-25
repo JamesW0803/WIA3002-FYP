@@ -1,6 +1,7 @@
 const FACULTY_CORE = "faculty_core";
 const PROGRAMME_CORE = "programme_core";
 const PROGRAMME_ELECTIVE = "programme_elective";
+const FACULTY_ELECTIVE = "faculty_elective";
 const UNIVERSITY_LANGUAGE = "university_language";
 const UNIVERSITY_COCURRICULUM = "university_cocurriculum";
 const UNIVERSITY_OTHER = "university_other";
@@ -14,6 +15,7 @@ const COURSE_TYPES = [
   FACULTY_CORE,
   PROGRAMME_CORE,
   PROGRAMME_ELECTIVE,
+  FACULTY_ELECTIVE,
   UNIVERSITY_LANGUAGE,
   UNIVERSITY_COCURRICULUM,
   UNIVERSITY_OTHER,
@@ -27,6 +29,7 @@ const READABLE_COURSE_TYPES = {
   [FACULTY_CORE]: "Faculty Core Course",
   [PROGRAMME_CORE]: "Programme Core Course",
   [PROGRAMME_ELECTIVE]: "Programme Elective Course",
+  [FACULTY_ELECTIVE]: "Faculty Elective Course",
   [UNIVERSITY_LANGUAGE]: "University Language Course",
   [UNIVERSITY_COCURRICULUM]: "University Co-curriculum Course",
   [UNIVERSITY_OTHER]: "University Other Course",
@@ -41,6 +44,7 @@ module.exports = {
   FACULTY_CORE,
   PROGRAMME_CORE,
   PROGRAMME_ELECTIVE,
+  FACULTY_ELECTIVE,
   UNIVERSITY_LANGUAGE,
   UNIVERSITY_COCURRICULUM,
   UNIVERSITY_OTHER,

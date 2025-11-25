@@ -1,17 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import {
-  Edit2,
-  Save,
-  X,
-  Trash 
-} from "lucide-react";
+import { Edit2, Save, X, Trash } from "lucide-react";
 import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import axiosClient from "../../../api/axiosClient";
 import { formSessions } from "../../../constants/courseFormConfig";
 import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import PrerequisitesSession from "../../../components/Faculty/Courses/PrerequisitesSession";
-import FormDialog from "../../../components/dialog/FormDialog"
+import FormDialog from "../../../components/dialog/FormDialog";
 
 const CourseDetails = () => {
   const location = useLocation();
@@ -32,7 +27,9 @@ const CourseDetails = () => {
       try {
         const res = await axiosClient.get(`/courses/${course_code}`);
         const course = res.data;
-        course.prerequisites = course.prerequisites.map((prerequisiteCourse) => prerequisiteCourse.course_code)
+        course.prerequisites = course.prerequisites.map(
+          (prerequisiteCourse) => prerequisiteCourse.course_code
+        );
         setFormData(course);
         setOriginalFormData(course)
       } catch (err) {
@@ -76,16 +73,15 @@ const CourseDetails = () => {
       } finally {
         setLoading(false);
       }
-    }
+    };
     run();
-
   }, [course_code]);
 
   const handleBack = () => navigate("/admin/courses");
 
   const handleCancel = () => {
-    if(addCourse){
-      navigate("/admin/courses")
+    if (addCourse) {
+      navigate("/admin/courses");
     }
     setEditMode(false)
     setFormData(originalFormData)
@@ -95,15 +91,15 @@ const CourseDetails = () => {
 
   const handleDelete = () => {
     setOpenDialog(true);
-  }
+  };
 
   const confirmDeleteCourse = async () => {
     try {
-        await axiosClient.delete(`/courses/${formData.course_code}`);
+      await axiosClient.delete(`/courses/${formData.course_code}`);
     } catch (error) {
-        console.error("Error deleting course:", error);
+      console.error("Error deleting course:", error);
     } finally {
-        navigate("/admin/courses")
+      navigate("/admin/courses");
     }
   };
 
@@ -111,9 +107,7 @@ const CourseDetails = () => {
     try {
       const payload = {
         ...formData,
-        prerequisites: formData.prerequisites
-          ? formData.prerequisites
-          : [],
+        prerequisites: formData.prerequisites ? formData.prerequisites : [],
       };
       if(!addCourse){
         const res =await axiosClient.put(`/courses/${formData.course_code}`, payload);
@@ -122,15 +116,21 @@ const CourseDetails = () => {
       }else{
         const res = await axiosClient.post(`/courses`, payload);
         const savedCourse = res.data;
-        navigate(`/admin/courses/${savedCourse.course_code}`, { state : { course_code : savedCourse.course_code , editMode : false , courses}})
+        navigate(`/admin/courses/${savedCourse.course_code}`, {
+          state: {
+            course_code: savedCourse.course_code,
+            editMode: false,
+            courses,
+          },
+        });
       }
     } catch (err) {
       console.error(err);
       // show notification
-      if(addCourse){
-        navigate("/admin/courses")
+      if (addCourse) {
+        navigate("/admin/courses");
       }
-    }finally{
+    } finally {
       setEditMode(false);
     }
   };
@@ -142,7 +142,9 @@ const CourseDetails = () => {
     }));
   };
 
-  const processedSessions = formSessions.filter((session) => session.title !== "Prerequisites")
+  const processedSessions = formSessions.filter(
+    (session) => session.title !== "Prerequisites"
+  );
 
   const renderField = (field) => {
     const {
@@ -171,14 +173,12 @@ const CourseDetails = () => {
     );
   };
 
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-12">
       <div className="max-w-6xl mx-auto space-y-6">
         <GeneralCardHeader handleBack={handleBack} title={"Back to Courses"} />
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-
           {loading ? (
             <>
               <SkeletonHeader />
@@ -193,10 +193,12 @@ const CourseDetails = () => {
               {/* ORIGINAL HEADER BAR */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">{formData.course_name || "--Add New Course--"}</h1>
-                    <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
-                        {formData.course_code || "new_course_code"}
-                    </div>
+                  <h1 className="text-3xl font-bold">
+                    {formData.course_name || "--Add New Course--"}
+                  </h1>
+                  <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
+                    {formData.course_code || "new_course_code"}
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-4 md:mt-0">
                   {editMode ? (
@@ -231,7 +233,6 @@ const CourseDetails = () => {
                         </button>
                       )}
                     </>
-                    
                   )}
                 </div>
               </div>
@@ -259,12 +260,16 @@ const CourseDetails = () => {
                     </div>
                   </div>
                 ))}
-                <PrerequisitesSession courses={courses} formData={formData} setFormData={setFormData} editMode={editMode}/>
+                <PrerequisitesSession
+                  courses={courses}
+                  formData={formData}
+                  setFormData={setFormData}
+                  editMode={editMode}
+                />
               </div>
             </>
           )}
         </div>
-
       </div>
     </div>
   );
@@ -282,12 +287,11 @@ const CourseInfoField = ({
   placeholder,
   onChange,
 }) => {
-
   let displayValue = value ?? "-";
-  if(fieldKey == "type"){
+  if (fieldKey == "type") {
     displayValue = READABLE_COURSE_TYPES[value] || "-";
   }
-  if(fieldKey == "offered_semester" && Array.isArray(value)){
+  if (fieldKey == "offered_semester" && Array.isArray(value)) {
     displayValue = value.length > 0 ? value.join(", ") : "-";
   }
 
@@ -319,7 +323,6 @@ const CourseInfoField = ({
               className="border border-gray-300 rounded-lg p-2 w-full text-sm resize-none"
               value={value}
               onChange={onChange}
-
             />
           )
         ) : (
@@ -331,8 +334,6 @@ const CourseInfoField = ({
     </div>
   );
 };
-
-
 
 const SkeletonHeader = () => (
   <div className="animate-pulse bg-gradient-to-r from-blue-600 to-blue-700 p-8">
@@ -363,6 +364,5 @@ const SkeletonSection = () => (
     </div>
   </div>
 );
-
 
 export default CourseDetails;
