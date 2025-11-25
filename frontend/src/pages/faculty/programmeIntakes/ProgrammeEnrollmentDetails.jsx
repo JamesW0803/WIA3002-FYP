@@ -266,7 +266,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
 
   const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
-  const mid = Math.ceil(entries.length / 2);
+  const mid = Math.floor(entries.length / 2);
   const leftEntries = entries.slice(0, mid);
   const rightEntries = entries.slice(mid);
 

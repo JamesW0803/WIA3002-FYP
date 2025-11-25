@@ -92,12 +92,10 @@ const ManageProgrammeEnrollment = () => {
     }, [searchKeywords])
     
     const handleProgrammeEnrollmentOnClick = (programme_intake_code) => {
-        // navigate to course page
         navigate(`/admin/programme-intakes/${programme_intake_code}`, { state : { programme_intake_code , editMode : false }})
     }
 
     const handleEditButtonOnClick = (programme_intake_code) => {
-        // navigate to course page
         navigate(`/admin/programme-intakes/${programme_intake_code}`, { state : { programme_intake_code , editMode : true }})
     }
 
@@ -126,9 +124,9 @@ const ManageProgrammeEnrollment = () => {
         viewButton : {
             onClick : handleProgrammeEnrollmentOnClick
         },
-        // editButton : {
-        //     onClick : handleEditButtonOnClick
-        // },
+        editButton : {
+            onClick : handleEditButtonOnClick
+        },
         deleteButton : {
             onClick : handleDeleteButtonOnClick
         }

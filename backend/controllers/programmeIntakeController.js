@@ -17,6 +17,7 @@ const {
   COURSE_TYPE_TO_CATEGORY,
 } = require("../constants/graduationCategories");
 const { editProgrammePlan } = require("./programmePlanController")
+const { createNextAcademicSession } = require("./academicSessionController")
 
 const getAllProgrammeIntakes = async (req, res) => {
   try {
@@ -99,7 +100,12 @@ const addProgrammeIntake = async (req, res) => {
           academic_session_id: currentAcademicSession, // optional if you want to link later
         });
 
-        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+        if(currentAcademicSession.next === null){
+          const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
+          currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
+        }else{
+          currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+        }
         semesterPlans.push(semesterPlan._id);
       }
     }else{
@@ -109,7 +115,13 @@ const addProgrammeIntake = async (req, res) => {
           courses: [],
           academic_session_id: currentAcademicSession, // optional if you want to link later
         });
-        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+
+        if(currentAcademicSession.next === null){
+          const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
+          currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
+        }else{
+          currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+        }
         semesterPlans.push(semesterPlan._id);
       }
     }
