@@ -11,6 +11,7 @@ const {
   updateProgrammeIntake,
   getGraduationRequirementsForStudent,
   getProgrammePlanMappingByCode,
+  editProgrammeIntake
 } = require("../controllers/programmeIntakeController");
 
 // Public routes (no auth required)
@@ -31,6 +32,7 @@ router.get("/", getAllProgrammeIntakes);
 router.get("/refresh", updateProgrammeIntake);
 router.get("/id/:id", getProgrammeIntakeById);
 router.get("/:programme_intake_code", getProgrammeIntakeByCode);
+router.put("/:programme_intake_id", editProgrammeIntake);
 router.post("/", addProgrammeIntake);
 router.delete("/:id", deleteProgrammeIntakeById);
 

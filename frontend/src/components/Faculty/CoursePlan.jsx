@@ -1,5 +1,4 @@
-import { useState , useEffect } from 'react';
-import { useOutletContext } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { READABLE_COURSE_TYPES } from "../../constants/courseType";
 import {
   Accordion,
@@ -13,113 +12,250 @@ import {
   TableHead,
   TableRow,
   Paper
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import axiosClient from '../../api/axiosClient';
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
-const CourseTable = ({ courses }) => (
+const EditableCourseTable = ({ courses, onRemove, editMode = false }) => (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
       <TableHead>
-        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+        <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
           <TableCell><strong>Course Code</strong></TableCell>
           <TableCell><strong>Course Name</strong></TableCell>
           <TableCell><strong>Credit</strong></TableCell>
           <TableCell><strong>Type</strong></TableCell>
+          {editMode &&<TableCell><strong>Action</strong></TableCell>}
         </TableRow>
       </TableHead>
       <TableBody>
-        {courses.map((course, index) => {
-          return (
-          <TableRow 
-            key={index}
-            sx={{
-              backgroundColor: 'white', 
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                backgroundColor: '#f5f5f5', 
-                cursor: 'pointer'
-              },
-              borderRadius: 1,
-              mb: 1
-            }}
-          >
-            <TableCell>{course.course_code}</TableCell>
-            <TableCell>{course.course_name}</TableCell>
-            <TableCell>{course.credit_hours}</TableCell>
-            <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
+        {courses.length > 0 ? (
+          courses.map((course, idx) => (
+            <TableRow key={idx}>
+              <TableCell>{course.course_code}</TableCell>
+              <TableCell>{course.course_name}</TableCell>
+              <TableCell>{course.credit_hours}</TableCell>
+              <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
+              {editMode &&              
+                <TableCell>
+                  <button
+                    onClick={() => onRemove(idx)}
+                    className="text-sm text-red-600"
+                  >
+                    Remove
+                  </button>
+                </TableCell>}
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell
+              colSpan={5}
+              sx={{
+                textAlign: 'center',
+                fontStyle: 'italic',
+                color: 'text.secondary',
+                bgcolor: '#f9f9f9',
+                py: 2,
+              }}
+            >
+              No courses
+            </TableCell>
           </TableRow>
-          )
-        })}
+        )}
       </TableBody>
     </Table>
   </TableContainer>
 );
 
-const CoursePlan = ({ programmeEnrollment }) => {
-  // const { programmeEnrollment } = useOutletContext();
-  const [ completeProgrammePlan, setCompleteProgrammePlan ] = useState({});
-  
-  useEffect(() => {
-    const fetchProgrammePlan = async () => {
-      try{
-        const programmePlan = programmeEnrollment.programme_plan;
-        const response = await axiosClient.get(`/programme-plans/${programmePlan._id}`);
-        setCompleteProgrammePlan(response.data);
-      }catch(error){
-        console.error("Error fetching programme plan: ", error);
-      }
+const CoursePlan = ({ programmeEnrollment, editMode, onChange }) => {
+  const [ semesterPlans, setSemesterPlans] = useState([]);
+  const [ addSelectState, setAddSelectState] = useState({});
+  const [ remaining, setRemaining ] = useState([])
+  const [ showSelect, setShowSelect] = useState({});
+  const [ expandedYears, setExpandedYears] = useState({});
+
+useEffect(() => {
+  if (!programmeEnrollment) return;
+
+  const hold = programmeEnrollment.programme_plan?.semester_plans || [];
+  const graduationRequirements = programmeEnrollment.graduation_requirements || [];
+  const gradCourseCodes = graduationRequirements.map((c) => c.course_code);
+
+  let latestSemesterPlan;
+  if (hold.length === 0) {
+    const minSem = programmeEnrollment.min_semester || 7;
+    latestSemesterPlan = Array.from({ length: minSem }, (_, idx) => ({
+      semester: idx + 1,
+      courses: []
+    }));
+  } else {
+    latestSemesterPlan = hold.map((sem, index) => ({
+      semester: index + 1,
+      courses: sem.courses || []
+    }));
+  }
+
+  const allocatedCourseCodes = latestSemesterPlan.flatMap((sem) =>
+    sem.courses.map((c) => c.course_code)
+  );
+
+  const remainingCourses = graduationRequirements.filter(
+    (course) => !allocatedCourseCodes.includes(course.course_code)
+  );
+
+  setSemesterPlans(latestSemesterPlan);
+  setRemaining(remainingCourses);
+}, [programmeEnrollment]);
+
+
+  const handleAddCourse = (semIndex, courseCode) => {
+    if (!courseCode) return;
+
+    const courseObj = remaining.find((c) => c.course_code === courseCode);
+    if (!courseObj) return;
+
+    setSemesterPlans((prev) => {
+      const updated = prev.map((sem) => ({
+        ...sem,
+        courses: [...sem.courses]
+      }));
+
+      updated[semIndex].courses.push(courseObj);
+
+      onChange(updated);
+      return updated;
+    });
+
+    // Remove from remaining
+    setRemaining((prev) => prev.filter((c) => c.course_code !== courseCode));
+
+    // Reset select
+    setAddSelectState((p) => ({ ...p, [semIndex]: "" }));
+        // Hide select after selecting a course
+    setShowSelect((p) => ({ ...p, [semIndex]: false }));
+
+  };
+
+  const handleRemoveCourse = (semIndex, courseIdx) => {
+    setSemesterPlans((prev) => {
+      const updated = prev.map((sem) => ({
+        ...sem,
+        courses: [...sem.courses]
+      }));
+
+      const removed = updated[semIndex].courses.splice(courseIdx, 1)[0];
+
+      // Add it back to remaining
+      setRemaining((prev) => [...prev, removed]);
+
+      onChange(updated);
+      return updated;
+    });
+  };
+
+const handleYearAccordionChange = (yearIdx) => (event, isExpanded) => {
+  setExpandedYears((prev) => ({ ...prev, [yearIdx]: isExpanded }));
+
+  // Hide all selects in this year when collapsed
+  if (!isExpanded) {
+    const newShowSelect = { ...showSelect };
+    for (let i = 0; i < 2; i++) {
+      const semIndex = yearIdx * 2 + i;
+      newShowSelect[semIndex] = false;
     }
-    fetchProgrammePlan();
-    
-  }, [programmeEnrollment]);
+    setShowSelect(newShowSelect);
+  }
+};
 
-  const semesterPlans = completeProgrammePlan.semester_plans || [];
 
-  // Group every 2 semesters into a "year"
   const yearGroups = [];
   for (let i = 0; i < semesterPlans.length; i += 2) {
     yearGroups.push(semesterPlans.slice(i, i + 2));
   }
 
+  const courseOptions = remaining.map((req) => ({
+    value: req.course_code,
+    label: `${req.course_code} — ${req.course_name}`,
+    course: req
+  }));
+
+
   return (
-    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '1.5rem' }}>
-      <Typography variant="body1" gutterBottom style={{ marginBottom: "2rem"}}>
-        Default Programme Plan for {programmeEnrollment?.programme_name}  
-        {" "}session {programmeEnrollment?.year} {programmeEnrollment?.semester}
+    <div style={{ width: "90%", margin: "auto", marginTop: "2rem", paddingBottom: "1.5rem" }}>
+      <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
+        Default Course Plan for {programmeEnrollment?.programme_name} — Session{" "}
+        {programmeEnrollment?.year} {programmeEnrollment?.semester}
       </Typography>
 
-      {yearGroups.map((yearItem, yearIdx) => (
-        <Accordion key={yearIdx} defaultExpanded={yearIdx === -1}>
+      {yearGroups.map((year, yearIdx) => (
+        <Accordion
+          key={yearIdx}
+          expanded={expandedYears[yearIdx] || false}
+          onChange={handleYearAccordionChange(yearIdx)} // move onChange here
+        >
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography fontWeight="bold">{"Year " + (yearIdx+1)}</Typography>
+            <Typography fontWeight="bold">Year {yearIdx + 1}</Typography>
           </AccordionSummary>
+
           <AccordionDetails>
-            {yearItem.length > 0 ? (
-              <div 
-                style={{ 
-                  display: "flex", 
-                  gap: "2rem", 
-                  flexWrap: "wrap"  // allows wrapping on small screens
-                }}
-              >
-                {yearItem.map((semesterObj, semIdx) => (
-                  <div key={semIdx} style={{ flex: "1 1 45%" }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      {"Semester " + (semIdx + 1)}
+            <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+              {year.map((semObj, idx) => {
+                const semIndex = yearIdx * 2 + idx;
+                const courses = semObj.courses || [];
+
+                return (
+                  <div key={idx} style={{ flex: "1 1 45%" }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Semester {idx+1}
                     </Typography>
-                    <CourseTable courses={semesterObj.courses}/>
+
+                    <EditableCourseTable
+                      courses={courses}
+                      onRemove={(i) => handleRemoveCourse(semIndex, i)}
+                      editMode={editMode}
+                    />
+
+                    {editMode && showSelect[semIndex] && (
+                      <div style={{ marginBottom: 12 }}>
+                        <select
+                          value={addSelectState[semIndex] || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setAddSelectState((p) => ({ ...p, [semIndex]: val }));
+                            if (val) handleAddCourse(semIndex, val);
+                          }}
+                          className="border rounded p-2 w-full text-sm"
+                        >
+                          <option value="">
+                            — Add course from remaining courses —
+                          </option>
+                          {courseOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {editMode && (
+                      <button
+                        onClick={() =>
+                          setShowSelect((prev) => ({ ...prev, [semIndex]: true }))
+                        }
+                        className="mt-1 bg-blue-500 text-white px-2 py-1 rounded text-sm"
+                      >
+                        Add Course
+                      </button>
+                    )}
                   </div>
-                  ))}
-              </div>
-              ) : (
-                <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                  No semesters listed
-                </Typography>
-              )}
+                );
+              })}
+            </div>
           </AccordionDetails>
         </Accordion>
       ))}
+
     </div>
   );
 };

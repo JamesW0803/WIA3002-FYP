@@ -12,6 +12,7 @@ const ProgrammeDetails = () => {
 
   const programme_code = location.state?.programme_code;
   const addProgramme = location.state?.addProgramme || false;
+  const [originalFormData, setOriginalFormData] = useState({})
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -23,6 +24,7 @@ const ProgrammeDetails = () => {
       try {
         const res = await axiosClient.get(`/programmes/${programme_code}`);
         setFormData(res.data);
+        setOriginalFormData(res.data)
       } catch (err) {
         console.error(err);
       }
@@ -59,6 +61,7 @@ const ProgrammeDetails = () => {
       navigate("/admin/programmes")
     }
     setEditMode(false);
+    setFormData(originalFormData)
   }
 
   const handleEdit = () => setEditMode(true);
@@ -68,6 +71,7 @@ const ProgrammeDetails = () => {
       if(!addProgramme){
         const res = await axiosClient.put(`/programmes/${formData.programme_code}`, formData);
         setFormData(res.data);
+        setOriginalFormData(res.data)
       }else{
         const res = await axiosClient.post(`/programmes`, formData);
         const savedCProgramme = res.data;

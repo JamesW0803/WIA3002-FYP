@@ -17,6 +17,7 @@ const CourseDetails = () => {
   const addCourse = location.state?.addCourse || false;
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
   const [formData, setFormData] = useState({});
+  const [originalFormData, setOriginalFormData] = useState({});
   const [openDialog, setOpenDialog] = useState(false);
 
   const [courses, setCourses] = useState([]);
@@ -29,6 +30,7 @@ const CourseDetails = () => {
         const res = await axiosClient.get(`/courses/${course_code}`);
         const course = res.data;
         setFormData(course);
+        setOriginalFormData(course);
       } catch (err) {
         console.error(err);
       }
@@ -90,6 +92,7 @@ const CourseDetails = () => {
       navigate("/admin/courses");
     }
     setEditMode(false);
+    setFormData(originalFormData);
   };
 
   const handleEdit = () => setEditMode(true);
@@ -142,9 +145,13 @@ const CourseDetails = () => {
             prerequisite_codes: (cfg.prerequisite_codes || []).filter(Boolean),
           })),
       };
-
       if (!addCourse) {
-        await axiosClient.put(`/courses/${formData.course_code}`, payload);
+        const res = await axiosClient.put(
+          `/courses/${formData.course_code}`,
+          payload
+        );
+        setFormData(res.data);
+        setOriginalFormData(res.data);
       } else {
         const res = await axiosClient.post(`/courses`, payload);
         const savedCourse = res.data;

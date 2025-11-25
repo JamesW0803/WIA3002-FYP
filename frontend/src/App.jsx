@@ -194,7 +194,7 @@ function App() {
               path="programme-intakes/add-programme-intake"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <AddProgrammeEnrollment />
+                  <ProgrammeEnrollmentDetails />
                 </ProtectedRoute>
               }
             />
