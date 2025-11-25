@@ -16,6 +16,7 @@ const Course = require("../models/Course");
 const {
   COURSE_TYPE_TO_CATEGORY,
 } = require("../constants/graduationCategories");
+const { editProgrammePlan } = require("./programmePlanController")
 
 const getAllProgrammeIntakes = async (req, res) => {
   try {
@@ -33,7 +34,7 @@ const getAllProgrammeIntakes = async (req, res) => {
 const addProgrammeIntake = async (req, res) => {
   try {
     const {
-      programme_code,
+      programme_name,
       academic_session_id,
       number_of_students_enrolled,
       graduation_rate,
@@ -45,7 +46,7 @@ const addProgrammeIntake = async (req, res) => {
 
     let programmePlanId = null;
 
-    const programme = await Programme.findOne({ programme_code });
+    const programme = await Programme.findOne({ programme_name });
     if (!programme) {
       return res.status(404).json({ message: "Programme not found" });
     }
@@ -87,6 +88,7 @@ const addProgrammeIntake = async (req, res) => {
       // 3. Distribute evenly into semesters
       const coursesPerSemester = Math.ceil(sortedCourses.length / min_semester);
 
+      let currentAcademicSession = academicSession
       for (let i = 0; i < min_semester; i++) {
         const sliceStart = i * coursesPerSemester;
         const sliceEnd = (i + 1) * coursesPerSemester;
@@ -94,15 +96,26 @@ const addProgrammeIntake = async (req, res) => {
 
         const semesterPlan = await SemesterPlan.create({
           courses: semesterCourses.map((c) => c._id),
-          academic_session_id: null, // optional if you want to link later
+          academic_session_id: currentAcademicSession, // optional if you want to link later
         });
 
+        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+        semesterPlans.push(semesterPlan._id);
+      }
+    }else{
+      let currentAcademicSession = academicSession
+      for (let i = 0; i < min_semester; i++) {
+        const semesterPlan = await SemesterPlan.create({
+          courses: [],
+          academic_session_id: currentAcademicSession, // optional if you want to link later
+        });
+        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
         semesterPlans.push(semesterPlan._id);
       }
     }
 
     const programmePlan = await ProgrammePlan.create({
-      title: `${programme_code} Auto Plan (${academicSession.year})`,
+      title: `${programme.programme_code} Auto Plan (${academicSession.year})`,
       semester_plans: semesterPlans,
     });
 
@@ -511,6 +524,55 @@ const getProgrammePlanMappingByCode = async (req, res) => {
   }
 };
 
+const editProgrammeIntake = async (req, res) => {
+  const { programme_intake_id } = req.params;
+  const updatedData = req.body;
+
+  try {
+    const academicSession = await AcademicSession.findById(updatedData.academic_session_id)
+    const programme = await Programme.findOne({
+      programme_name : updatedData.programme_name
+    })
+
+    if(!programme){
+      return res.status(404).json({ message: "Invalid programme name" });
+    }
+
+    if(!academicSession){
+      return res.status(404).json({ message: "Invalid academic session" });
+    }
+
+    await editProgrammePlan(updatedData.programme_plan);
+    
+    const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(
+      programme_intake_id, // filter
+      updatedData, // updated fields
+      { new: true } // return updated document
+    ).populate("graduation_requirements")
+      .populate("programme_id")
+      .populate("academic_session_id")
+      .populate({
+        path: "programme_plan",
+        populate: {
+          path: "semester_plans",
+          populate: {
+            path: "courses",
+          },
+        },
+      });
+
+    if (!updatedProgrammeIntake) {
+      return res.status(404).json({ message: "Programme intake not exist" });
+    }
+
+    res.status(200).json(formatProgrammeIntake(updatedProgrammeIntake));
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Failed to update programme intake", details: err.message });
+  }
+};
+
 module.exports = {
   getAllProgrammeIntakes,
   addProgrammeIntake,
@@ -520,4 +582,5 @@ module.exports = {
   updateProgrammeIntake,
   getGraduationRequirementsForStudent,
   getProgrammePlanMappingByCode,
+  editProgrammeIntake
 };

@@ -1,5 +1,6 @@
 const Student = require("../models/Student");
 const ProgrammePlan = require("../models/ProgrammePlan");
+const SemesterPlan = require("../models/SemesterPlan");
 
 const getProgrammePlans = async (req, res) => {
   try {
@@ -42,7 +43,28 @@ const getProgrammePlanById = async (req, res) => {
   }
 };
 
+const editProgrammePlan = async (updatedProgrammePlan) => {
+  try {
+    // Validate programme plan exists
+    const plan = await ProgrammePlan.findById(updatedProgrammePlan._id);
+    if (!plan) return res.status(404).json({ message: "Programme plan not found" });
+
+    // Update each semester plan if provided
+    if (updatedProgrammePlan.semester_plans) {
+      const res = await Promise.all(updatedProgrammePlan.semester_plans.map(async (sem) => {
+        await SemesterPlan.findByIdAndUpdate(sem._id, {
+          courses: sem.courses,
+        });
+      }));
+    }
+  }catch(err){
+    console.log(err)
+  }
+
+}
+
 module.exports = {
   getProgrammePlans,
-  getProgrammePlanById
+  getProgrammePlanById,
+  editProgrammePlan
 };
