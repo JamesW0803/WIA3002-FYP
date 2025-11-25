@@ -30,10 +30,13 @@ const academicSessionSchema = new mongoose.Schema(
     next: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AcademicSession",
+      default: null,
+
     },
     previous: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AcademicSession",
+      default: null
     },
   },
   {
