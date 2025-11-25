@@ -3,7 +3,7 @@ import MessageModal from "../Faculty/MessageModal";
 
 const StudentProfileHeader = ({ student, messageModalOpen, setMessageModalOpen, handleBack }) => {
   return (
-    <div className="h-auto bg-white shadow-sm border-b flex-shrink-0 w-full sticky top-0 z-50">
+    <div className="h-auto bg-white shadow-sm border-b flex-shrink-0 w-full sticky top-0 z-40">
       <div className="px-4 py-4 max-w-6xl mx-auto">
         {/* Back Button */}
         <button
