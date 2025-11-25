@@ -336,7 +336,7 @@ export const useAcademicProfile = () => {
         const userId = decoded.user_id;
 
         const [profileRes, sessionRes] = await Promise.all([
-          axiosClient.get(`/user/student-profile/${userId}`, {
+          axiosClient.get(`/academic-profile/student-profile/${userId}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           axiosClient.get(`/academic-sessions/current`, {
@@ -386,7 +386,13 @@ export const useAcademicProfile = () => {
         setStudentSemester(relSem);
         setSessionLoading(false);
       } catch (err) {
-        console.error("❌ Failed to load intake or session:", err);
+        console.error("❌ Failed to load intake or session:", {
+          message: err.message,
+          url: err.config?.url,
+          method: err.config?.method,
+          status: err.response?.status,
+          data: err.response?.data,
+        });
         showNotification(
           "Failed to load academic intake/session info",
           "error"
