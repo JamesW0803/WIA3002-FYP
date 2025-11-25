@@ -376,10 +376,22 @@ const checkCoursePrerequisites = async (req, res) => {
     }
 
     // 4. Retake: if student already failed this course, allow without prereq check
-    const isRetake = profile.entries?.some(
-      (entry) =>
-        entry.course.course_code === courseCode && entry.status === "Failed"
-    );
+    const isRetake = profile.entries?.some((entry) => {
+      if (entry.course.course_code !== courseCode) return false;
+
+      if (entry.status === "Failed") return true;
+
+      if (
+        entry.status === "Passed" &&
+        entry.grade &&
+        entry.grade !== "A" &&
+        entry.grade !== "A+"
+      ) {
+        return true; // passed but below A / A+
+      }
+
+      return false;
+    });
 
     if (isRetake) {
       return res.status(200).json({
