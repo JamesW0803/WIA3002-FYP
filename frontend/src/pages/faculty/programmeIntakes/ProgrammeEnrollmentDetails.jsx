@@ -39,6 +39,7 @@ const ProgrammeEnrollmentDetails = () => {
         setFormData(data);
         setOriginalFormData(data)
         setGraduationRequirements(data.graduation_requirements || []);
+        console.log("first data: ", data)
       } catch (err) {
         console.error(err);
       }finally{
@@ -106,9 +107,9 @@ const ProgrammeEnrollmentDetails = () => {
             faculty: "",
             min_semester: "",
             max_semester: "",
-            number_of_students_enrolled: "",
-            number_of_students_graduated: "",
-            graduation_rate: "",
+            number_of_students_enrolled: "0",
+            number_of_students_graduated: "0",
+            graduation_rate: "0",
             total_credit_hours: "",
             createdAt: "",
             updatedAt: "",
@@ -138,8 +139,8 @@ const ProgrammeEnrollmentDetails = () => {
     const { programme_name, year, semester } = formData;
 
     const programme = programmes.find(programme => programme.programme_name == formData.programme_name)
-    setFormData(prev => ({ ...prev, department: programme.department }));
-    setFormData(prev => ({ ...prev, faculty: programme.faculty }));
+    setFormData(prev => ({ ...prev, department: programme?.department }));
+    setFormData(prev => ({ ...prev, faculty: programme?.faculty }));
 
 
     if (programme_name && year && semester) {
@@ -152,7 +153,7 @@ const ProgrammeEnrollmentDetails = () => {
   useEffect(() => {
   if(editMode) {
     const session = academicSessions.find(academicSession => academicSession._id == formData.academic_session_id);
-    setFormData(prev => ({ ...prev, year: session.year, semester: session.semester, academic_session: session }));
+    setFormData(prev => ({ ...prev, year: session?.year, semester: session?.semester, academic_session: session }));
 
   }
 
@@ -161,9 +162,13 @@ const ProgrammeEnrollmentDetails = () => {
   const handleBack = () => navigate("/admin/programme-intakes");
 
   const handleCancel = () => {
-    setFormData(originalFormData); // restore original data
-    setGraduationRequirements(originalFormData.graduation_requirements || []);
-    setEditMode(false);
+    if(!addProgrammeIntake){
+      setFormData(originalFormData); // restore original data
+      setGraduationRequirements(originalFormData.graduation_requirements || []);
+      setEditMode(false);
+    }else{
+      navigate('/admin/programme-intakes')
+    }
   }
 
   const handleEdit = () => setEditMode(true);
@@ -171,7 +176,6 @@ const ProgrammeEnrollmentDetails = () => {
   const handleSave = async () => {
     try {
       if(!addProgrammeIntake){
-        console.log("payload:", formData)
         const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
         setEditMode(false);
         const data = {
@@ -179,13 +183,15 @@ const ProgrammeEnrollmentDetails = () => {
           createdAt: formatDateToLocaleString(res.data.createdAt),
           updatedAt: formatDateToLocaleString(res.data.updatedAt),
         };
+        console.log("data: ", data)
         setFormData(data)
         setOriginalFormData(data)
         setGraduationRequirements(data.graduation_requirements || []);
       }else{
-        // const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
-        // setEditMode(false);
-        // setFormData(res.data)
+        const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
+        const programmeIntake = res.data
+        setEditMode(false)
+        navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
       }
 
     } catch (err) {
@@ -212,12 +218,32 @@ const ProgrammeEnrollmentDetails = () => {
   };
 
   const handleGraduationRequirementsOnChange = (updatedRequirements) => {
-    setFormData(prev => ({
-      ...prev,
-      graduation_requirements: updatedRequirements
-    }));
-    setGraduationRequirements(updatedRequirements); // if you still need local state
-  }
+    setFormData(prev => {
+      const currentPlan = prev.programme_plan?.semester_plans || [];
+      const updatedCodes = updatedRequirements.map(r => r.course_code);
+
+      // CLEAN THE COURSE PLAN
+      const cleanedSemesterPlans = currentPlan.map(sem => ({
+        ...sem,
+        courses: sem.courses
+          ? sem.courses.filter(c => updatedCodes.includes(c.course_code))
+          : []
+      }));
+
+      return {
+        ...prev,
+        graduation_requirements: updatedRequirements,
+        programme_plan: {
+          ...prev.programme_plan,
+          semester_plans: cleanedSemesterPlans
+        }
+      };
+    });
+
+    // only update local state if you actually need it
+    setGraduationRequirements(updatedRequirements);
+  };
+
 
 const handleProgrammePlanChange = (updatedSemesterPlans) => {
   const oriSemesterPlans = formData.programme_plan?.semester_plans || [];
@@ -379,7 +405,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
               <div className="p-8">
                 {activeTab === "graduation-requirement" && (
                   <GraduationRequirement 
-                    graduationRequirements={graduationRequirements} 
+                    programmeEnrollment={formData} 
                     editMode={editMode} 
                     onChange={handleGraduationRequirementsOnChange}
                   />

@@ -18,12 +18,30 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axiosClient from '../../api/axiosClient';
 import { COURSE_TYPES, READABLE_COURSE_TYPES } from '../../constants/courseType';
 
-const GraduationRequirement = ({ graduationRequirements, editMode, onChange }) => {
-  const [requirements, setRequirements] = useState(graduationRequirements);
+const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
+  const [requirements, setRequirements] = useState([]);
   const [courses, setCourses] = useState([]);
   const [showSelect, setShowSelect] = useState({});
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [grouped, setGrouped] = useState({})
+
+  useEffect(() => {
+    if(programmeEnrollment && programmeEnrollment.graduation_requirements){
+      const graduationRequirements = programmeEnrollment.graduation_requirements;
+
+      const hold = graduationRequirements.reduce((acc, course) => {
+        if (!acc[course.type]) acc[course.type] = [];
+        acc[course.type].push(course);
+        return acc;
+      }, {});
+      for(const type of COURSE_TYPES){
+        if(!hold[type]) hold[type] = []
+      }
+      setGrouped(hold)
+      setRequirements(graduationRequirements)
+    }
+
+  }, [programmeEnrollment.graduation_requirements]);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -36,18 +54,6 @@ const GraduationRequirement = ({ graduationRequirements, editMode, onChange }) =
     };
     fetchCourses();
   }, []);
-
-  useEffect(() => {
-    const hold = requirements.reduce((acc, course) => {
-      if (!acc[course.type]) acc[course.type] = [];
-      acc[course.type].push(course);
-      return acc;
-    }, {});
-    for(const type of COURSE_TYPES){
-      if(!hold[type]) hold[type] = []
-    }
-    setGrouped(hold)
-  }, [requirements]);
 
   const handleDelete = (type, index) => {
 

@@ -68,50 +68,45 @@ const EditableCourseTable = ({ courses, onRemove, editMode = false }) => (
 );
 
 const CoursePlan = ({ programmeEnrollment, editMode, onChange }) => {
-  const [semesterPlans, setSemesterPlans] = useState([]);
-  const [graduationRequirements, setGraduationRequirements] = useState([]);
-  const [addSelectState, setAddSelectState] = useState({});
+  const [ semesterPlans, setSemesterPlans] = useState([]);
+  const [ addSelectState, setAddSelectState] = useState({});
   const [ remaining, setRemaining ] = useState([])
-  const [showSelect, setShowSelect] = useState({});
-  const [expandedYears, setExpandedYears] = useState({});
+  const [ showSelect, setShowSelect] = useState({});
+  const [ expandedYears, setExpandedYears] = useState({});
 
-  useEffect(() => {
-    if (!programmeEnrollment) return;
+useEffect(() => {
+  if (!programmeEnrollment) return;
 
-    const semesterPlans = programmeEnrollment.programme_plan?.semester_plans;
+  const hold = programmeEnrollment.programme_plan?.semester_plans || [];
+  const graduationRequirements = programmeEnrollment.graduation_requirements || [];
+  const gradCourseCodes = graduationRequirements.map((c) => c.course_code);
 
-    if (!semesterPlans || semesterPlans.length === 0) {
-      const minSem = programmeEnrollment.min_semester || 7;
+  let latestSemesterPlan;
+  if (hold.length === 0) {
+    const minSem = programmeEnrollment.min_semester || 7;
+    latestSemesterPlan = Array.from({ length: minSem }, (_, idx) => ({
+      semester: idx + 1,
+      courses: []
+    }));
+  } else {
+    latestSemesterPlan = hold.map((sem, index) => ({
+      semester: index + 1,
+      courses: sem.courses || []
+    }));
+  }
 
-      const emptySemesterPlans = new Array(minSem).fill(null).map((_, idx) => ({
-        semester: idx + 1,
-        courses: []
-      }));
+  const allocatedCourseCodes = latestSemesterPlan.flatMap((sem) =>
+    sem.courses.map((c) => c.course_code)
+  );
 
-      setSemesterPlans(emptySemesterPlans);
-      setRemaining(programmeEnrollment.graduation_requirements || [])
-      // onChange(emptySemesterPlans); // array only
-    } else {
-      const formattedSemesterPlans = semesterPlans.map(((semesterPlan, index) => ({
-        semester : index + 1,
-        courses : semesterPlan.courses
-      })))
-      setSemesterPlans(formattedSemesterPlans);
+  const remainingCourses = graduationRequirements.filter(
+    (course) => !allocatedCourseCodes.includes(course.course_code)
+  );
 
-      // Calculate remaining courses
-      const allocatedCourseCodes = formattedSemesterPlans.flatMap((sem) =>
-        sem.courses.map((c) => c.course_code)
-      );
+  setSemesterPlans(latestSemesterPlan);
+  setRemaining(remainingCourses);
+}, [programmeEnrollment]);
 
-      const remainingCourses = (programmeEnrollment.graduation_requirements || []).filter(
-        (course) => !allocatedCourseCodes.includes(course.course_code)
-      );
-
-      setRemaining(remainingCourses);
-    }
-
-    setGraduationRequirements(programmeEnrollment.graduation_requirements || []);
-  }, [programmeEnrollment]);
 
   const handleAddCourse = (semIndex, courseCode) => {
     if (!courseCode) return;

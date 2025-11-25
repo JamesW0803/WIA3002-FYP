@@ -34,7 +34,7 @@ const getAllProgrammeIntakes = async (req, res) => {
 const addProgrammeIntake = async (req, res) => {
   try {
     const {
-      programme_code,
+      programme_name,
       academic_session_id,
       number_of_students_enrolled,
       graduation_rate,
@@ -46,7 +46,7 @@ const addProgrammeIntake = async (req, res) => {
 
     let programmePlanId = null;
 
-    const programme = await Programme.findOne({ programme_code });
+    const programme = await Programme.findOne({ programme_name });
     if (!programme) {
       return res.status(404).json({ message: "Programme not found" });
     }
@@ -115,7 +115,7 @@ const addProgrammeIntake = async (req, res) => {
     }
 
     const programmePlan = await ProgrammePlan.create({
-      title: `${programme_code} Auto Plan (${academicSession.year})`,
+      title: `${programme.programme_code} Auto Plan (${academicSession.year})`,
       semester_plans: semesterPlans,
     });
 
@@ -548,15 +548,18 @@ const editProgrammeIntake = async (req, res) => {
       programme_intake_id, // filter
       updatedData, // updated fields
       { new: true } // return updated document
-    ).populate("programme_id")
+    ).populate("graduation_requirements")
+      .populate("programme_id")
       .populate("academic_session_id")
       .populate({
         path: "programme_plan",
         populate: {
           path: "semester_plans",
-          populate: [{ path: "courses" }, { path: "academic_session_id" }],
+          populate: {
+            path: "courses",
+          },
         },
-    });;
+      });
 
     if (!updatedProgrammeIntake) {
       return res.status(404).json({ message: "Programme intake not exist" });
