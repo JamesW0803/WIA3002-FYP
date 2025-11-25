@@ -1,4 +1,5 @@
 const Course = require("../models/Course");
+const Programme = require("../models/Programme");
 const {
   formatCourses,
   formatCourse,
@@ -19,13 +20,14 @@ const getAllCourses = async (req, res) => {
       };
     }
 
-    // Return minimal data if requested (for dropdowns, etc.)
     if (minimal === "true") {
+      // leave this minimal block as-is; it doesn’t need programme-specific info
       const mini = await Course.find(query)
         .select(
           "course_code course_name credit_hours prerequisites offered_semester"
-        ) // include _id implicitly
+        )
         .populate({ path: "prerequisites", select: "course_code" });
+
       const minimalCourses = mini.map((course) => ({
         _id: course._id,
         code: course.course_code,
@@ -37,10 +39,20 @@ const getAllCourses = async (req, res) => {
       return res.status(200).json(minimalCourses);
     }
 
-    const courses = await Course.find(query).populate({
-      path: "prerequisites",
-      select: "course_code course_name credit_hours offered_semester",
-    });
+    const courses = await Course.find(query)
+      .populate({
+        path: "prerequisites",
+        select: "course_code course_name credit_hours offered_semester",
+      })
+      .populate({
+        path: "prerequisitesByProgramme.programme",
+        select: "programme_name programme_code",
+      })
+      .populate({
+        path: "prerequisitesByProgramme.prerequisites",
+        select: "course_code course_name credit_hours",
+      });
+
     const formattedCourses = formatCourses(courses);
     res.status(200).json(formattedCourses);
   } catch (error) {
@@ -56,17 +68,17 @@ const addCourse = async (req, res) => {
       type,
       credit_hours,
       description,
-      prerequisites = [], // default to []
+      prerequisites = [],
+      prerequisitesByProgramme = [], // 👈 accept it
       faculty,
       department,
       offered_semester,
       study_level,
     } = req.body;
 
-    let prerequisitesCourseIds = [];
-
-    // Remove empty / falsy values
+    // ----- 1. Global prerequisites (codes -> ObjectIds) -----
     const cleanedPrerequisiteCodes = (prerequisites || []).filter(Boolean);
+    let prerequisitesCourseIds = [];
 
     if (cleanedPrerequisiteCodes.length > 0) {
       const prerequisiteCourses = await Promise.all(
@@ -84,6 +96,44 @@ const addCourse = async (req, res) => {
       prerequisitesCourseIds = prerequisiteCourses.map((course) => course._id);
     }
 
+    // ----- 2. Programme-specific prerequisites -----
+    const prereqsByProgrammeDocs = [];
+
+    for (const cfg of prerequisitesByProgramme || []) {
+      const programmeCode = cfg.programme_code;
+      const prereqCodes = (cfg.prerequisite_codes || []).filter(Boolean);
+
+      if (!programmeCode || prereqCodes.length === 0) continue;
+
+      // find programme by code
+      const programme = await Programme.findOne({
+        programme_code: programmeCode,
+      });
+      if (!programme) {
+        return res.status(400).json({
+          error: `Invalid programme code in prerequisites: ${programmeCode}`,
+        });
+      }
+
+      // find all prerequisite courses by code
+      const prereqCourseDocs = await Promise.all(
+        prereqCodes.map((code) => Course.findOne({ course_code: code }))
+      );
+
+      if (prereqCourseDocs.some((c) => !c)) {
+        return res.status(400).json({
+          error:
+            "One or more programme-specific prerequisite course codes are invalid.",
+        });
+      }
+
+      prereqsByProgrammeDocs.push({
+        programme: programme._id,
+        prerequisites: prereqCourseDocs.map((c) => c._id),
+      });
+    }
+
+    // ----- 3. Create course -----
     const newCourse = new Course({
       course_code,
       course_name,
@@ -91,6 +141,7 @@ const addCourse = async (req, res) => {
       credit_hours,
       description,
       prerequisites: prerequisitesCourseIds,
+      prerequisitesByProgramme: prereqsByProgrammeDocs, // 👈 save it
       faculty,
       department,
       offered_semester,
@@ -111,9 +162,16 @@ const getCourseByCode = async (req, res) => {
   try {
     const { course_code } = req.params;
 
-    const course = await Course.findOne({ course_code }).populate(
-      "prerequisites"
-    );
+    const course = await Course.findOne({ course_code })
+      .populate("prerequisites")
+      .populate(
+        "prerequisitesByProgramme.programme",
+        "programme_name programme_code"
+      )
+      .populate(
+        "prerequisitesByProgramme.prerequisites",
+        "course_code course_name"
+      );
 
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
@@ -145,28 +203,75 @@ const deleteCourseByCode = async (req, res) => {
 
 const editCourse = async (req, res) => {
   const { course_code } = req.params;
-  const updatedData = req.body;
-  const prereqCourses = [];
+
+  // destructure explicitly so we can transform fields
+  const {
+    prerequisites = [],
+    prerequisitesByProgramme = [],
+    ...rest
+  } = req.body;
 
   try {
-    for (const code of updatedData.prerequisites) {
-      const prereqCourse = await Course.findOne({
-        course_code: code,
-      });
+    // ----- 1. Global prerequisites (codes -> ObjectIds) -----
+    const prereqCourses = [];
+    for (const code of prerequisites || []) {
+      if (!code) continue;
+      const prereqCourse = await Course.findOne({ course_code: code });
 
       if (!prereqCourse) {
         return res
           .status(400)
-          .json({ message: "Invalid prerequisite course code" });
+          .json({ message: `Invalid prerequisite course code: ${code}` });
       }
       prereqCourses.push(prereqCourse._id);
     }
 
-    updatedData.prerequisites = prereqCourses;
+    // ----- 2. Programme-specific prerequisites -----
+    const prereqsByProgrammeDocs = [];
+
+    for (const cfg of prerequisitesByProgramme || []) {
+      const programmeCode = cfg.programme_code;
+      const prereqCodes = (cfg.prerequisite_codes || []).filter(Boolean);
+
+      if (!programmeCode || prereqCodes.length === 0) continue;
+
+      const programme = await Programme.findOne({
+        programme_code: programmeCode,
+      });
+      if (!programme) {
+        return res
+          .status(400)
+          .json({ message: `Invalid programme code: ${programmeCode}` });
+      }
+
+      const prereqCourseDocs = await Promise.all(
+        prereqCodes.map((code) => Course.findOne({ course_code: code }))
+      );
+
+      if (prereqCourseDocs.some((c) => !c)) {
+        return res.status(400).json({
+          message:
+            "One or more programme-specific prerequisite course codes are invalid.",
+        });
+      }
+
+      prereqsByProgrammeDocs.push({
+        programme: programme._id,
+        prerequisites: prereqCourseDocs.map((c) => c._id),
+      });
+    }
+
+    // ----- 3. Build update payload -----
+    const updatedData = {
+      ...rest,
+      prerequisites: prereqCourses,
+      prerequisitesByProgramme: prereqsByProgrammeDocs,
+    };
+
     const updatedCourse = await Course.findOneAndUpdate(
-      { course_code }, // filter
-      updatedData, // updated fields
-      { new: true } // return updated document
+      { course_code },
+      updatedData,
+      { new: true }
     );
 
     if (!updatedCourse) {
@@ -175,9 +280,10 @@ const editCourse = async (req, res) => {
 
     res.status(200).json(updatedCourse);
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: "Failed to update course", details: err.message });
+    res.status(500).json({
+      error: "Failed to update course",
+      details: err.message,
+    });
   }
 };
 

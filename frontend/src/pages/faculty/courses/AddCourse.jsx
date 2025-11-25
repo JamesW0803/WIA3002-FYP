@@ -16,7 +16,7 @@ const classificationSession = formSessions.find(
   (session) => session["title"] === "Classification"
 );
 
-const ConsolidatedForm = ({ courses, formData, setFormData }) => {
+const ConsolidatedForm = ({ courses, programmes, formData, setFormData }) => {
   const formSessions = [basicInformationSession, classificationSession];
 
   return (
@@ -24,6 +24,7 @@ const ConsolidatedForm = ({ courses, formData, setFormData }) => {
       {formSessions.map((formSession) => {
         return (
           <FormSession
+            key={formSession.title}
             title={formSession.title}
             fields={formSession.fields}
             formData={formData}
@@ -31,7 +32,15 @@ const ConsolidatedForm = ({ courses, formData, setFormData }) => {
           />
         );
       })}
+
       <PrerequisitesFormSession
+        courses={courses}
+        formData={formData}
+        setFormData={setFormData}
+      />
+
+      <ProgrammePrerequisitesFormSession
+        programmes={programmes}
         courses={courses}
         formData={formData}
         setFormData={setFormData}
@@ -145,10 +154,193 @@ const PrerequisitesFormSession = ({ courses, formData, setFormData }) => {
   );
 };
 
+const ProgrammePrerequisitesFormSession = ({
+  programmes,
+  courses,
+  formData,
+  setFormData,
+}) => {
+  // Dropdown options
+  const programmeOptions = (programmes || []).map((p) => ({
+    label: `${p.programme_code} - ${p.programme_name}`,
+    value: p.programme_code,
+  }));
+
+  const courseOptions = (courses || []).map((course) => ({
+    label: `${course.course_code} ${course.course_name}`,
+    value: course.course_code,
+  }));
+
+  const addProgrammeConfig = () => {
+    const current = formData.prerequisitesByProgramme || [];
+    setFormData({
+      ...formData,
+      prerequisitesByProgramme: [
+        ...current,
+        { programme_code: "", prerequisite_codes: [""] }, // start with one empty prereq
+      ],
+    });
+  };
+
+  const removeProgrammeConfig = (index) => {
+    const current = formData.prerequisitesByProgramme || [];
+    const updated = current.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      prerequisitesByProgramme: updated,
+    });
+  };
+
+  const updateProgrammeCode = (index, programme_code) => {
+    const current = formData.prerequisitesByProgramme || [];
+    const updated = [...current];
+    updated[index] = {
+      ...updated[index],
+      programme_code,
+    };
+    setFormData({
+      ...formData,
+      prerequisitesByProgramme: updated,
+    });
+  };
+
+  const addProgrammePrereq = (index) => {
+    const current = formData.prerequisitesByProgramme || [];
+    const updated = [...current];
+    const cfg = updated[index] || {
+      programme_code: "",
+      prerequisite_codes: [],
+    };
+    updated[index] = {
+      ...cfg,
+      prerequisite_codes: [...(cfg.prerequisite_codes || []), ""],
+    };
+    setFormData({
+      ...formData,
+      prerequisitesByProgramme: updated,
+    });
+  };
+
+  const updateProgrammePrereq = (index, prereqIndex, value) => {
+    const current = formData.prerequisitesByProgramme || [];
+    const updated = [...current];
+    const cfg = updated[index];
+    const prereqs = [...(cfg.prerequisite_codes || [])];
+    prereqs[prereqIndex] = value;
+    updated[index] = {
+      ...cfg,
+      prerequisite_codes: prereqs,
+    };
+    setFormData({
+      ...formData,
+      prerequisitesByProgramme: updated,
+    });
+  };
+
+  const removeProgrammePrereq = (index, prereqIndex) => {
+    const current = formData.prerequisitesByProgramme || [];
+    const updated = [...current];
+    const cfg = updated[index];
+    const prereqs = (cfg.prerequisite_codes || []).filter(
+      (_, i) => i !== prereqIndex
+    );
+    updated[index] = {
+      ...cfg,
+      prerequisite_codes: prereqs,
+    };
+    setFormData({
+      ...formData,
+      prerequisitesByProgramme: updated,
+    });
+  };
+
+  return (
+    <div
+      id="form-session-programme-prerequisites"
+      className="flex flex-col mt-8"
+    >
+      <span className="font-semibold ml-16">
+        Programme-specific prerequisites
+      </span>
+      <span className="font-extralight ml-16 mb-4 text-sm">
+        These override the global prerequisites for the selected programme.
+      </span>
+
+      {(formData.prerequisitesByProgramme || []).map((cfg, index) => (
+        <div
+          key={index}
+          className="ml-16 mb-4 border rounded-xl p-4 flex flex-col gap-3"
+        >
+          {/* Programme selector + remove button */}
+          <div className="flex items-center gap-4">
+            <div className="w-1/2">
+              <SelectInputField
+                label="Programme"
+                options={programmeOptions}
+                value={cfg.programme_code || ""}
+                onChange={(e) => updateProgrammeCode(index, e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => removeProgrammeConfig(index)}
+              className="text-red-500 text-xs hover:underline"
+            >
+              Remove programme config
+            </button>
+          </div>
+
+          {/* Prereqs for this programme */}
+          <div className="flex flex-col gap-2">
+            {(cfg.prerequisite_codes || []).map((value, pIndex) => (
+              <div key={pIndex} className="flex flex-row items-center gap-3">
+                <div className="w-1/2">
+                  <SelectInputField
+                    label={`Prerequisite ${pIndex + 1}`}
+                    options={courseOptions}
+                    value={value}
+                    onChange={(e) =>
+                      updateProgrammePrereq(index, pIndex, e.target.value)
+                    }
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeProgrammePrereq(index, pIndex)}
+                  className="text-red-500 text-xs hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => addProgrammePrereq(index)}
+              className="text-blue-600 text-xs hover:underline mt-1"
+            >
+              + Add another prerequisite for this programme
+            </button>
+          </div>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addProgrammeConfig}
+        className="ml-16 text-blue-600 text-sm hover:underline"
+      >
+        + Add programme-specific prerequisites
+      </button>
+    </div>
+  );
+};
+
 const AddCourse = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const courses = location.state.courses;
+  const [programmes, setProgrammes] = useState([]);
   const [formData, setFormData] = useState({
     course_code: "",
     course_name: "",
@@ -156,10 +348,24 @@ const AddCourse = () => {
     credit_hours: null,
     description: "",
     prerequisites: [],
+    prerequisitesByProgramme: [],
     faculty: "",
     offered_semester: [],
     study_level: null,
   });
+
+  useEffect(() => {
+    const fetchProgrammes = async () => {
+      try {
+        const res = await axiosClient.get("/programmes");
+        setProgrammes(res.data);
+      } catch (err) {
+        console.error("Error fetching programmes: ", err);
+      }
+    };
+
+    fetchProgrammes();
+  }, []);
 
   const handleCancel = () => {
     navigate(`/admin/courses`);
@@ -189,6 +395,15 @@ const AddCourse = () => {
       ...formData,
       offered_semester,
       prerequisites: (formData.prerequisites || []).filter(Boolean),
+      prerequisitesByProgramme: (formData.prerequisitesByProgramme || [])
+        .filter(
+          (cfg) =>
+            cfg.programme_code && (cfg.prerequisite_codes || []).length > 0
+        )
+        .map((cfg) => ({
+          programme_code: cfg.programme_code,
+          prerequisite_codes: (cfg.prerequisite_codes || []).filter(Boolean),
+        })),
     };
 
     try {
@@ -222,6 +437,7 @@ const AddCourse = () => {
       <Divider sx={{ marginX: 5 }} />
       <ConsolidatedForm
         courses={courses}
+        programmes={programmes}
         formData={formData}
         setFormData={setFormData}
       />

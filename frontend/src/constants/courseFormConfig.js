@@ -17,7 +17,7 @@ const faculties = ["Faculty of Computer Science and Information Technology"];
 
 const studyLevels = [0, 1, 2, 3];
 
-const credit_hours = [2, 3, 4, 5, 12];
+const credit_hours = [2, 3, 4, 5, 12, 14];
 
 const semesters = [
   "Semester 1",

@@ -6,6 +6,7 @@ import axiosClient from "../../../api/axiosClient";
 import { formSessions } from "../../../constants/courseFormConfig";
 import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import PrerequisitesSession from "../../../components/Faculty/Courses/PrerequisitesSession";
+import ProgrammePrerequisitesSession from "../../../components/Faculty/Courses/ProgrammePrerequisitesSession";
 import FormDialog from "../../../components/dialog/FormDialog";
 
 const CourseDetails = () => {
@@ -19,6 +20,7 @@ const CourseDetails = () => {
   const [openDialog, setOpenDialog] = useState(false);
 
   const [courses, setCourses] = useState([]);
+  const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,9 +28,6 @@ const CourseDetails = () => {
       try {
         const res = await axiosClient.get(`/courses/${course_code}`);
         const course = res.data;
-        course.prerequisites = course.prerequisites.map(
-          (prerequisiteCourse) => prerequisiteCourse.course_code
-        );
         setFormData(course);
       } catch (err) {
         console.error(err);
@@ -44,13 +43,21 @@ const CourseDetails = () => {
       }
     };
 
+    // NEW
+    const fetchProgrammes = async () => {
+      try {
+        const res = await axiosClient.get("/programmes");
+        setProgrammes(res.data);
+      } catch (err) {
+        console.error("Error fetching programmes: ", err);
+      }
+    };
+
     const run = async () => {
       try {
         if (!addCourse) {
-          // Only fetch course if NOT adding a new one
           await fetchCourse();
         } else {
-          // If adding new course, initialize empty form
           setEditMode(true);
           setFormData({
             course_code: "",
@@ -59,6 +66,7 @@ const CourseDetails = () => {
             credit_hours: "",
             offered_semester: [],
             prerequisites: [],
+            prerequisitesByProgramme: [],
             description: "",
             study_level: "",
             department: "",
@@ -66,8 +74,8 @@ const CourseDetails = () => {
           });
         }
 
-        // Always fetch available courses (for prerequisites)
         await fetchAllCourses();
+        await fetchProgrammes();
       } finally {
         setLoading(false);
       }
@@ -123,7 +131,16 @@ const CourseDetails = () => {
       const payload = {
         ...formData,
         offered_semester,
-        prerequisites: formData.prerequisites ? formData.prerequisites : [],
+        prerequisites: (formData.prerequisites || []).filter(Boolean),
+        prerequisitesByProgramme: (formData.prerequisitesByProgramme || [])
+          .filter(
+            (cfg) =>
+              cfg.programme_code && (cfg.prerequisite_codes || []).length > 0
+          )
+          .map((cfg) => ({
+            programme_code: cfg.programme_code,
+            prerequisite_codes: (cfg.prerequisite_codes || []).filter(Boolean),
+          })),
       };
 
       if (!addCourse) {
@@ -275,6 +292,14 @@ const CourseDetails = () => {
                   </div>
                 ))}
                 <PrerequisitesSession
+                  courses={courses}
+                  formData={formData}
+                  setFormData={setFormData}
+                  editMode={editMode}
+                />
+
+                <ProgrammePrerequisitesSession
+                  programmes={programmes}
                   courses={courses}
                   formData={formData}
                   setFormData={setFormData}
