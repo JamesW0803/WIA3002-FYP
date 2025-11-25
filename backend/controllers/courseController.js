@@ -141,7 +141,7 @@ const addCourse = async (req, res) => {
       credit_hours,
       description,
       prerequisites: prerequisitesCourseIds,
-      prerequisitesByProgramme: prereqsByProgrammeDocs, // 👈 save it
+      prerequisitesByProgramme: prereqsByProgrammeDocs,
       faculty,
       department,
       offered_semester,
@@ -149,7 +149,25 @@ const addCourse = async (req, res) => {
     });
 
     const savedCourse = await newCourse.save();
-    res.status(201).json(savedCourse);
+
+    // Re-fetch with populations + format so frontend always
+    // gets programme_code + prerequisite_codes, etc.
+    const populated = await Course.findById(savedCourse._id)
+      .populate(
+        "prerequisites",
+        "course_code course_name credit_hours offered_semester"
+      )
+      .populate(
+        "prerequisitesByProgramme.programme",
+        "programme_name programme_code"
+      )
+      .populate(
+        "prerequisitesByProgramme.prerequisites",
+        "course_code course_name credit_hours"
+      );
+
+    const formatted = formatCourse(populated);
+    res.status(201).json(formatted);
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({ error: "Course code already exists." });
@@ -278,7 +296,23 @@ const editCourse = async (req, res) => {
       return res.status(404).json({ message: "Course not exist" });
     }
 
-    res.status(200).json(updatedCourse);
+    // populate + format before sending to frontend
+    const populated = await Course.findById(updatedCourse._id)
+      .populate(
+        "prerequisites",
+        "course_code course_name credit_hours offered_semester"
+      )
+      .populate(
+        "prerequisitesByProgramme.programme",
+        "programme_name programme_code"
+      )
+      .populate(
+        "prerequisitesByProgramme.prerequisites",
+        "course_code course_name credit_hours"
+      );
+
+    const formatted = formatCourse(populated);
+    res.status(200).json(formatted);
   } catch (err) {
     res.status(500).json({
       error: "Failed to update course",
