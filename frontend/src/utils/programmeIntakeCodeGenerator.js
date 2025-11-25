@@ -11,7 +11,7 @@ export const generateProgrammeIntakeCode = (programme, year, semester) => {
   const shortSemester =
     semesterMap[semester] || semester.replace(/\s+/g, "").toUpperCase(); // fallback
 
-  const programmeIntakeCode = `${programme.programme_code}-${startYear}-${endYear}-${shortSemester}`;
+  const programmeIntakeCode = `${programme?.programme_code}-${startYear}-${endYear}-${shortSemester}`;
   return programmeIntakeCode;
 };
 
