@@ -16,6 +16,7 @@ const Course = require("../models/Course");
 const {
   COURSE_TYPE_TO_CATEGORY,
 } = require("../constants/graduationCategories");
+const { editProgrammePlan } = require("./programmePlanController")
 
 const getAllProgrammeIntakes = async (req, res) => {
   try {
@@ -87,6 +88,7 @@ const addProgrammeIntake = async (req, res) => {
       // 3. Distribute evenly into semesters
       const coursesPerSemester = Math.ceil(sortedCourses.length / min_semester);
 
+      let currentAcademicSession = academicSession
       for (let i = 0; i < min_semester; i++) {
         const sliceStart = i * coursesPerSemester;
         const sliceEnd = (i + 1) * coursesPerSemester;
@@ -94,9 +96,20 @@ const addProgrammeIntake = async (req, res) => {
 
         const semesterPlan = await SemesterPlan.create({
           courses: semesterCourses.map((c) => c._id),
-          academic_session_id: null, // optional if you want to link later
+          academic_session_id: currentAcademicSession, // optional if you want to link later
         });
 
+        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+        semesterPlans.push(semesterPlan._id);
+      }
+    }else{
+      let currentAcademicSession = academicSession
+      for (let i = 0; i < min_semester; i++) {
+        const semesterPlan = await SemesterPlan.create({
+          courses: [],
+          academic_session_id: currentAcademicSession, // optional if you want to link later
+        });
+        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
         semesterPlans.push(semesterPlan._id);
       }
     }
@@ -529,7 +542,7 @@ const editProgrammeIntake = async (req, res) => {
       return res.status(404).json({ message: "Invalid academic session" });
     }
 
-    updatedData.programme_id = programme._id
+    await editProgrammePlan(updatedData.programme_plan);
     
     const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(
       programme_intake_id, // filter

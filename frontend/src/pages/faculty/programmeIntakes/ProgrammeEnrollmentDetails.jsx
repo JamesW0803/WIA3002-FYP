@@ -171,6 +171,7 @@ const ProgrammeEnrollmentDetails = () => {
   const handleSave = async () => {
     try {
       if(!addProgrammeIntake){
+        console.log("payload:", formData)
         const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
         setEditMode(false);
         const data = {
@@ -217,6 +218,25 @@ const ProgrammeEnrollmentDetails = () => {
     }));
     setGraduationRequirements(updatedRequirements); // if you still need local state
   }
+
+const handleProgrammePlanChange = (updatedSemesterPlans) => {
+  const oriSemesterPlans = formData.programme_plan?.semester_plans || [];
+
+  // Create a new programme plan with updated courses
+  const updatedProgrammePlan = {
+    ...formData.programme_plan,
+    semester_plans: oriSemesterPlans.map((sem, idx) => ({
+      ...sem,
+      courses: updatedSemesterPlans.find((sem) => sem.semester === idx+1).courses
+    }))
+  };
+
+  setFormData(prev => ({
+    ...prev,
+    programme_plan: updatedProgrammePlan
+  }));
+};
+
 
   const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
@@ -358,10 +378,18 @@ const ProgrammeEnrollmentDetails = () => {
               {/* TAB CONTENT */}
               <div className="p-8">
                 {activeTab === "graduation-requirement" && (
-                  <GraduationRequirement graduationRequirements={graduationRequirements} editMode={editMode} onChange={handleGraduationRequirementsOnChange}/>
+                  <GraduationRequirement 
+                    graduationRequirements={graduationRequirements} 
+                    editMode={editMode} 
+                    onChange={handleGraduationRequirementsOnChange}
+                  />
                 )}
                 {activeTab === "course-plan" && (
-                  <CoursePlan programmeEnrollment={formData} />
+                  <CoursePlan 
+                    programmeEnrollment={formData} 
+                    editMode={editMode} 
+                    onChange={handleProgrammePlanChange}
+                  />                
                 )}
               </div>
             </div>
