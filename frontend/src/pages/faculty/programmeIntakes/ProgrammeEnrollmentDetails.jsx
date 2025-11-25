@@ -357,6 +357,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                         editMode={editMode}
                         onChange={handleInputChange(key)}
                         academicSessions={academicSessions}
+                        onCreate={addProgrammeIntake}
                       />
                     ))}
                   </div>
@@ -371,6 +372,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                         editMode={editMode}
                         onChange={handleInputChange(key)}
                         academicSessions={academicSessions}
+                        onCreate={addProgrammeIntake}
                       />
                     ))}
                   </div>
@@ -425,8 +427,9 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
   );
 };
 
-const FormField = ({ field, value, editMode, onChange, academicSessions }) => {
+const FormField = ({ field, value, editMode, onChange, academicSessions, onCreate}) => {
   if (!field) return null;
+  if( onCreate && field.autoCreation) return null;
   const { label, icon: Icon, type, multiline, options, placeholder } = field;
 
   let displayValue = value;

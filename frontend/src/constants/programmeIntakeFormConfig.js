@@ -8,9 +8,6 @@ import {
   Building,
   FileText,
 } from "lucide-react";
-import { DEPARTMENTS } from "./department";
-
-const faculties = ["Faculty of Computer Science and Information Technology"];
 
 export const programmeIntakeFormFields = [
   {
@@ -87,6 +84,7 @@ export const programmeIntakeFormFields = [
     label: "Created at",
     icon: FileText,
     readonly: true,
+    autoCreation: true
   },
   {
     type: "text",
@@ -94,5 +92,6 @@ export const programmeIntakeFormFields = [
     label: "Updated at",
     icon: FileText,
     readonly: true,
+    autoCreation: true
   },
 ];
