@@ -11,7 +11,7 @@ const studentSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
-  matricNo : {
+  matricNo: {
     type: String,
     required: true,
     unique: true,
