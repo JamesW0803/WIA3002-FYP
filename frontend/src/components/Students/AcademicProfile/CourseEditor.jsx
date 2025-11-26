@@ -1,4 +1,3 @@
-// CourseEditor.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import CourseListSelector from "./CourseListSelector";
 import CourseStatusSelector from "./CourseStatusSelector";
@@ -79,7 +78,25 @@ const CourseEditor = (props) => {
         return;
       }
 
-      const localMissing = prerequisiteCodes.filter((code) => {
+      // 1) local prerequisites (from minimal course list)
+      const localRequired = prerequisiteCodes || [];
+
+      // 2) server-side prerequisites (programme-aware)
+      const serverCheck = await checkCoursePrerequisites(editingEntry.code, {
+        year: editingEntry.year,
+        semester: editingEntry.semester,
+      });
+
+      const serverRequired = serverCheck?.requiredCourses || [];
+      const serverUnmet = serverCheck?.unmetPrerequisites || [];
+
+      // 3) effective required list = union of local + server
+      const effectiveRequired = Array.from(
+        new Set([...localRequired, ...serverRequired])
+      );
+
+      // 4) local “already passed in earlier terms” check
+      const localMissing = effectiveRequired.filter((code) => {
         return !entries.some(
           (e) =>
             e.code === code &&
@@ -88,16 +105,12 @@ const CourseEditor = (props) => {
         );
       });
 
-      const serverCheck = await checkCoursePrerequisites(editingEntry.code, {
-        year: editingEntry.year,
-        semester: editingEntry.semester,
-      });
-
-      const combined = Array.from(
-        new Set([...localMissing, ...serverCheck.unmetPrerequisites])
+      // 5) union of unmet from local scan + server scan
+      const combinedUnmet = Array.from(
+        new Set([...localMissing, ...serverUnmet])
       );
 
-      const sameTermConflict = prerequisiteCodes.some((code) =>
+      const sameTermConflict = effectiveRequired.some((code) =>
         entries.some(
           (e) =>
             e.code === code &&
@@ -107,10 +120,11 @@ const CourseEditor = (props) => {
       );
 
       setPrerequisiteCheck({
-        hasPrerequisites: prerequisiteCodes.length > 0,
-        unmetPrerequisites: combined,
-        allPrerequisitesMet: combined.length === 0,
-        requiredCourses: prerequisiteCodes,
+        hasPrerequisites:
+          effectiveRequired.length > 0 || serverCheck?.hasPrerequisites,
+        unmetPrerequisites: combinedUnmet,
+        allPrerequisitesMet: combinedUnmet.length === 0,
+        requiredCourses: effectiveRequired,
         sameTermConflict,
       });
     };
@@ -149,8 +163,14 @@ const CourseEditor = (props) => {
   };
 
   const getUnmetLocalPrereqs = () => {
-    if (prerequisiteCodes.length === 0) return [];
-    return prerequisiteCodes.filter((code) => {
+    const required =
+      prerequisiteCheck.requiredCourses?.length > 0
+        ? prerequisiteCheck.requiredCourses
+        : prerequisiteCodes;
+
+    if (!required || required.length === 0) return [];
+
+    return required.filter((code) => {
       return !entries.some(
         (e) =>
           e.code === code &&
@@ -163,8 +183,14 @@ const CourseEditor = (props) => {
   };
 
   const hasSameSemesterPrerequisites = () => {
-    if (prerequisiteCodes.length === 0) return false;
-    return prerequisiteCodes.some((code) =>
+    const required =
+      prerequisiteCheck.requiredCourses?.length > 0
+        ? prerequisiteCheck.requiredCourses
+        : prerequisiteCodes;
+
+    if (!required || required.length === 0) return false;
+
+    return required.some((code) =>
       entries.some(
         (e) =>
           e.code === code &&
