@@ -26,17 +26,22 @@ export default function AutoGenerationCircularIntegration({ onGenerate , success
     };
   }, []);
 
-  const handleButtonClick = () => {
+  const handleButtonClick = async () => {
     if (!loading) {
       setSuccess(false);
       setLoading(true);
-      onGenerate();
-      timer.current = setTimeout(() => {
+
+      try {
+        await onGenerate(); // Wait for onGenerate to finish
         setSuccess(true);
+      } catch (err) {
+        console.error("Error generating programme plan", err);
+      } finally {
         setLoading(false);
-      }, 2000);
+      }
     }
   };
+
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0, mb: 1 }}>

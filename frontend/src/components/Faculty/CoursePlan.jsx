@@ -83,7 +83,7 @@ useEffect(() => {
   const graduationRequirements = programmeEnrollment.graduation_requirements || [];
 
   let latestSemesterPlan;
-  const minSem = programmeEnrollment.min_semester || 7;
+  const minSem = Number(programmeEnrollment.min_semester) || 7;
   if (hold.length !== minSem) {
 
     latestSemesterPlan = Array.from({ length: minSem }, (_, idx) => {
@@ -104,6 +104,15 @@ useEffect(() => {
     }));
   }
 
+  setExpandedYears((prev) => {
+    const newExpanded = {};
+    for (let yearIdx = 0; yearIdx < Math.ceil(minSem/2); yearIdx++) {
+      // If a value exists in prev, keep it; else default to false
+      newExpanded[yearIdx] = prev[yearIdx] ?? false;
+    }
+    return newExpanded;
+  });
+    
   const allocatedCourseCodes = latestSemesterPlan.flatMap((sem) =>
     sem.courses.map((c) => c.course_code)
   );
@@ -186,11 +195,17 @@ const handleOnGenerate = async () => {
     const draftedSemesterPlans = res.data
     setGenerated(true)
     onChange(draftedSemesterPlans)
+
   }catch(err){
     console.log("Error generating draft programme plan")
+  }finally{
+    setExpandedYears(prev =>
+      Object.fromEntries(
+        Object.keys(prev).map(key => [key, true])
+      )
+    );
   }
 }
-
 
   const yearGroups = [];
   for (let i = 0; i < semesterPlans.length; i += 2) {
