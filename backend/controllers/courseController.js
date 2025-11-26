@@ -1,3 +1,4 @@
+//courseController.js
 const Course = require("../models/Course");
 const Programme = require("../models/Programme");
 const {
@@ -20,25 +21,73 @@ const getAllCourses = async (req, res) => {
       };
     }
 
+    // ==== PROGRAMME-AWARE MINIMAL RESPONSE FOR PLANNER ====
     if (minimal === "true") {
-      // leave this minimal block as-is; it doesn’t need programme-specific info
+      let studentProgrammeId = null;
+
+      // If a student is logged in, try to get their programme
+      // (same pattern as in checkCoursePrerequisites)
+      if (req.user && req.user.role === "student") {
+        const profile = await AcademicProfile.findOne({
+          student: req.user.user_id,
+        })
+          .populate({
+            path: "student",
+            populate: {
+              path: "programme",
+              model: "Programme",
+            },
+          })
+          .select("student");
+
+        studentProgrammeId = profile?.student?.programme?._id || null;
+      }
+
+      // Pull courses with both global + programme-specific prereqs
       const mini = await Course.find(query)
         .select(
-          "course_code course_name credit_hours prerequisites offered_semester"
+          "course_code course_name credit_hours prerequisites offered_semester prerequisitesByProgramme"
         )
-        .populate({ path: "prerequisites", select: "course_code" });
+        .populate({
+          path: "prerequisites",
+          select: "course_code",
+        })
+        .populate({
+          path: "prerequisitesByProgramme.prerequisites",
+          select: "course_code",
+        });
 
-      const minimalCourses = mini.map((course) => ({
-        _id: course._id,
-        code: course.course_code,
-        name: course.course_name,
-        credit: course.credit_hours,
-        prerequisites: (course.prerequisites || []).map((p) => p.course_code),
-        offered_semester: course.offered_semester,
-      }));
+      const minimalCourses = mini.map((course) => {
+        let effectivePrereqs = course.prerequisites || [];
+
+        // If we know the student's programme, prefer programme-specific config
+        if (studentProgrammeId) {
+          const cfg = (course.prerequisitesByProgramme || []).find((p) =>
+            p.programme.equals
+              ? p.programme.equals(studentProgrammeId)
+              : p.programme.toString() === studentProgrammeId.toString()
+          );
+
+          if (cfg && Array.isArray(cfg.prerequisites)) {
+            effectivePrereqs = cfg.prerequisites;
+          }
+        }
+
+        return {
+          _id: course._id,
+          code: course.course_code,
+          name: course.course_name,
+          credit: course.credit_hours,
+          // <- this is now the programme-specific list (if available)
+          prerequisites: (effectivePrereqs || []).map((p) => p.course_code),
+          offered_semester: course.offered_semester,
+        };
+      });
+
       return res.status(200).json(minimalCourses);
     }
 
+    // ==== FULL (NON-MINIMAL) RESPONSE – unchanged ====
     const courses = await Course.find(query)
       .populate({
         path: "prerequisites",
