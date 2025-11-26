@@ -18,6 +18,7 @@ const {
 } = require("../constants/graduationCategories");
 const { editProgrammePlan } = require("./programmePlanController")
 const { createNextAcademicSession } = require("./academicSessionController")
+const { generateProgrammeIntakeCode } = require("../utils/formatter/programmeIntakeFormatter")
 
 const getAllProgrammeIntakes = async (req, res) => {
   try {
@@ -67,7 +68,7 @@ const addProgrammeIntake = async (req, res) => {
     for (let i = 0; i < semesterPlans.length; i++) {
       const semesterPlan = await SemesterPlan.create({
         programme_plan_id : programmePlan._id,
-        courses: semesterPlans[i].courses,
+        courses: semesterPlans[i].courses?.map(course => course._id),
         academic_session_id: currentAcademicSession, 
       });
 
@@ -199,89 +200,6 @@ const deleteProgrammeIntakeById = async (req, res) => {
     res.status(500).json({ error: error.message });
     console.log("Error deleting programme intake by ID:", error);
   }
-};
-
-const generateProgrammeIntakeCode = (programme, year, semester) => {
-  // Split year from "2023/2024" to "23" and "24"
-  const [startYear, endYear] = year.split("/").map((y) => y.slice(-2)); // ["23", "24"]
-
-  // Convert semester to short form
-  const semesterMap = {
-    "Semester 1": "S1",
-    "Semester 2": "S2",
-    "Special Semester": "SS",
-  };
-  const shortSemester =
-    semesterMap[semester] || semester.replace(/\s+/g, "").toUpperCase(); // fallback
-
-  const programmeIntakeCode = `${programme.programme_code}-${startYear}-${endYear}-${shortSemester}`;
-  return programmeIntakeCode;
-};
-
-const topologicalSort = async (courses) => {
-  const courseMap = {};
-  const inDegree = {};
-  const graph = {};
-
-  // Initialize map
-  courses.forEach((course) => {
-    const id = course._id.toString();
-    courseMap[id] = course;
-    inDegree[id] = 0;
-    graph[id] = [];
-  });
-
-  // Fetch missing prerequisite courses from DB if not in the list
-  for (const course of courses) {
-    const courseId = course._id.toString();
-    const prereqs = course.prerequisites || [];
-
-    for (const prereq of prereqs) {
-      const prereqId = prereq._id?.toString() || prereq.toString();
-
-      if (!graph[prereqId]) {
-        // Not in original list, try fetch from DB
-        const missingCourse = await Course.findById(prereqId);
-        if (missingCourse) {
-          courseMap[prereqId] = missingCourse;
-          inDegree[prereqId] = 0;
-          graph[prereqId] = [];
-        } else {
-          console.warn(
-            `⚠️ Prerequisite course with ID ${prereqId} not found in DB`
-          );
-          continue; // skip if not found
-        }
-      }
-
-      graph[prereqId].push(courseId);
-      inDegree[courseId] = (inDegree[courseId] || 0) + 1;
-    }
-  }
-
-  // Kahn’s algorithm
-  const queue = [];
-  const result = [];
-
-  for (const [id, degree] of Object.entries(inDegree)) {
-    if (degree === 0) queue.push(id);
-  }
-
-  while (queue.length) {
-    const current = queue.shift();
-    result.push(courseMap[current]);
-
-    for (const neighbor of graph[current]) {
-      inDegree[neighbor]--;
-      if (inDegree[neighbor] === 0) queue.push(neighbor);
-    }
-  }
-
-  if (result.length !== Object.keys(courseMap).length) {
-    throw new Error("Cycle detected or unresolved prerequisite chain.");
-  }
-
-  return result;
 };
 
 const updateProgrammeIntake = async (req, res) => {
@@ -502,7 +420,7 @@ const editProgrammeIntake = async (req, res) => {
       return res.status(404).json({ message: "Invalid academic session" });
     }
 
-    await editProgrammePlan(updatedData.programme_plan);
+    await editProgrammePlan(updatedData.programme_plan, programme, academicSession);
     
     const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(
       programme_intake_id, // filter
@@ -542,5 +460,5 @@ module.exports = {
   updateProgrammeIntake,
   getGraduationRequirementsForStudent,
   getProgrammePlanMappingByCode,
-  editProgrammeIntake
+  editProgrammeIntake,
 };

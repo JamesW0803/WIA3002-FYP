@@ -226,7 +226,7 @@ const handleOnGenerate = async () => {
         {programmeEnrollment?.year} {programmeEnrollment?.semester}
       </Typography>
 
-      {onCreate && 
+      {onCreate || editMode &&
         <AutoGenerationCircularIntegration 
           onGenerate={handleOnGenerate} 
           success={generated}

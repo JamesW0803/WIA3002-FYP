@@ -177,15 +177,18 @@ const ProgrammeEnrollmentDetails = () => {
     try {
       if(!addProgrammeIntake){
         const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
+        const programmeIntake = res.data
         setEditMode(false);
-        const data = {
-          ...res.data,
-          createdAt: formatDateToLocaleString(res.data.createdAt),
-          updatedAt: formatDateToLocaleString(res.data.updatedAt),
-        };
-        setFormData(data)
-        setOriginalFormData(data)
-        setGraduationRequirements(data.graduation_requirements || []);
+        navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, 
+          { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
+        // const data = {
+        //   ...res.data,
+        //   createdAt: formatDateToLocaleString(res.data.createdAt),
+        //   updatedAt: formatDateToLocaleString(res.data.updatedAt),
+        // };
+        // setFormData(data)
+        // setOriginalFormData(data)
+        // setGraduationRequirements(data.graduation_requirements || []);
       }else{
         const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
         const programmeIntake = res.data
@@ -256,12 +259,12 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
         return ({
           ...oriSemesterPlans[sem.semester-1],
           courses: sem.courses,
-          sem: sem.semester
+          semester: sem.semester
         })
       }else{
         return ({
           courses: sem.courses,
-          sem: sem.semester
+          semester: sem.semester
         })
       }
   })};

@@ -2,7 +2,11 @@ const Student = require("../models/Student");
 const ProgrammePlan = require("../models/ProgrammePlan");
 const SemesterPlan = require("../models/SemesterPlan");
 const Course = require("../models/Course");
+const AcademicSession = require("../models/AcademicSession");
 const { TYPE_PRIORITY } = require("../constants/courseType")
+const { createNextAcademicSession } = require("./academicSessionController")
+const { generateProgrammeIntakeCode } = require("../utils/formatter/programmeIntakeFormatter")
+
 const { SEMESTER_1, SEMESTER_2, SEMESTER_1_AND_2, } = require("../constants/semesters")
 
 const getProgrammePlans = async (req, res) => {
@@ -46,20 +50,59 @@ const getProgrammePlanById = async (req, res) => {
   }
 };
 
-const editProgrammePlan = async (updatedProgrammePlan) => {
+const editProgrammePlan = async (updatedProgrammePlan, programme, academicSession) => {
   try {
     // Validate programme plan exists
     const plan = await ProgrammePlan.findById(updatedProgrammePlan._id);
     if (!plan) return "Programme not found";
+    const semesterPlans = updatedProgrammePlan.semester_plans
+    let update = false
 
-    // Update each semester plan if provided
-    if (updatedProgrammePlan.semester_plans) {
-      const res = await Promise.all(updatedProgrammePlan.semester_plans.map(async (sem) => {
-        await SemesterPlan.findByIdAndUpdate(sem._id, {
-          courses: sem.courses,
+    // update each semester plan
+    let currentAcademicSession = academicSession
+    for (let i = 0; i < semesterPlans.length; i++) {
+      const semesterPlan = semesterPlans[i]
+
+      const semesterPlanId = semesterPlan._id
+      if(semesterPlanId){
+        // update existing semester plan which already linked to the programme plan
+        await SemesterPlan.findByIdAndUpdate(semesterPlanId, {
+          courses: semesterPlan.courses?.map(course => course._id),
+          academic_session_id: currentAcademicSession._id, 
+        })
+      }else{
+        // create new semester plan and link to programme plan
+        const newSemesterPlan = await SemesterPlan.create({
+          programme_plan_id : plan._id,
+          courses: semesterPlan.courses?.map(course => course._id),
+          academic_session_id: currentAcademicSession._id, 
         });
-      }));
+
+        // store the newly created semester plan under programme plan
+        plan.semester_plans.push(newSemesterPlan._id)
+        update = true
+      }
+
+      if(currentAcademicSession.next === null){
+        const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
+        currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
+      }else{
+        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+      }
     }
+
+    // Update programme plan
+    const updatedTitle = generateProgrammeIntakeCode(programme, academicSession.year, academicSession.semester)
+
+    if(updatedTitle !== plan.title){
+      plan.title = updatedTitle
+      update = true
+    }
+
+    if(update){
+      await plan.save()
+    }
+
   }catch(err){
     console.log(err)
   }
