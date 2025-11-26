@@ -75,29 +75,32 @@ const StudentDetails = () => {
                 handleInputChange={handleInputChange} 
                 editMode={editMode}
             />
-            <StudentNavTabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <div className="px-10">
+                <StudentNavTabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-            {/*Tabs*/}
-            {activeTab === "academic-profile" && (
-            <StudentAcademicProfile
-                academicProfile={student.academicProfile}
-                student={student}
-            />
-            )}
+                {/*Tabs*/}
+                {activeTab === "academic-profile" && (
+                <StudentAcademicProfile
+                    academicProfile={student.academicProfile}
+                    student={student}
+                />
+                )}
 
-            {activeTab === "graduation-requirement" && (
-            <StudentGraduationRequirement
-                academicProfile={student.academicProfile}
-                programme_intake_id={student.programme_intake_id}
-            />
-            )}
+                {activeTab === "graduation-requirement" && (
+                <StudentGraduationRequirement
+                    academicProfile={student.academicProfile}
+                    programme_intake_id={student.programme_intake_id}
+                />
+                )}
 
-            {activeTab === "default-programme-plan" && (
-            <DefaultProgrammePlan
-                academicProfile={student.academicProfile}
-                programme_intake_id={student.programme_intake_id}
-            />
-            )}
+                {activeTab === "default-programme-plan" && (
+                <DefaultProgrammePlan
+                    academicProfile={student.academicProfile}
+                    programme_intake_id={student.programme_intake_id}
+                />
+                )}
+            </div>
+
         </div> 
     )
 }

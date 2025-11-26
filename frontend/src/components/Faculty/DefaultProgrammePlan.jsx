@@ -26,7 +26,7 @@ const CourseTable = ({ courses , coursesTaken}) => (
         <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
           <TableCell><strong>Course Code</strong></TableCell>
           <TableCell><strong>Course Name</strong></TableCell>
-          <TableCell><strong>Credit</strong></TableCell>
+          <TableCell><strong>Credit Hours</strong></TableCell>
           <TableCell><strong>Type</strong></TableCell>
           <TableCell><strong>Status</strong></TableCell>
         </TableRow>
@@ -124,7 +124,7 @@ const DefaultProgrammePlan = ({ programme_intake_id, academicProfile}) => {
   }
 
   return (
-    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '1.5rem' }}>
+    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '2rem', paddingLeft: '2rem', paddingRight: "2rem"}}>
       <Typography variant="body1" gutterBottom style={{ marginBottom: "2rem"}}>
         Default Programme Plan for {programmeIntake?.programme_name}  
         {" "}session {programmeIntake?.year} {programmeIntake?.semester}
@@ -146,7 +146,10 @@ const DefaultProgrammePlan = ({ programme_intake_id, academicProfile}) => {
               >
                 {yearItem.map((semesterObj, semIdx) => (
                   <div key={semIdx} style={{ flex: "1 1 45%" }}>
-                    <Typography variant="subtitle1" gutterBottom>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ fontWeight: 600, m: 0 }}   // ⭐ remove bottom margin
+                    >
                       {"Semester " + (semIdx + 1)}
                     </Typography>
                     <CourseTable courses={semesterObj.courses} coursesTaken={coursesTaken}/>
