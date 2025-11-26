@@ -26,6 +26,7 @@ const ProgrammeEnrollmentDetails = () => {
   const [ intakeFields, setIntakeFields] = useState(programmeIntakeFormFields);
   const [ academicSessions, setAcademicSessions] = useState([]);
   const [ programmes, setProgrammes] = useState([]);
+  const [ generated, setGenerated ] = useState(false)
 
   useEffect(() => {
     const fetchProgrammeEnrollment = async () => {
@@ -39,7 +40,6 @@ const ProgrammeEnrollmentDetails = () => {
         setFormData(data);
         setOriginalFormData(data)
         setGraduationRequirements(data.graduation_requirements || []);
-        console.log("first data: ", data)
       } catch (err) {
         console.error(err);
       }finally{
@@ -177,21 +177,24 @@ const ProgrammeEnrollmentDetails = () => {
     try {
       if(!addProgrammeIntake){
         const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
+        const programmeIntake = res.data
         setEditMode(false);
-        const data = {
-          ...res.data,
-          createdAt: formatDateToLocaleString(res.data.createdAt),
-          updatedAt: formatDateToLocaleString(res.data.updatedAt),
-        };
-        console.log("data: ", data)
-        setFormData(data)
-        setOriginalFormData(data)
-        setGraduationRequirements(data.graduation_requirements || []);
+        navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, 
+          { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
+        // const data = {
+        //   ...res.data,
+        //   createdAt: formatDateToLocaleString(res.data.createdAt),
+        //   updatedAt: formatDateToLocaleString(res.data.updatedAt),
+        // };
+        // setFormData(data)
+        // setOriginalFormData(data)
+        // setGraduationRequirements(data.graduation_requirements || []);
       }else{
         const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
         const programmeIntake = res.data
         setEditMode(false)
-        navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
+        navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, 
+          { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
       }
 
     } catch (err) {
@@ -251,18 +254,26 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
   // Create a new programme plan with updated courses
   const updatedProgrammePlan = {
     ...formData.programme_plan,
-    semester_plans: oriSemesterPlans.map((sem, idx) => ({
-      ...sem,
-      courses: updatedSemesterPlans.find((sem) => sem.semester === idx+1).courses
-    }))
-  };
+    semester_plans: updatedSemesterPlans.map((sem, idx) => {
+      if(oriSemesterPlans[sem.semester-1]){
+        return ({
+          ...oriSemesterPlans[sem.semester-1],
+          courses: sem.courses,
+          semester: sem.semester
+        })
+      }else{
+        return ({
+          courses: sem.courses,
+          semester: sem.semester
+        })
+      }
+  })};
 
   setFormData(prev => ({
     ...prev,
     programme_plan: updatedProgrammePlan
   }));
 };
-
 
   const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
@@ -417,6 +428,9 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                     programmeEnrollment={formData} 
                     editMode={editMode} 
                     onChange={handleProgrammePlanChange}
+                    onCreate={addProgrammeIntake}
+                    generated={generated}
+                    setGenerated={setGenerated}
                   />                
                 )}
               </div>
