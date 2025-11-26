@@ -190,7 +190,8 @@ const ProgrammeEnrollmentDetails = () => {
         const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
         const programmeIntake = res.data
         setEditMode(false)
-        navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
+        navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, 
+          { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
       }
 
     } catch (err) {

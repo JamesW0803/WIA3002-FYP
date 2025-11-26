@@ -42,10 +42,12 @@ const addProgrammeIntake = async (req, res) => {
       min_semester,
       max_semester,
       graduation_requirements,
-      coursePlanAutoGenerate,
+      programme_plan
     } = req.body;
 
-    let programmePlanId = null;
+    const courseList = Object.values(graduation_requirements).flat();
+    const semesterPlans = programme_plan?.semester_plans
+    const semesterPlanIds = []
 
     const programme = await Programme.findOne({ programme_name });
     if (!programme) {
@@ -57,81 +59,29 @@ const addProgrammeIntake = async (req, res) => {
       return res.status(404).json({ message: "Academic session not found" });
     }
 
-    const courseList = Object.values(graduation_requirements).flat();
-
-    let coursePlan;
-
-    const selectedCourseCodes = courseList.map((course) => course.course_code);
-    const semesterPlans = [];
-
-    if (coursePlanAutoGenerate && courseList.length > 0) {
-      // 1. Fetch full course objects
-      const selectedCourses = await Course.find({
-        course_code: { $in: selectedCourseCodes },
-      });
-
-      // 2. Sort by study_level first, then topo-sort by prerequisites
-      selectedCourses.sort((a, b) => {
-        const typeOrder = {
-          faculty_core: 0,
-          programme_core: 1,
-          programme_elective: 2,
-        };
-
-        const typeA = typeOrder[a.type] ?? 99;
-        const typeB = typeOrder[b.type] ?? 99;
-
-        if (typeA !== typeB) return typeA - typeB;
-        return a.study_level - b.study_level; // fallback to study_level
-      });
-      const sortedCourses = await topologicalSort(selectedCourses);
-
-      // 3. Distribute evenly into semesters
-      const coursesPerSemester = Math.ceil(sortedCourses.length / min_semester);
-
-      let currentAcademicSession = academicSession
-      for (let i = 0; i < min_semester; i++) {
-        const sliceStart = i * coursesPerSemester;
-        const sliceEnd = (i + 1) * coursesPerSemester;
-        const semesterCourses = sortedCourses.slice(sliceStart, sliceEnd);
-
-        const semesterPlan = await SemesterPlan.create({
-          courses: semesterCourses.map((c) => c._id),
-          academic_session_id: currentAcademicSession, // optional if you want to link later
-        });
-
-        if(currentAcademicSession.next === null){
-          const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
-          currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
-        }else{
-          currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
-        }
-        semesterPlans.push(semesterPlan._id);
-      }
-    }else{
-      let currentAcademicSession = academicSession
-      for (let i = 0; i < min_semester; i++) {
-        const semesterPlan = await SemesterPlan.create({
-          courses: [],
-          academic_session_id: currentAcademicSession, // optional if you want to link later
-        });
-
-        if(currentAcademicSession.next === null){
-          const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
-          currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
-        }else{
-          currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
-        }
-        semesterPlans.push(semesterPlan._id);
-      }
-    }
-
     const programmePlan = await ProgrammePlan.create({
       title: `${programme.programme_code} Auto Plan (${academicSession.year})`,
-      semester_plans: semesterPlans,
     });
 
-    programmePlanId = programmePlan;
+    let currentAcademicSession = academicSession
+    for (let i = 0; i < semesterPlans.length; i++) {
+      const semesterPlan = await SemesterPlan.create({
+        programme_plan_id : programmePlan._id,
+        courses: semesterPlans[i].courses,
+        academic_session_id: currentAcademicSession, 
+      });
+
+      if(currentAcademicSession.next === null){
+        const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
+        currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
+      }else{
+        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+      }
+      semesterPlanIds.push(semesterPlan._id);
+    }
+
+    programmePlan.semester_plans = semesterPlanIds
+    const savedProgrammePlan = await programmePlan.save()
 
     const required_course_ids = await Promise.all(
       courseList.map(async (course) => {
@@ -160,8 +110,7 @@ const addProgrammeIntake = async (req, res) => {
       min_semester,
       max_semester,
       graduation_requirements: required_course_ids,
-      course_plan: coursePlan,
-      programme_plan: programmePlanId,
+      programme_plan: savedProgrammePlan._id,
       total_credit_hours: total_required_credits,
     });
 
