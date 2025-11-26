@@ -24,7 +24,7 @@ const EditableCourseTable = ({ courses, onRemove, editMode = false, onCreate }) 
         <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
           <TableCell><strong>Course Code</strong></TableCell>
           <TableCell><strong>Course Name</strong></TableCell>
-          <TableCell><strong>Credit</strong></TableCell>
+          <TableCell><strong>Credit Hours</strong></TableCell>
           <TableCell><strong>Type</strong></TableCell>
           {editMode &&<TableCell><strong>Action</strong></TableCell>}
         </TableRow>
@@ -252,8 +252,11 @@ const handleOnGenerate = async () => {
 
                 return (
                   <div key={idx} style={{ flex: "1 1 45%" }}>
-                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                      Semester {idx+1}
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ fontWeight: 600, m: 0 }}   // ⭐ remove bottom margin
+                    >
+                      {"Semester " + (idx + 1)}
                     </Typography>
 
                     <EditableCourseTable

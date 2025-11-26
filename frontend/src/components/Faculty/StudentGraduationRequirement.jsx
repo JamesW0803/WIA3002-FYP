@@ -87,7 +87,7 @@ const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) =
   }
 
   return (
-    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '2rem' }}>
+    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '2rem', paddingLeft: '2rem', paddingRight: "2rem"}}>
         <Header programmeIntake={programmeIntake} academicProfile={academicProfile}/>
         <CourseAccordion graduationRequirements={graduationRequirements} coursesTaken={coursesTaken}/>
     </div>

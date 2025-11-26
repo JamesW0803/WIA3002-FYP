@@ -12,22 +12,23 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { MessageSquare } from "lucide-react";
 import MessageModal from "./MessageModal"; // ⭐ you'll create this next
 import CourseStatusBadge from '../../constants/courseStatusStyle';
+import CoursePlanBadge from './CoursePlanBadge';
 
 const CourseTable = ({ courses , plan=false }) => (
   <TableContainer 
     component={Paper}
     sx={{
       mb: 2,
-      backgroundColor: plan ? "#e3f2fd" : "white",  // ⭐ blue background if it's a course plan
-      border: plan ? "1px solid #64b5f6" : "none"
+      backgroundColor: "white",  
+      border: "none"
     }}
   >
     <Table>
       <TableHead>
-        <TableRow sx={{ backgroundColor: plan ? "#90caf9" : '#f5f5f5' }}>
+        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
           <TableCell><strong>Course Code</strong></TableCell>
           <TableCell><strong>Course Name</strong></TableCell>
-          <TableCell><strong>Credit</strong></TableCell>
+          <TableCell><strong>Credit Hours</strong></TableCell>
           {plan && <TableCell><strong>Type</strong></TableCell>}
           {!plan && <TableCell><strong>Status</strong></TableCell>}
           {!plan && <TableCell><strong>Grade</strong></TableCell>}
@@ -147,8 +148,8 @@ const StudentAcademicProfile = ({ academicProfile, student }) => {
   }
 
   return (
-    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '2rem' }}>
-      <Typography variant="body1" gutterBottom>
+    <div style={{ width: '90%', margin: 'auto', marginTop: '2rem', paddingBottom: '2rem', paddingLeft: '2rem', paddingRight: "2rem"}}>
+      <Typography variant="body1" gutterBottom >
         View the student’s academic courses. You can explore their actual completed courses or see them organized according to a course plan.
       </Typography>
 
@@ -221,14 +222,22 @@ const StudentAcademicProfile = ({ academicProfile, student }) => {
                       style={{
                         flex: "1 1 45%",
                         padding: "1rem",
-                        backgroundColor: semesterObj.plan ? "#e3f2fd" : "#fff",
+                        backgroundColor: "#fff",
                         borderRadius: "8px",
-                        border: semesterObj.plan ? "1px solid #64b5f6" : "1px solid #ccc"
+                        border: "1px solid #ccc"
                       }}
                     >
-                      <Typography variant="subtitle1" gutterBottom>
-                        {"Semester " + (semIdx + 1)}
-                      </Typography>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Typography 
+                          variant="subtitle1" 
+                          sx={{ fontWeight: 600, m: 0 }}   // ⭐ remove bottom margin
+                        >
+                          {"Semester " + (semIdx + 1)}
+                        </Typography>
+
+                        <CoursePlanBadge isPlan={semesterObj.plan} />
+                      </div>
+
                       {semesterObj.courses?.length > 0 ? (
                         <CourseTable courses={semesterObj.courses} plan={semesterObj.plan}/>
                       ) : (
