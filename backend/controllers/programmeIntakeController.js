@@ -133,7 +133,6 @@ const addProgrammeIntake = async (req, res) => {
 
     programmePlanId = programmePlan;
 
-    // console.log("Course plan: ", coursePlan)
     const required_course_ids = await Promise.all(
       courseList.map(async (course) => {
         const currentCourse = await Course.findOne({

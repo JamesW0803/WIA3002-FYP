@@ -14,8 +14,10 @@ import {
   Paper
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import AutoGenerationCircularIntegration from "./AutoGenerationCircularIntegration";
+import axiosClient from "../../api/axiosClient";
 
-const EditableCourseTable = ({ courses, onRemove, editMode = false }) => (
+const EditableCourseTable = ({ courses, onRemove, editMode = false, onCreate }) => (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
       <TableHead>
@@ -67,7 +69,7 @@ const EditableCourseTable = ({ courses, onRemove, editMode = false }) => (
   </TableContainer>
 );
 
-const CoursePlan = ({ programmeEnrollment, editMode, onChange }) => {
+const CoursePlan = ({ programmeEnrollment, editMode, onChange, onCreate, generated, setGenerated }) => {
   const [ semesterPlans, setSemesterPlans] = useState([]);
   const [ addSelectState, setAddSelectState] = useState({});
   const [ remaining, setRemaining ] = useState([])
@@ -79,15 +81,22 @@ useEffect(() => {
 
   const hold = programmeEnrollment.programme_plan?.semester_plans || [];
   const graduationRequirements = programmeEnrollment.graduation_requirements || [];
-  const gradCourseCodes = graduationRequirements.map((c) => c.course_code);
 
   let latestSemesterPlan;
-  if (hold.length === 0) {
-    const minSem = programmeEnrollment.min_semester || 7;
-    latestSemesterPlan = Array.from({ length: minSem }, (_, idx) => ({
-      semester: idx + 1,
-      courses: []
-    }));
+  const minSem = programmeEnrollment.min_semester || 7;
+  if (hold.length !== minSem) {
+
+    latestSemesterPlan = Array.from({ length: minSem }, (_, idx) => {
+      const exist = hold[idx]
+
+      return {
+        semester : idx + 1,
+        courses : exist?.courses || []
+      }
+    })
+
+    onChange(latestSemesterPlan)
+
   } else {
     latestSemesterPlan = hold.map((sem, index) => ({
       semester: index + 1,
@@ -167,6 +176,21 @@ const handleYearAccordionChange = (yearIdx) => (event, isExpanded) => {
   }
 };
 
+const handleOnGenerate = async () => {
+  try{
+    const payload = {
+      graduation_requirements : programmeEnrollment.graduation_requirements,
+      programme_plan : programmeEnrollment.programme_plan
+    }
+    const res = await axiosClient.post("/programme-plans/generate-draft", payload)
+    const draftedSemesterPlans = res.data
+    setGenerated(true)
+    onChange(draftedSemesterPlans)
+  }catch(err){
+    console.log("Error generating draft programme plan")
+  }
+}
+
 
   const yearGroups = [];
   for (let i = 0; i < semesterPlans.length; i += 2) {
@@ -186,6 +210,14 @@ const handleYearAccordionChange = (yearIdx) => (event, isExpanded) => {
         Default Course Plan for {programmeEnrollment?.programme_name} — Session{" "}
         {programmeEnrollment?.year} {programmeEnrollment?.semester}
       </Typography>
+
+      {onCreate && 
+        <AutoGenerationCircularIntegration 
+          onGenerate={handleOnGenerate} 
+          success={generated}
+          setSuccess={setGenerated}
+        /> 
+      }
 
       {yearGroups.map((year, yearIdx) => (
         <Accordion
