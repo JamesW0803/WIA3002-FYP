@@ -68,7 +68,12 @@ const StudentDetails = () => {
 
     return (
         <div className="flex flex-col h-screen w-full">
-            <StudentProfileHeader student={student} messageModalOpen={messageModalOpen} setMessageModalOpen={setMessageModalOpen} handleBack={backButton.onClick}/>
+            <StudentProfileHeader 
+                student={student} 
+                messageModalOpen={messageModalOpen} 
+                setMessageModalOpen={setMessageModalOpen} 
+                handleBack={backButton.onClick}
+            />
             <StudentDetailsDisplayTable 
                 leftEntries={leftEntries} 
                 rightEntries={rightEntries} 

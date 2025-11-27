@@ -4,11 +4,12 @@ import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import useChatStore from "../../stores/useChatStore";
 
-const MessageModal = ({ open, onClose, student, coursePlan=false }) => {
+const MessageModal = ({ open, onClose, student, coursePlan=false, onSuccess=null, onFail=null}) => {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { getUploadUrl, putToAzure, sendMessage } = useChatStore();
+
 
 
   if (!open) return null;
@@ -61,14 +62,14 @@ const MessageModal = ({ open, onClose, student, coursePlan=false }) => {
       if (redirect) {
         navigate(`/admin/helpdesk`, { state: { conversationId: conversation._id }});
       } else {
-        alert("Message sent!");
+        onSuccess()
       }
 
       onClose();
       setText("");
     } catch (err) {
       console.error(err);
-      alert("Failed to send message");
+      onFail()
     }
 
     setLoading(false);
@@ -97,7 +98,7 @@ const MessageModal = ({ open, onClose, student, coursePlan=false }) => {
           onChange={(e) => setText(e.target.value)}
           rows={5}
           placeholder="Write your message..."
-          className="w-full border rounded p-2"
+          className="w-full border rounded p-2 resize-none"
         />
 
         <div className="flex justify-end gap-2 mt-4">
@@ -121,6 +122,7 @@ const MessageModal = ({ open, onClose, student, coursePlan=false }) => {
         </div>
 
       </div>
+ 
     </div>
   );
 };

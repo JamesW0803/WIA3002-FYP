@@ -1,7 +1,15 @@
 import { ArrowLeft, Hash, Mail, MessageCircle } from "lucide-react";
 import MessageModal from "../Faculty/MessageModal";
+import Notification from "../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../hooks/useAcademicProfile";
 
 const StudentProfileHeader = ({ student, messageModalOpen, setMessageModalOpen, handleBack }) => {
+  const { 
+      showNotification , 
+      closeNotification,
+      notification,
+  } = useAcademicProfile()
+
   return (
     <div className="h-auto bg-white shadow-sm border-b flex-shrink-0 w-full sticky top-0 z-40">
       <div className="px-4 py-4 max-w-6xl mx-auto">
@@ -64,7 +72,18 @@ const StudentProfileHeader = ({ student, messageModalOpen, setMessageModalOpen, 
           open={messageModalOpen}
           onClose={() => setMessageModalOpen(false)}
           student={student}
+          onSuccess={()=>{showNotification("Message is sent successfully", "success")}}
+          onFail={()=>{showNotification("Error sending message", "error")}}
         />
+
+        {notification.show && (
+          <Notification
+              message={notification.message}
+              type={notification.type}
+              isClosing={notification.isClosing}
+              onClose={closeNotification}
+          />
+        )} 
       </div>
     </div>
   );
