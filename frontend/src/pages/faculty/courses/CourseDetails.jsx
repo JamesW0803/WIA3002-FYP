@@ -8,6 +8,8 @@ import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import PrerequisitesSession from "../../../components/Faculty/Courses/PrerequisitesSession";
 import ProgrammePrerequisitesSession from "../../../components/Faculty/Courses/ProgrammePrerequisitesSession";
 import FormDialog from "../../../components/dialog/FormDialog";
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const CourseDetails = () => {
   const location = useLocation();
@@ -23,6 +25,11 @@ const CourseDetails = () => {
   const [courses, setCourses] = useState([]);
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { 
+      showNotification , 
+      closeNotification,
+      notification,
+  } = useAcademicProfile()
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -60,7 +67,7 @@ const CourseDetails = () => {
         if (!addCourse) {
           await fetchCourse();
         } else {
-          setEditMode(true);
+          setEditMode(location.state?.editMode ? true : false);
           setFormData({
             course_code: "",
             course_name: "",
@@ -82,6 +89,9 @@ const CourseDetails = () => {
         setLoading(false);
       }
     };
+    console.log("editMode: ", editMode)
+    console.log("addCourse: ", addCourse)
+
     run();
   }, [course_code]);
 
@@ -104,14 +114,19 @@ const CourseDetails = () => {
   const confirmDeleteCourse = async () => {
     try {
       await axiosClient.delete(`/courses/${formData.course_code}`);
+      navigate("/admin/courses", {
+        state: {
+          notificationMessage: "Course is removed successfully",
+          notificationType: "success"
+        }
+      });
     } catch (error) {
-      console.error("Error deleting course:", error);
-    } finally {
-      navigate("/admin/courses");
-    }
+      showNotification("Error removing course", "error")
+    } 
   };
 
   const handleSave = async () => {
+    let branch = ""
     try {
       // normalize offered_semester just like AddCourse
       let offered_semester = formData.offered_semester;
@@ -146,30 +161,34 @@ const CourseDetails = () => {
           })),
       };
       if (!addCourse) {
+        branch = "update"
         const res = await axiosClient.put(
           `/courses/${formData.course_code}`,
           payload
         );
+        showNotification("Course is updated successfully", "success")
         setFormData(res.data);
         setOriginalFormData(res.data);
+        setEditMode(false)
       } else {
+        branch = "oncreate"
         const res = await axiosClient.post(`/courses`, payload);
         const savedCourse = res.data;
+        showNotification("Course is created successfully", "success")
+        setEditMode(false)
         navigate(`/admin/courses/${savedCourse.course_code}`, {
           state: {
             course_code: savedCourse.course_code,
             editMode: false,
             courses,
+            addCourse: false
           },
         });
       }
+      
     } catch (err) {
+      showNotification(`Error ${branch === "update" ? "updating" : "creating"} course` , "error")
       console.error(err);
-      if (addCourse) {
-        navigate("/admin/courses");
-      }
-    } finally {
-      setEditMode(false);
     }
   };
 
@@ -316,6 +335,15 @@ const CourseDetails = () => {
             </>
           )}
         </div>
+
+        {notification.show && (
+          <Notification
+              message={notification.message}
+              type={notification.type}
+              isClosing={notification.isClosing}
+              onClose={closeNotification}
+          />
+        )}
       </div>
     </div>
   );

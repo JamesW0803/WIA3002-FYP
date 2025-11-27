@@ -6,11 +6,14 @@ import ToolBar from "../../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import FormDialog from "../../../components/dialog/FormDialog"
 import AddProgrammeModal from "../../../components/form/AddProgrammeModal";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ALL_SHORT_FORMS } from "../../../constants/shortForm";
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const ManageProgrammes = () => {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [programmes, setProgrammes] = useState([]);
     const [items, setItems] = useState([]);
@@ -33,6 +36,22 @@ const ManageProgrammes = () => {
 
     const header = ["Programme Code", "Programme Name", "Department", "Faculty"]
     const order = ["programme_code", "programme_name", "department", "faculty"]
+    const { 
+        showNotification , 
+        closeNotification,
+        notification,
+    } = useAcademicProfile()
+    
+    useEffect(() => {
+        if (location.state?.notificationMessage) {
+        const { notificationMessage, notificationType } = location.state;
+
+        showNotification(notificationMessage, notificationType);
+
+        // Clear the state so the page won’t show the notification on refresh
+        navigate(location.pathname, { replace: true });
+        }
+    }, []);
 
     useEffect(() => {
         const fetchProgrammes = async () => {
@@ -151,6 +170,7 @@ const ManageProgrammes = () => {
         try {
             const response = await axiosClient.delete(`/programmes/${selectedProgrammeCodeToDelete}`);
             setProgrammes(prev => prev.filter(programme => programme.programme_code !== selectedProgrammeCodeToDelete));
+            showNotification("Programme is removed successfully", "success")
         } catch (error) {
             console.error("Error deleting programme:", error);
         } finally {
@@ -223,6 +243,14 @@ const ManageProgrammes = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
             />
+            {notification.show && (
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    isClosing={notification.isClosing}
+                    onClose={closeNotification}
+                />
+            )}
         </div> 
 
 

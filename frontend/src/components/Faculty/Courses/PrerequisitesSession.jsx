@@ -2,11 +2,11 @@ const PrerequisitesSession = ({ courses, formData, setFormData, editMode}) => {
   return (
   <div className="mt-8">
     <span className="font-semibold ml-1 mb-2 block">Prerequisites</span>
-    {formData.prerequisites.length === 0 && !editMode && (
+    {formData.prerequisites?.length === 0 && !editMode && (
       <p className="text-sm text-gray-500 ml-1">No prerequisites</p>
     )}
 
-    {formData.prerequisites.map((value, index) => {
+    {formData.prerequisites?.map((value, index) => {
         const course = courses.find(c => c.course_code === value);
         return (
             

@@ -5,10 +5,13 @@ import Title from "../../../components/Title";
 import ToolBar from "../../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import FormDialog from "../../../components/dialog/FormDialog"
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const ManageProgrammeEnrollment = () => {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [programmeEnrollments, setProgrammeEnrollments] = useState([]);
     const [items, setItems] = useState([]);
@@ -22,6 +25,23 @@ const ManageProgrammeEnrollment = () => {
 
     const header = ["Programme Enrollment Code", "Programme Name", "Enrollment Year", "Enrollment Semester"]
     const order = ["programme_intake_code", "programme_name", "year", "semester"]
+
+    const { 
+        showNotification , 
+        closeNotification,
+        notification,
+    } = useAcademicProfile()
+
+    useEffect(() => {
+        if (location.state?.notificationMessage) {
+        const { notificationMessage, notificationType } = location.state;
+
+        showNotification(notificationMessage, notificationType);
+
+        // Clear the state so the page won’t show the notification on refresh
+        navigate(location.pathname, { replace: true });
+        }
+    }, []);    
     
     useEffect(() => {
         const fetchProgrammeEnrollments = async () => {
@@ -111,8 +131,10 @@ const ManageProgrammeEnrollment = () => {
     const confirmDeleteProgrammeEnrollment = async () => {
         try {
             const response = await axiosClient.delete(`/programme-intakes/${selectedProgrammeIntakeCodeToDelete}`);
+            showNotification("Programme enrollment is removed successfully", "success")
             setProgrammeEnrollments(prev => prev.filter(programmeEnrollment => programmeEnrollment.programme_intake_code !== selectedProgrammeIntakeCodeToDelete));
         } catch (error) {
+            showNotification("Error removing programme enrollment", "error")
             console.error("Error deleting programme enrollment:", error);
         } finally {
             setOpenDialog(false);
@@ -169,6 +191,14 @@ const ManageProgrammeEnrollment = () => {
                 confirmText="Delete"
                 cancelText="Cancel"
             />
+            {notification.show && (
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    isClosing={notification.isClosing}
+                    onClose={closeNotification}
+                />
+            )}
         </div> 
     )
 }

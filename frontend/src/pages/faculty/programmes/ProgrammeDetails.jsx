@@ -5,6 +5,8 @@ import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import { programmeFormFields } from "../../../constants/programmeFormConfig";
 import { Edit2, Save, X, Trash } from "lucide-react";
 import FormDialog from "../../../components/dialog/FormDialog"
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const ProgrammeDetails = () => {
   const location = useLocation();
@@ -17,6 +19,11 @@ const ProgrammeDetails = () => {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const { 
+        showNotification , 
+        closeNotification,
+        notification,
+    } = useAcademicProfile()
 
   // Load programme details
   useEffect(() => {
@@ -67,23 +74,25 @@ const ProgrammeDetails = () => {
   const handleEdit = () => setEditMode(true);
 
   const handleSave = async () => {
+    let branch = ""
     try {
       if(!addProgramme){
+        branch = "update"
         const res = await axiosClient.put(`/programmes/${formData.programme_code}`, formData);
         setFormData(res.data);
         setOriginalFormData(res.data)
+        showNotification("Programme is updated successfully" , "success")
+        setEditMode(false)
       }else{
+        branch = "oncreate"
         const res = await axiosClient.post(`/programmes`, formData);
         const savedCProgramme = res.data;
+        showNotification("Programme is created successfully", "success")
+        setEditMode(false)
         navigate(`/admin/programmes/${savedCProgramme.programme_code}`, { state : { programme_code : savedCProgramme.programme_code , editMode : false}})
       }
     } catch (err) {
-      console.error(err);
-      if(addProgramme){
-        navigate("/admin/programmes")
-      }
-    }finally{
-      setEditMode(false);
+      showNotification(`Error ${branch === "update" ? "updating" : "creating"} programme` , "error")
     }
   };
 
@@ -94,10 +103,15 @@ const ProgrammeDetails = () => {
   const confirmDeleteProgramme = async () => {
     try {
         await axiosClient.delete(`/programmes/${formData.programme_code}`);
+        navigate("/admin/programmes", {
+          state: {
+            notificationMessage: "Programme is removed successfully",
+            notificationType: "success"
+          }
+        });
     } catch (error) {
+        showNotification("Error removing programme", "error")
         console.error("Error deleting programme:", error);
-    } finally {
-        navigate("/admin/programmes")
     }
   };
 
@@ -203,6 +217,14 @@ const ProgrammeDetails = () => {
 
         </div>
 
+        {notification.show && (
+            <Notification
+                message={notification.message}
+                type={notification.type}
+                isClosing={notification.isClosing}
+                onClose={closeNotification}
+            />
+        )}
       </div>
     </div>
   );
