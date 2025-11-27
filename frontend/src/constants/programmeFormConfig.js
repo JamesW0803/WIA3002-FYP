@@ -10,6 +10,7 @@ export const programmeFormFields = [
     label: "Programme Code",
     icon: Tag,
     placeholder: "e.g., BCS101",
+    readonly: true,
   },
   {
     type: "text",

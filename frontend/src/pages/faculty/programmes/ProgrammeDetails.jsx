@@ -42,7 +42,7 @@ const ProgrammeDetails = () => {
         if (!addProgramme) {
           await fetchProgramme();
         } else {
-          setEditMode(true);
+          // setEditMode(true);
           setFormData({
             programme_name : "",
             programme_code : "",
@@ -56,6 +56,7 @@ const ProgrammeDetails = () => {
         setLoading(false);
       }
     }
+    console.log("editMode: ", editMode)
     run();
 
   }, [programme_code]);
@@ -146,7 +147,7 @@ const ProgrammeDetails = () => {
                 </div>
 
                 <div className="flex gap-2 mt-4 md:mt-0">
-                  {editMode ? (
+                  {editMode || addProgramme ? (
                     <>
                       <button
                         onClick={handleCancel}
@@ -208,6 +209,8 @@ const ProgrammeDetails = () => {
                       placeholder={field.placeholder}
                       editMode={editMode}
                       onChange={handleInputChange(field.key)}
+                      readonly={field.readonly ?? false}
+                      addProgramme={addProgramme}
                     />
                   ))}
                 </div>
@@ -231,14 +234,26 @@ const ProgrammeDetails = () => {
 };
 
 // Dynamic Field Component
-const ProgrammeField = ({ icon: Icon, label, value, type, options, editMode, multiline, placeholder, onChange }) => {
+const ProgrammeField = ({ icon: Icon, label, value, type, options, editMode, multiline, placeholder, onChange , readonly=false, addProgramme}) => {
+  if (readonly && editMode) {
+    return (
+      <div className="flex items-start mb-3">
+        {Icon && <div className="mr-3 mt-1 text-gray-400"><Icon size={18} /></div>}
+        <div className="w-full">
+          <p className="text-sm text-gray-500 mb-1">{label}</p>
+          <p className="text-sm font-semibold text-gray-900">{value ?? "-"}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start gap-3">
       {Icon && <div className="mt-2 text-gray-400"><Icon size={18} /></div>}
       <div className="w-full">
         <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
 
-        {editMode ? (
+        {editMode || addProgramme? (
           type === "select" ? (
             <select
               className="border border-gray-300 rounded-lg p-2 w-full text-sm"

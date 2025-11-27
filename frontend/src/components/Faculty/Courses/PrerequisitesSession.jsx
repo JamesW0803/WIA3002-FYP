@@ -1,8 +1,9 @@
-const PrerequisitesSession = ({ courses, formData, setFormData, editMode}) => {
+const PrerequisitesSession = ({ courses, formData, setFormData, editMode, addCourse}) => {
+  console.log("editMode: ", editMode)
   return (
   <div className="mt-8">
     <span className="font-semibold ml-1 mb-2 block">Prerequisites</span>
-    {formData.prerequisites?.length === 0 && !editMode && (
+    {formData.prerequisites?.length === 0 && !editMode && !addCourse && (
       <p className="text-sm text-gray-500 ml-1">No prerequisites</p>
     )}
 
@@ -11,7 +12,7 @@ const PrerequisitesSession = ({ courses, formData, setFormData, editMode}) => {
         return (
             
       <div key={index} className="flex items-center gap-2 mb-2">
-        {editMode ? (
+        {(editMode || addCourse) ? (
           <>
             <select
               className="border border-gray-300 rounded-lg p-2 text-sm"
@@ -51,7 +52,7 @@ const PrerequisitesSession = ({ courses, formData, setFormData, editMode}) => {
         
     })}
 
-    {editMode && (
+    { (editMode || addCourse) && (
       <button
         className="text-blue-600 text-sm hover:underline"
         onClick={() =>

@@ -129,7 +129,7 @@ const ManageCourses = () => {
     }
 
     const handleButtonAddCourseOnClick = () => {
-        navigate(`/admin/courses/add-course`, { state : { courses , addCourse : true, editMode: true}})
+        navigate(`/admin/courses/add-course`, { state : { courses , addCourse : true}})
     }
 
     const handleDeleteButtonOnClick = (course_code) => {

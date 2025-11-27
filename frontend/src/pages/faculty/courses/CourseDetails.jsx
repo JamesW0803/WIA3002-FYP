@@ -67,7 +67,7 @@ const CourseDetails = () => {
         if (!addCourse) {
           await fetchCourse();
         } else {
-          setEditMode(location.state?.editMode ? true : false);
+          // setEditMode(location.state?.editMode ? true : false);
           setFormData({
             course_code: "",
             course_name: "",
@@ -89,9 +89,6 @@ const CourseDetails = () => {
         setLoading(false);
       }
     };
-    console.log("editMode: ", editMode)
-    console.log("addCourse: ", addCourse)
-
     run();
   }, [course_code]);
 
@@ -226,6 +223,8 @@ const CourseDetails = () => {
         options={options}
         placeholder={placeholder}
         onChange={handleInputChange(key)}
+        readonly={field.readonly ?? false}
+        addCourse={addCourse}
       />
     );
   };
@@ -258,7 +257,7 @@ const CourseDetails = () => {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4 md:mt-0">
-                  {editMode ? (
+                  {editMode || addCourse ? (
                     <>
                       <button
                         onClick={handleCancel}
@@ -322,6 +321,7 @@ const CourseDetails = () => {
                   formData={formData}
                   setFormData={setFormData}
                   editMode={editMode}
+                  addCourse={addCourse}
                 />
 
                 <ProgrammePrerequisitesSession
@@ -330,6 +330,7 @@ const CourseDetails = () => {
                   formData={formData}
                   setFormData={setFormData}
                   editMode={editMode}
+                  addCourse={addCourse}
                 />
               </div>
             </>
@@ -360,6 +361,8 @@ const CourseInfoField = ({
   options,
   placeholder,
   onChange,
+  addCourse,
+  readonly
 }) => {
   let displayValue = value ?? "-";
   if (fieldKey == "type") {
@@ -369,6 +372,18 @@ const CourseInfoField = ({
     displayValue = value.length > 0 ? value.join(", ") : "-";
   }
 
+  if (readonly && editMode) {
+    return (
+      <div className="flex items-start mb-3">
+        {icon && <div className="mr-3 mt-1 text-gray-400">{icon}</div>}
+        <div className="w-full">
+          <p className="text-sm text-gray-500 mb-1">{label}</p>
+          <p className="text-sm font-semibold text-gray-900">{displayValue ?? "-"}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start mb-3">
       {icon && <div className="mr-3 mt-1 text-gray-400">{icon}</div>}
@@ -376,7 +391,7 @@ const CourseInfoField = ({
       <div className="w-full">
         <p className="text-sm text-gray-500 mb-1">{label}</p>
 
-        {editMode ? (
+        {editMode || addCourse ? (
           type === "select" ? (
             <select
               className="border border-gray-300 rounded-lg p-2 w-full text-sm"

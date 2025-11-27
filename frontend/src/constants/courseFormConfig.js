@@ -37,6 +37,7 @@ export const formSessions = [
         label: "Course Code",
         icon: Tag,
         placeholder: "e.g., WIA1001",
+        readonly: true,
       },
       {
         type: "text",
