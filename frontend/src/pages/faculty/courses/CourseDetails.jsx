@@ -8,6 +8,8 @@ import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import PrerequisitesSession from "../../../components/Faculty/Courses/PrerequisitesSession";
 import ProgrammePrerequisitesSession from "../../../components/Faculty/Courses/ProgrammePrerequisitesSession";
 import FormDialog from "../../../components/dialog/FormDialog";
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const CourseDetails = () => {
   const location = useLocation();
@@ -23,6 +25,11 @@ const CourseDetails = () => {
   const [courses, setCourses] = useState([]);
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { 
+      showNotification , 
+      closeNotification,
+      notification,
+  } = useAcademicProfile()
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -60,7 +67,7 @@ const CourseDetails = () => {
         if (!addCourse) {
           await fetchCourse();
         } else {
-          setEditMode(true);
+          // setEditMode(location.state?.editMode ? true : false);
           setFormData({
             course_code: "",
             course_name: "",
@@ -104,14 +111,19 @@ const CourseDetails = () => {
   const confirmDeleteCourse = async () => {
     try {
       await axiosClient.delete(`/courses/${formData.course_code}`);
+      navigate("/admin/courses", {
+        state: {
+          notificationMessage: "Course is removed successfully",
+          notificationType: "success"
+        }
+      });
     } catch (error) {
-      console.error("Error deleting course:", error);
-    } finally {
-      navigate("/admin/courses");
-    }
+      showNotification("Error removing course", "error")
+    } 
   };
 
   const handleSave = async () => {
+    let branch = ""
     try {
       // normalize offered_semester just like AddCourse
       let offered_semester = formData.offered_semester;
@@ -146,30 +158,34 @@ const CourseDetails = () => {
           })),
       };
       if (!addCourse) {
+        branch = "update"
         const res = await axiosClient.put(
           `/courses/${formData.course_code}`,
           payload
         );
+        showNotification("Course is updated successfully", "success")
         setFormData(res.data);
         setOriginalFormData(res.data);
+        setEditMode(false)
       } else {
+        branch = "oncreate"
         const res = await axiosClient.post(`/courses`, payload);
         const savedCourse = res.data;
+        showNotification("Course is created successfully", "success")
+        setEditMode(false)
         navigate(`/admin/courses/${savedCourse.course_code}`, {
           state: {
             course_code: savedCourse.course_code,
             editMode: false,
             courses,
+            addCourse: false
           },
         });
       }
+      
     } catch (err) {
+      showNotification(`Error ${branch === "update" ? "updating" : "creating"} course` , "error")
       console.error(err);
-      if (addCourse) {
-        navigate("/admin/courses");
-      }
-    } finally {
-      setEditMode(false);
     }
   };
 
@@ -207,6 +223,8 @@ const CourseDetails = () => {
         options={options}
         placeholder={placeholder}
         onChange={handleInputChange(key)}
+        readonly={field.readonly ?? false}
+        addCourse={addCourse}
       />
     );
   };
@@ -239,7 +257,7 @@ const CourseDetails = () => {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4 md:mt-0">
-                  {editMode ? (
+                  {editMode || addCourse ? (
                     <>
                       <button
                         onClick={handleCancel}
@@ -303,6 +321,7 @@ const CourseDetails = () => {
                   formData={formData}
                   setFormData={setFormData}
                   editMode={editMode}
+                  addCourse={addCourse}
                 />
 
                 <ProgrammePrerequisitesSession
@@ -311,11 +330,21 @@ const CourseDetails = () => {
                   formData={formData}
                   setFormData={setFormData}
                   editMode={editMode}
+                  addCourse={addCourse}
                 />
               </div>
             </>
           )}
         </div>
+
+        {notification.show && (
+          <Notification
+              message={notification.message}
+              type={notification.type}
+              isClosing={notification.isClosing}
+              onClose={closeNotification}
+          />
+        )}
       </div>
     </div>
   );
@@ -332,6 +361,8 @@ const CourseInfoField = ({
   options,
   placeholder,
   onChange,
+  addCourse,
+  readonly
 }) => {
   let displayValue = value ?? "-";
   if (fieldKey == "type") {
@@ -341,6 +372,18 @@ const CourseInfoField = ({
     displayValue = value.length > 0 ? value.join(", ") : "-";
   }
 
+  if (readonly && editMode) {
+    return (
+      <div className="flex items-start mb-3">
+        {icon && <div className="mr-3 mt-1 text-gray-400">{icon}</div>}
+        <div className="w-full">
+          <p className="text-sm text-gray-500 mb-1">{label}</p>
+          <p className="text-sm font-semibold text-gray-900">{displayValue ?? "-"}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start mb-3">
       {icon && <div className="mr-3 mt-1 text-gray-400">{icon}</div>}
@@ -348,7 +391,7 @@ const CourseInfoField = ({
       <div className="w-full">
         <p className="text-sm text-gray-500 mb-1">{label}</p>
 
-        {editMode ? (
+        {editMode || addCourse ? (
           type === "select" ? (
             <select
               className="border border-gray-300 rounded-lg p-2 w-full text-sm"

@@ -5,6 +5,8 @@ import GeneralCardHeader from "../../../components/Faculty/GeneralCardHeader";
 import { programmeFormFields } from "../../../constants/programmeFormConfig";
 import { Edit2, Save, X, Trash } from "lucide-react";
 import FormDialog from "../../../components/dialog/FormDialog"
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const ProgrammeDetails = () => {
   const location = useLocation();
@@ -17,6 +19,11 @@ const ProgrammeDetails = () => {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const { 
+        showNotification , 
+        closeNotification,
+        notification,
+    } = useAcademicProfile()
 
   // Load programme details
   useEffect(() => {
@@ -35,7 +42,7 @@ const ProgrammeDetails = () => {
         if (!addProgramme) {
           await fetchProgramme();
         } else {
-          setEditMode(true);
+          // setEditMode(true);
           setFormData({
             programme_name : "",
             programme_code : "",
@@ -49,6 +56,7 @@ const ProgrammeDetails = () => {
         setLoading(false);
       }
     }
+    console.log("editMode: ", editMode)
     run();
 
   }, [programme_code]);
@@ -67,23 +75,25 @@ const ProgrammeDetails = () => {
   const handleEdit = () => setEditMode(true);
 
   const handleSave = async () => {
+    let branch = ""
     try {
       if(!addProgramme){
+        branch = "update"
         const res = await axiosClient.put(`/programmes/${formData.programme_code}`, formData);
         setFormData(res.data);
         setOriginalFormData(res.data)
+        showNotification("Programme is updated successfully" , "success")
+        setEditMode(false)
       }else{
+        branch = "oncreate"
         const res = await axiosClient.post(`/programmes`, formData);
         const savedCProgramme = res.data;
+        showNotification("Programme is created successfully", "success")
+        setEditMode(false)
         navigate(`/admin/programmes/${savedCProgramme.programme_code}`, { state : { programme_code : savedCProgramme.programme_code , editMode : false}})
       }
     } catch (err) {
-      console.error(err);
-      if(addProgramme){
-        navigate("/admin/programmes")
-      }
-    }finally{
-      setEditMode(false);
+      showNotification(`Error ${branch === "update" ? "updating" : "creating"} programme` , "error")
     }
   };
 
@@ -94,10 +104,15 @@ const ProgrammeDetails = () => {
   const confirmDeleteProgramme = async () => {
     try {
         await axiosClient.delete(`/programmes/${formData.programme_code}`);
+        navigate("/admin/programmes", {
+          state: {
+            notificationMessage: "Programme is removed successfully",
+            notificationType: "success"
+          }
+        });
     } catch (error) {
+        showNotification("Error removing programme", "error")
         console.error("Error deleting programme:", error);
-    } finally {
-        navigate("/admin/programmes")
     }
   };
 
@@ -132,7 +147,7 @@ const ProgrammeDetails = () => {
                 </div>
 
                 <div className="flex gap-2 mt-4 md:mt-0">
-                  {editMode ? (
+                  {editMode || addProgramme ? (
                     <>
                       <button
                         onClick={handleCancel}
@@ -194,6 +209,8 @@ const ProgrammeDetails = () => {
                       placeholder={field.placeholder}
                       editMode={editMode}
                       onChange={handleInputChange(field.key)}
+                      readonly={field.readonly ?? false}
+                      addProgramme={addProgramme}
                     />
                   ))}
                 </div>
@@ -203,20 +220,40 @@ const ProgrammeDetails = () => {
 
         </div>
 
+        {notification.show && (
+            <Notification
+                message={notification.message}
+                type={notification.type}
+                isClosing={notification.isClosing}
+                onClose={closeNotification}
+            />
+        )}
       </div>
     </div>
   );
 };
 
 // Dynamic Field Component
-const ProgrammeField = ({ icon: Icon, label, value, type, options, editMode, multiline, placeholder, onChange }) => {
+const ProgrammeField = ({ icon: Icon, label, value, type, options, editMode, multiline, placeholder, onChange , readonly=false, addProgramme}) => {
+  if (readonly && editMode) {
+    return (
+      <div className="flex items-start mb-3">
+        {Icon && <div className="mr-3 mt-1 text-gray-400"><Icon size={18} /></div>}
+        <div className="w-full">
+          <p className="text-sm text-gray-500 mb-1">{label}</p>
+          <p className="text-sm font-semibold text-gray-900">{value ?? "-"}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start gap-3">
       {Icon && <div className="mt-2 text-gray-400"><Icon size={18} /></div>}
       <div className="w-full">
         <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
 
-        {editMode ? (
+        {editMode || addProgramme? (
           type === "select" ? (
             <select
               className="border border-gray-300 rounded-lg p-2 w-full text-sm"

@@ -9,6 +9,8 @@ import GraduationRequirement from "../../../components/Faculty/GraduationRequire
 import CoursePlan from "../../../components/Faculty/CoursePlan";
 import FormDialog from "../../../components/dialog/FormDialog"
 import { generateProgrammeIntakeCode } from "../../../utils/programmeIntakeCodeGenerator";
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const ProgrammeEnrollmentDetails = () => {
   const location = useLocation();
@@ -27,6 +29,11 @@ const ProgrammeEnrollmentDetails = () => {
   const [ academicSessions, setAcademicSessions] = useState([]);
   const [ programmes, setProgrammes] = useState([]);
   const [ generated, setGenerated ] = useState(false)
+  const { 
+      showNotification , 
+      closeNotification,
+      notification,
+  } = useAcademicProfile()
 
   useEffect(() => {
     const fetchProgrammeEnrollment = async () => {
@@ -174,30 +181,29 @@ const ProgrammeEnrollmentDetails = () => {
   const handleEdit = () => setEditMode(true);
 
   const handleSave = async () => {
+    let branch = ""
     try {
       if(!addProgrammeIntake){
+        branch = "update"
         const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
         const programmeIntake = res.data
+        showNotification("Programme enrollment is updated successfully", "success")
         setEditMode(false);
+        setFormData(programmeIntake);
+        setOriginalFormData(programmeIntake);
         navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, 
           { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
-        // const data = {
-        //   ...res.data,
-        //   createdAt: formatDateToLocaleString(res.data.createdAt),
-        //   updatedAt: formatDateToLocaleString(res.data.updatedAt),
-        // };
-        // setFormData(data)
-        // setOriginalFormData(data)
-        // setGraduationRequirements(data.graduation_requirements || []);
       }else{
         const res = await axiosClient.post(`/programme-intakes/${formData._id}`, formData);
         const programmeIntake = res.data
+        showNotification("Programme enrollment is created successfully", "success")
         setEditMode(false)
         navigate(`/admin/programme-intakes/${programmeIntake.programme_intake_code}`, 
           { state : { programme_intake_code: programmeIntake.programme_intake_code  , editMode : false }})
       }
 
     } catch (err) {
+      showNotification(`Error ${branch === "update" ? "updating" : "creating"} programme enrollment` , "error")
       console.error("Error saving programme enrollment:", err);
     }
   };
@@ -209,10 +215,15 @@ const ProgrammeEnrollmentDetails = () => {
   const confirmDeleteProgrammeIntake = async () => {
     try {
         await axiosClient.delete(`/programme-intakes/${formData.programme_intake_code}`);
+        navigate("/admin/programme-intakes", {
+          state: {
+            notificationMessage: "Programme enrollment is removed successfully",
+            notificationType: "success"
+          }
+        });
     } catch (error) {
+        showNotification("Error removing programme enrollment", "error")
         console.error("Error deleting course:", error);
-    } finally {
-        navigate("/admin/programme-intakes")
     }
   };
 
@@ -286,156 +297,165 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
       <div className="max-w-6xl mx-auto space-y-6">
         <GeneralCardHeader handleBack={handleBack} title="Back to Programme Intakes" />
 
-          {loading ? (
-            <>
-              <SkeletonHeader />
+        {loading ? (
+          <>
+            <SkeletonHeader />
 
-              <div className="p-8 space-y-12 bg-white">
-                <SkeletonSection />
-                <SkeletonSection />
-              </div>
-            </>
-          ) : (
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              {/* HEADER */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">{formData.programme_intake_code || "-"}</h1>
-                    <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
-                        {formData.programme_name || "-"}
-                    </div>
-                    <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 ml-2">
-                        {`${formData.academic_session?.year}-${formData.academic_session?.semester}` || "-"}
-                    </div>
-                </div>
-                <div className="flex gap-2 mt-4 md:mt-0">
-                  {editMode ? (
-                    <>
-                      <button
-                        onClick={handleCancel}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                      >
-                        <X size={16} /> Cancel
-                      </button>
-                      <button
-                        onClick={handleSave}
-                        className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
-                      >
-                        <Save size={16} /> Save
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleEdit}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                      >
-                        <Edit2 size={16} /> Edit
-                      </button>
-                      {!addProgrammeIntake && (
-                        <button
-                          onClick={handleDelete}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                        >
-                          <Trash size={16} /> Delete
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <FormDialog
-                open={openDialog}
-                onClose={() => setOpenDialog(false)}
-                onConfirm={confirmDeleteProgrammeIntake}
-                title="Delete Course"
-                content={`Are you sure you want to delete programme intake  with code "${formData.programme_intake_code}"?`}
-                confirmText="Delete"
-                cancelText="Cancel"
-              />
-
-              {/* FORM CONTENT */}
-              <div className="p-8 bg-white rounded-b-2xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  {/* Left Column */}
-                  <div className="flex flex-col gap-6">
-                    {leftEntries.map(([key, value]) => (
-                      <FormField
-                        key={key}
-                        field={intakeFields.find((f) => f.key === key)}
-                        value={value}
-                        editMode={editMode}
-                        onChange={handleInputChange(key)}
-                        academicSessions={academicSessions}
-                        onCreate={addProgrammeIntake}
-                      />
-                    ))}
+            <div className="p-8 space-y-12 bg-white">
+              <SkeletonSection />
+              <SkeletonSection />
+            </div>
+          </>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            {/* HEADER */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between">
+              <div>
+                  <h1 className="text-3xl font-bold">{formData.programme_intake_code || "-"}</h1>
+                  <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 mr-2">
+                      {formData.programme_name || "-"}
                   </div>
-
-                  {/* Right Column */}
-                  <div className="flex flex-col gap-6">
-                    {rightEntries.map(([key, value]) => (
-                      <FormField
-                        key={key}
-                        field={intakeFields.find((f) => f.key === key)}
-                        value={value}
-                        editMode={editMode}
-                        onChange={handleInputChange(key)}
-                        academicSessions={academicSessions}
-                        onCreate={addProgrammeIntake}
-                      />
-                    ))}
+                  <div className="text-sm bg-white/20 px-3 py-1 rounded-lg inline-block mt-2 ml-2">
+                      {`${formData.academic_session?.year}-${formData.academic_session?.semester}` || "-"}
                   </div>
-                </div>
               </div>
-
-              {/* TABS */}
-              <div className="flex gap-4 border-b border-gray-200 px-8">
-                <button
-                  className={`pb-2 text-sm font-medium ${
-                    activeTab === "graduation-requirement"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                  onClick={() => setActiveTab("graduation-requirement")}
-                >
-                  Graduation Requirement
-                </button>
-                <button
-                  className={`pb-2 text-sm font-medium ${
-                    activeTab === "course-plan"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                  onClick={() => setActiveTab("course-plan")}
-                >
-                  Course Plan
-                </button>
-              </div>
-
-              {/* TAB CONTENT */}
-              <div className="p-8">
-                {activeTab === "graduation-requirement" && (
-                  <GraduationRequirement 
-                    programmeEnrollment={formData} 
-                    editMode={editMode} 
-                    onChange={handleGraduationRequirementsOnChange}
-                  />
-                )}
-                {activeTab === "course-plan" && (
-                  <CoursePlan 
-                    programmeEnrollment={formData} 
-                    editMode={editMode} 
-                    onChange={handleProgrammePlanChange}
-                    onCreate={addProgrammeIntake}
-                    generated={generated}
-                    setGenerated={setGenerated}
-                  />                
+              <div className="flex gap-2 mt-4 md:mt-0">
+                {editMode ? (
+                  <>
+                    <button
+                      onClick={handleCancel}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                    >
+                      <X size={16} /> Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                    >
+                      <Save size={16} /> Save
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleEdit}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                    >
+                      <Edit2 size={16} /> Edit
+                    </button>
+                    {!addProgrammeIntake && (
+                      <button
+                        onClick={handleDelete}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                      >
+                        <Trash size={16} /> Delete
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
-          )}
+
+            <FormDialog
+              open={openDialog}
+              onClose={() => setOpenDialog(false)}
+              onConfirm={confirmDeleteProgrammeIntake}
+              title="Delete Course"
+              content={`Are you sure you want to delete programme intake  with code "${formData.programme_intake_code}"?`}
+              confirmText="Delete"
+              cancelText="Cancel"
+            />
+
+            {/* FORM CONTENT */}
+            <div className="p-8 bg-white rounded-b-2xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                {/* Left Column */}
+                <div className="flex flex-col gap-6">
+                  {leftEntries.map(([key, value]) => (
+                    <FormField
+                      key={key}
+                      field={intakeFields.find((f) => f.key === key)}
+                      value={value}
+                      editMode={editMode}
+                      onChange={handleInputChange(key)}
+                      academicSessions={academicSessions}
+                      onCreate={addProgrammeIntake}
+                    />
+                  ))}
+                </div>
+
+                {/* Right Column */}
+                <div className="flex flex-col gap-6">
+                  {rightEntries.map(([key, value]) => (
+                    <FormField
+                      key={key}
+                      field={intakeFields.find((f) => f.key === key)}
+                      value={value}
+                      editMode={editMode}
+                      onChange={handleInputChange(key)}
+                      academicSessions={academicSessions}
+                      onCreate={addProgrammeIntake}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* TABS */}
+            <div className="flex gap-4 border-b border-gray-200 px-8">
+              <button
+                className={`pb-2 text-sm font-medium ${
+                  activeTab === "graduation-requirement"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setActiveTab("graduation-requirement")}
+              >
+                Graduation Requirement
+              </button>
+              <button
+                className={`pb-2 text-sm font-medium ${
+                  activeTab === "course-plan"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setActiveTab("course-plan")}
+              >
+                Course Plan
+              </button>
+            </div>
+
+            {/* TAB CONTENT */}
+            <div className="p-8">
+              {activeTab === "graduation-requirement" && (
+                <GraduationRequirement 
+                  programmeEnrollment={formData} 
+                  editMode={editMode} 
+                  onChange={handleGraduationRequirementsOnChange}
+                />
+              )}
+              {activeTab === "course-plan" && (
+                <CoursePlan 
+                  programmeEnrollment={formData} 
+                  editMode={editMode} 
+                  onChange={handleProgrammePlanChange}
+                  onCreate={addProgrammeIntake}
+                  generated={generated}
+                  setGenerated={setGenerated}
+                />                
+              )}
+            </div>
+          </div>
+        )}
+
+        {notification.show && (
+          <Notification
+              message={notification.message}
+              type={notification.type}
+              isClosing={notification.isClosing}
+              onClose={closeNotification}
+          />
+        )}
       </div>
     </div>
   );

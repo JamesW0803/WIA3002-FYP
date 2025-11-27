@@ -4,6 +4,7 @@ const ProgrammePrerequisitesSession = ({
   formData,
   setFormData,
   editMode,
+  addCourse,
 }) => {
   const configs = formData.prerequisitesByProgramme || [];
 
@@ -93,7 +94,7 @@ const ProgrammePrerequisitesSession = ({
   };
 
   // If viewing (not editing) and nothing configured, hide the whole section
-  if (!editMode && configs.length === 0) return null;
+  if (!editMode && !addCourse && configs.length === 0) return null;
 
   return (
     <div className="mt-8">
@@ -112,7 +113,7 @@ const ProgrammePrerequisitesSession = ({
           {/* Programme row */}
           <div className="flex items-center gap-4">
             <div className="w-1/2">
-              {editMode ? (
+              {(editMode || addCourse) ? (
                 <select
                   className="border border-gray-300 rounded-lg p-2 w-full text-sm"
                   value={cfg.programme_code || ""}
@@ -132,7 +133,7 @@ const ProgrammePrerequisitesSession = ({
               )}
             </div>
 
-            {editMode && (
+            {(editMode || addCourse) && (
               <button
                 type="button"
                 onClick={() => removeProgrammeConfig(index)}
@@ -145,7 +146,7 @@ const ProgrammePrerequisitesSession = ({
 
           {/* Prereqs for this programme */}
           <div className="flex flex-col gap-2">
-            {editMode ? (
+            {(editMode || addCourse) ? (
               (cfg.prerequisite_codes || []).map((value, pIndex) => (
                 <div key={pIndex} className="flex flex-row items-center gap-3">
                   <div className="w-1/2">
@@ -181,7 +182,7 @@ const ProgrammePrerequisitesSession = ({
               </p>
             )}
 
-            {editMode && (
+            {(editMode || addCourse) && (
               <button
                 type="button"
                 onClick={() => addProgrammePrereq(index)}
@@ -194,7 +195,7 @@ const ProgrammePrerequisitesSession = ({
         </div>
       ))}
 
-      {editMode && (
+      {(editMode || addCourse) && (
         <button
           type="button"
           onClick={addProgrammeConfig}

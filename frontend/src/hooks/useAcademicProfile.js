@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import axiosClient from "../api/axiosClient";
 import { getUserIdFromStorage } from "../utils/getUserIdFromStorage";
+import { useAuth } from "../context/AuthContext";
 
 export const useAcademicProfile = () => {
   const userId = getUserIdFromStorage();
+  const { user } = useAuth();
   const [editingBackup, setEditingBackup] = useState(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -274,6 +276,7 @@ export const useAcademicProfile = () => {
       console.error("No user ID found in token");
       return;
     }
+    if(user.role === "admin") return
     const annotateRetakes = (list) => {
       // Sort by (year, semester) so “earlier” comes first
       const sorted = [...list].sort(
@@ -315,6 +318,7 @@ export const useAcademicProfile = () => {
 
   // Check if this is the first time (no courses exist)
   useEffect(() => {
+    if(user.role === "admin") return
     if (entries.length === 0 && !hasAddedFirstCourse) {
       setShowOnboarding(true);
     } else {
@@ -323,11 +327,13 @@ export const useAcademicProfile = () => {
   }, [entries, hasAddedFirstCourse]);
 
   useEffect(() => {
+    if(user.role === "admin") return
     const firstCourseFlag = localStorage.getItem("hasAddedFirstCourse");
     setHasAddedFirstCourse(firstCourseFlag === "true");
   }, []);
 
   useEffect(() => {
+    if(user.role === "admin") return
     const fetchIntakeAndSession = async () => {
       try {
         // grab token + userId
@@ -405,6 +411,7 @@ export const useAcademicProfile = () => {
   }, []);
 
   useEffect(() => {
+    if(user.role === "admin") return
     const fetchCourses = async () => {
       try {
         const response = await axiosClient.get("/courses", {

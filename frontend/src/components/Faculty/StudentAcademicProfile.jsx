@@ -13,6 +13,8 @@ import { MessageSquare } from "lucide-react";
 import MessageModal from "./MessageModal"; // ⭐ you'll create this next
 import CourseStatusBadge from '../../constants/courseStatusStyle';
 import CoursePlanBadge from './CoursePlanBadge';
+import Notification from "../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../hooks/useAcademicProfile";
 
 const CourseTable = ({ courses , plan=false }) => (
   <TableContainer 
@@ -61,6 +63,11 @@ const StudentAcademicProfile = ({ academicProfile, student }) => {
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [loading, setLoading] = useState(true); 
+  const { 
+      showNotification , 
+      closeNotification,
+      notification,
+  } = useAcademicProfile()
 
 
   // Fetch all available course plans for the student
@@ -204,7 +211,19 @@ const StudentAcademicProfile = ({ academicProfile, student }) => {
         onClose={() => setFeedbackOpen(false)}
         student={student}
         coursePlan={selectedPlan}
+        onSuccess={()=>{showNotification("Feedback is sent successfully", "success")}}
+        onFail={()=>{showNotification("Error sending feedback", "error")}}
       />
+
+      {notification.show && (
+        <Notification
+            message={notification.message}
+            type={notification.type}
+            isClosing={notification.isClosing}
+            onClose={closeNotification}
+            
+        />
+      )} 
 
       {/* Display Semesters */}
       {itemsToDisplay.length > 0 ? (

@@ -6,10 +6,14 @@ import ToolBar from "../../../components/table/ToolBar"
 import Divider from '@mui/material/Divider';
 import FormDialog from "../../../components/dialog/FormDialog"
 import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import Notification from "../../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 
 const ManageCourses = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+
 
     const [courses, setCourses] = useState([]);
     const [items, setItems] = useState([]);
@@ -24,7 +28,24 @@ const ManageCourses = () => {
 
     const header = ["Course Code", "Course Name", "Credit Hour", "Type", "Offered In"]
     const order = ["course_code", "course_name", "credit_hours", "type", "offered_semester"]
+
+    const { 
+        showNotification , 
+        closeNotification,
+        notification,
+    } = useAcademicProfile()
     
+    useEffect(() => {
+        if (location.state?.notificationMessage) {
+        const { notificationMessage, notificationType } = location.state;
+
+        showNotification(notificationMessage, notificationType);
+
+        // Clear the state so the page won’t show the notification on refresh
+        navigate(location.pathname, { replace: true });
+        }
+    }, []);
+
     useEffect(() => {
         const fetchCourses = async () => {
             try {
@@ -120,6 +141,7 @@ const ManageCourses = () => {
         try {
             const response = await axiosClient.delete(`/courses/${selectedCourseCodeToDelete}`);
             setCourses(prev => prev.filter(course => course.course_code !== selectedCourseCodeToDelete));
+            showNotification("Course is removed successfully", "success")
         } catch (error) {
             console.error("Error deleting course:", error);
         } finally {
@@ -177,6 +199,14 @@ const ManageCourses = () => {
                 confirmText="Delete"
                 cancelText="Cancel"
             />
+            {notification.show && (
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    isClosing={notification.isClosing}
+                    onClose={closeNotification}
+                />
+            )}
         </div> 
     )
 }

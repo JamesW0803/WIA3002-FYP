@@ -65,7 +65,7 @@ const addProgrammeIntake = async (req, res) => {
     });
 
     let currentAcademicSession = academicSession
-    for (let i = 0; i < semesterPlans.length; i++) {
+    for (let i = 0; i < semesterPlans?.length; i++) {
       const semesterPlan = await SemesterPlan.create({
         programme_plan_id : programmePlan._id,
         courses: semesterPlans[i].courses?.map(course => course._id),
