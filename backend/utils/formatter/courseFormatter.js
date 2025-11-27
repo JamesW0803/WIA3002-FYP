@@ -22,6 +22,12 @@ const formatCourse = (course) => {
     })
   );
 
+  const typesByProgramme = (course.typesByProgramme || []).map((cfg) => ({
+    programme_code: cfg.programme?.programme_code ?? cfg.programme_code ?? "-",
+    programme_name: cfg.programme?.programme_name ?? cfg.programme_name ?? "",
+    type: cfg.type ?? "-",
+  }));
+
   return {
     _id: course._id ?? "-",
     course_code: course.course_code ?? "-",
@@ -32,6 +38,7 @@ const formatCourse = (course) => {
 
     prerequisites: prerequisitesCodes,
     prerequisitesByProgramme,
+    typesByProgramme,
 
     faculty: course.faculty ?? "-",
     department: course.department ?? "No department assigned",

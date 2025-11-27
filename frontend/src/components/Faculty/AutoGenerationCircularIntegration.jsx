@@ -1,20 +1,24 @@
-import * as React from 'react';
-import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
-import { green } from '@mui/material/colors';
-import Button from '@mui/material/Button';
-import Fab from '@mui/material/Fab';
-import CheckIcon from '@mui/icons-material/Check';
-import SaveIcon from '@mui/icons-material/Save';
+import * as React from "react";
+import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
+import { green } from "@mui/material/colors";
+import Button from "@mui/material/Button";
+import Fab from "@mui/material/Fab";
+import CheckIcon from "@mui/icons-material/Check";
+import SaveIcon from "@mui/icons-material/Save";
 
-export default function AutoGenerationCircularIntegration({ onGenerate , success = false, setSuccess}) {
+export default function AutoGenerationCircularIntegration({
+  onGenerate,
+  success = false,
+  setSuccess,
+}) {
   const [loading, setLoading] = React.useState(false);
   const timer = React.useRef(undefined);
 
   const buttonSx = {
     ...(success && {
       bgcolor: green[500],
-      '&:hover': {
+      "&:hover": {
         bgcolor: green[700],
       },
     }),
@@ -42,10 +46,9 @@ export default function AutoGenerationCircularIntegration({ onGenerate , success
     }
   };
 
-
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0, mb: 1 }}>
-      <Box sx={{ position: 'relative' }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0, mb: 1 }}>
+      <Box sx={{ position: "relative" }}>
         <Fab
           aria-label="save"
           color="primary"
@@ -53,14 +56,18 @@ export default function AutoGenerationCircularIntegration({ onGenerate , success
           sx={buttonSx}
           onClick={handleButtonClick}
         >
-          {success ? <CheckIcon fontSize="small" /> : <SaveIcon fontSize="small" />}
+          {success ? (
+            <CheckIcon fontSize="small" />
+          ) : (
+            <SaveIcon fontSize="small" />
+          )}
         </Fab>
         {loading && (
           <CircularProgress
             size={48} // smaller progress
             sx={{
               color: green[500],
-              position: 'absolute',
+              position: "absolute",
               top: -4,
               left: -4,
               zIndex: 1,
@@ -68,7 +75,7 @@ export default function AutoGenerationCircularIntegration({ onGenerate , success
           />
         )}
       </Box>
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={{ position: "relative" }}>
         <Button
           variant="contained"
           sx={buttonSx}
@@ -83,11 +90,11 @@ export default function AutoGenerationCircularIntegration({ onGenerate , success
             size={20} // smaller inline progress
             sx={{
               color: green[500],
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              marginTop: '-10px',
-              marginLeft: '-10px',
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              marginTop: "-10px",
+              marginLeft: "-10px",
             }}
           />
         )}

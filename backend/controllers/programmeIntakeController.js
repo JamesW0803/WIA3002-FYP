@@ -16,9 +16,12 @@ const Course = require("../models/Course");
 const {
   COURSE_TYPE_TO_CATEGORY,
 } = require("../constants/graduationCategories");
-const { editProgrammePlan } = require("./programmePlanController")
-const { createNextAcademicSession } = require("./academicSessionController")
-const { generateProgrammeIntakeCode } = require("../utils/formatter/programmeIntakeFormatter")
+const { editProgrammePlan } = require("./programmePlanController");
+const { createNextAcademicSession } = require("./academicSessionController");
+const {
+  generateProgrammeIntakeCode,
+} = require("../utils/formatter/programmeIntakeFormatter");
+const { getEffectiveTypeForProgramme } = require("../utils/courseHelpers");
 
 const getAllProgrammeIntakes = async (req, res) => {
   try {
@@ -43,12 +46,12 @@ const addProgrammeIntake = async (req, res) => {
       min_semester,
       max_semester,
       graduation_requirements,
-      programme_plan
+      programme_plan,
     } = req.body;
 
     const courseList = Object.values(graduation_requirements).flat();
-    const semesterPlans = programme_plan?.semester_plans
-    const semesterPlanIds = []
+    const semesterPlans = programme_plan?.semester_plans;
+    const semesterPlanIds = [];
 
     const programme = await Programme.findOne({ programme_name });
     if (!programme) {
@@ -64,25 +67,31 @@ const addProgrammeIntake = async (req, res) => {
       title: `${programme.programme_code} Auto Plan (${academicSession.year})`,
     });
 
-    let currentAcademicSession = academicSession
+    let currentAcademicSession = academicSession;
     for (let i = 0; i < (semesterPlans?.length ?? min_semester); i++) {
       const semesterPlan = await SemesterPlan.create({
-        programme_plan_id : programmePlan._id,
-        courses: semesterPlans?.[i]?.courses?.map(course => course._id) ?? [],
-        academic_session_id: currentAcademicSession, 
+        programme_plan_id: programmePlan._id,
+        courses: semesterPlans?.[i]?.courses?.map((course) => course._id) ?? [],
+        academic_session_id: currentAcademicSession,
       });
 
-      if(currentAcademicSession.next === null){
-        const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
-        currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
-      }else{
-        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+      if (currentAcademicSession.next === null) {
+        const nextAcademicSession = await createNextAcademicSession(
+          currentAcademicSession
+        );
+        currentAcademicSession = await AcademicSession.findById(
+          nextAcademicSession._id
+        );
+      } else {
+        currentAcademicSession = await AcademicSession.findById(
+          currentAcademicSession.next
+        );
       }
       semesterPlanIds.push(semesterPlan._id);
     }
 
-    programmePlan.semester_plans = semesterPlanIds
-    const savedProgrammePlan = await programmePlan.save()
+    programmePlan.semester_plans = semesterPlanIds;
+    const savedProgrammePlan = await programmePlan.save();
 
     const required_course_ids = await Promise.all(
       courseList.map(async (course) => {
@@ -301,7 +310,11 @@ const getGraduationRequirementsForStudent = async (req, res) => {
     let totalRequiredCredits = 0;
 
     for (const course of courses) {
-      const category = COURSE_TYPE_TO_CATEGORY[course.type];
+      const effectiveType = getEffectiveTypeForProgramme(
+        course,
+        studentProgrammeId
+      );
+      const category = COURSE_TYPE_TO_CATEGORY[effectiveType];
       if (!category) continue;
 
       if (!requirementsByCategory[category]) {
@@ -407,26 +420,33 @@ const editProgrammeIntake = async (req, res) => {
   const updatedData = req.body;
 
   try {
-    const academicSession = await AcademicSession.findById(updatedData.academic_session_id)
+    const academicSession = await AcademicSession.findById(
+      updatedData.academic_session_id
+    );
     const programme = await Programme.findOne({
-      programme_name : updatedData.programme_name
-    })
+      programme_name: updatedData.programme_name,
+    });
 
-    if(!programme){
+    if (!programme) {
       return res.status(404).json({ message: "Invalid programme name" });
     }
 
-    if(!academicSession){
+    if (!academicSession) {
       return res.status(404).json({ message: "Invalid academic session" });
     }
 
-    await editProgrammePlan(updatedData.programme_plan, programme, academicSession);
-    
+    await editProgrammePlan(
+      updatedData.programme_plan,
+      programme,
+      academicSession
+    );
+
     const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(
       programme_intake_id, // filter
       updatedData, // updated fields
       { new: true } // return updated document
-    ).populate("graduation_requirements")
+    )
+      .populate("graduation_requirements")
       .populate("programme_id")
       .populate("academic_session_id")
       .populate({
@@ -445,9 +465,10 @@ const editProgrammeIntake = async (req, res) => {
 
     res.status(200).json(formatProgrammeIntake(updatedProgrammeIntake));
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: "Failed to update programme intake", details: err.message });
+    res.status(500).json({
+      error: "Failed to update programme intake",
+      details: err.message,
+    });
   }
 };
 

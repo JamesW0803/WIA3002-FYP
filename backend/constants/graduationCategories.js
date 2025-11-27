@@ -5,6 +5,7 @@ const COURSE_TYPE_TO_CATEGORY = {
   university_cocurriculum: "University Courses",
   university_other: "University Courses",
   programme_elective: "Specialization Electives",
+  faculty_elective: "Faculty Electives",
   she_cluster_1: "SHE Cluster",
   she_cluster_2: "SHE Cluster",
   she_cluster_3: "SHE Cluster",
