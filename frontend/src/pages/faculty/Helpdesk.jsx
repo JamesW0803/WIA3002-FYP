@@ -121,6 +121,11 @@ export function HelpDesk() {
   }, [active, messagesByConv]);
 
   const openConversation = async (conversationId) => {
+    // If navigating away from a convo that has no messages → delete it
+    if (active && hasNoMessages(active)) {
+      await deleteConversation(active, true);  
+    }
+
     if (active) leaveConversation(active);
     setActive(conversationId);
     await joinConversation(conversationId);
@@ -214,6 +219,11 @@ export function HelpDesk() {
         1200
       );
     }
+  };
+
+  const hasNoMessages = (convId) => {
+    if (!messagesByConv[convId]) return false; 
+    return messagesByConv[convId].length === 0;
   };
 
   return (
