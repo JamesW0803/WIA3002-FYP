@@ -7,6 +7,7 @@ import SelectInputField from "../../../components/form/SelectInputField";
 import ActionBar from "../../../components/form/ActionBar";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formSessions } from "../../../constants/courseFormConfig";
+import ProgrammeTypesSession from "../../../components/Faculty/Courses/ProgrammeTypesSession";
 
 const basicInformationSession = formSessions.find(
   (session) => session["title"] === "Basic Information"
@@ -44,6 +45,14 @@ const ConsolidatedForm = ({ courses, programmes, formData, setFormData }) => {
         courses={courses}
         formData={formData}
         setFormData={setFormData}
+      />
+
+      <ProgrammeTypesSession
+        programmes={programmes}
+        formData={formData}
+        setFormData={setFormData}
+        editMode={true}
+        addCourse={true}
       />
     </div>
   );
@@ -349,6 +358,7 @@ const AddCourse = () => {
     description: "",
     prerequisites: [],
     prerequisitesByProgramme: [],
+    typesByProgramme: [],
     faculty: "",
     offered_semester: [],
     study_level: null,
@@ -403,6 +413,12 @@ const AddCourse = () => {
         .map((cfg) => ({
           programme_code: cfg.programme_code,
           prerequisite_codes: (cfg.prerequisite_codes || []).filter(Boolean),
+        })),
+      typesByProgramme: (formData.typesByProgramme || [])
+        .filter((cfg) => cfg.programme_code && cfg.type)
+        .map((cfg) => ({
+          programme_code: cfg.programme_code,
+          type: cfg.type,
         })),
     };
 

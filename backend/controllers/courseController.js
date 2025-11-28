@@ -6,6 +6,7 @@ const {
   formatCourse,
 } = require("../utils/formatter/courseFormatter");
 const AcademicProfile = require("../models/StudentAcademicProfile");
+const { COURSE_TYPES } = require("../constants/courseType");
 
 const getAllCourses = async (req, res) => {
   try {
@@ -100,6 +101,10 @@ const getAllCourses = async (req, res) => {
       .populate({
         path: "prerequisitesByProgramme.prerequisites",
         select: "course_code course_name credit_hours",
+      })
+      .populate({
+        path: "typesByProgramme.programme",
+        select: "programme_name programme_code",
       });
 
     const formattedCourses = formatCourses(courses);
@@ -118,7 +123,8 @@ const addCourse = async (req, res) => {
       credit_hours,
       description,
       prerequisites = [],
-      prerequisitesByProgramme = [], // 👈 accept it
+      prerequisitesByProgramme = [],
+      typesByProgramme = [],
       faculty,
       department,
       offered_semester,
@@ -182,7 +188,38 @@ const addCourse = async (req, res) => {
       });
     }
 
-    // ----- 3. Create course -----
+    // ----- 3. Programme-specific types (NEW) -----
+    const typesByProgrammeDocs = [];
+
+    for (const cfg of typesByProgramme || []) {
+      const { programme_code, type: programmeType } = cfg;
+      if (!programme_code || !programmeType) continue;
+
+      // validate type
+      if (!COURSE_TYPES.includes(programmeType)) {
+        return res.status(400).json({
+          error: `Invalid course type '${programmeType}' for programme ${programme_code}`,
+        });
+      }
+
+      // find programme
+      const programme = await Programme.findOne({
+        programme_code: programme_code,
+      });
+
+      if (!programme) {
+        return res.status(400).json({
+          error: `Invalid programme code in typesByProgramme: ${programme_code}`,
+        });
+      }
+
+      typesByProgrammeDocs.push({
+        programme: programme._id,
+        type: programmeType,
+      });
+    }
+
+    // ----- 4. Create course -----
     const newCourse = new Course({
       course_code,
       course_name,
@@ -191,6 +228,7 @@ const addCourse = async (req, res) => {
       description,
       prerequisites: prerequisitesCourseIds,
       prerequisitesByProgramme: prereqsByProgrammeDocs,
+      typesByProgramme: typesByProgrammeDocs,
       faculty,
       department,
       offered_semester,
@@ -213,7 +251,8 @@ const addCourse = async (req, res) => {
       .populate(
         "prerequisitesByProgramme.prerequisites",
         "course_code course_name credit_hours"
-      );
+      )
+      .populate("typesByProgramme.programme", "programme_name programme_code");
 
     const formatted = formatCourse(populated);
     res.status(201).json(formatted);
@@ -238,7 +277,8 @@ const getCourseByCode = async (req, res) => {
       .populate(
         "prerequisitesByProgramme.prerequisites",
         "course_code course_name"
-      );
+      )
+      .populate("typesByProgramme.programme", "programme_name programme_code");
 
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
@@ -275,6 +315,7 @@ const editCourse = async (req, res) => {
   const {
     prerequisites = [],
     prerequisitesByProgramme = [],
+    typesByProgramme = [],
     ...rest
   } = req.body;
 
@@ -328,11 +369,41 @@ const editCourse = async (req, res) => {
       });
     }
 
-    // ----- 3. Build update payload -----
+    // 3. Programme-specific types
+    const typesByProgrammeDocs = [];
+
+    for (const cfg of typesByProgramme || []) {
+      const { programme_code, type: programmeType } = cfg;
+      if (!programme_code || !programmeType) continue;
+
+      if (!COURSE_TYPES.includes(programmeType)) {
+        return res.status(400).json({
+          message: `Invalid course type '${programmeType}' for programme ${programme_code}`,
+        });
+      }
+
+      const programme = await Programme.findOne({
+        programme_code: programme_code,
+      });
+
+      if (!programme) {
+        return res.status(400).json({
+          message: `Invalid programme code in typesByProgramme: ${programme_code}`,
+        });
+      }
+
+      typesByProgrammeDocs.push({
+        programme: programme._id,
+        type: programmeType,
+      });
+    }
+
+    // ----- 4. Build update payload -----
     const updatedData = {
       ...rest,
       prerequisites: prereqCourses,
       prerequisitesByProgramme: prereqsByProgrammeDocs,
+      typesByProgramme: typesByProgrammeDocs,
     };
 
     const updatedCourse = await Course.findOneAndUpdate(
@@ -358,7 +429,8 @@ const editCourse = async (req, res) => {
       .populate(
         "prerequisitesByProgramme.prerequisites",
         "course_code course_name credit_hours"
-      );
+      )
+      .populate("typesByProgramme.programme", "programme_name programme_code");
 
     const formatted = formatCourse(populated);
     res.status(200).json(formatted);

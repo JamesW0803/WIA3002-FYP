@@ -10,6 +10,7 @@ import ProgrammePrerequisitesSession from "../../../components/Faculty/Courses/P
 import FormDialog from "../../../components/dialog/FormDialog";
 import Notification from "../../../components/Students/AcademicProfile/Notification";
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
+import ProgrammeTypesSession from "../../../components/Faculty/Courses/ProgrammeTypesSession";
 
 const CourseDetails = () => {
   const location = useLocation();
@@ -25,11 +26,8 @@ const CourseDetails = () => {
   const [courses, setCourses] = useState([]);
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { 
-      showNotification , 
-      closeNotification,
-      notification,
-  } = useAcademicProfile()
+  const { showNotification, closeNotification, notification } =
+    useAcademicProfile();
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -76,6 +74,7 @@ const CourseDetails = () => {
             offered_semester: [],
             prerequisites: [],
             prerequisitesByProgramme: [],
+            typesByProgramme: [],
             description: "",
             study_level: "",
             department: "",
@@ -114,23 +113,23 @@ const CourseDetails = () => {
       navigate("/admin/courses", {
         state: {
           notificationMessage: "Course is removed successfully",
-          notificationType: "success"
-        }
+          notificationType: "success",
+        },
       });
     } catch (error) {
-      showNotification("Error removing course", "error")
-    } 
+      showNotification("Error removing course", "error");
+    }
   };
 
   const handleSave = async () => {
-    let branch = ""
+    let branch = "";
     try {
       // normalize offered_semester just like AddCourse
       let offered_semester = formData.offered_semester;
 
       if (!Array.isArray(offered_semester)) {
         if (offered_semester === "Semester 1 & 2") {
-          offered_semester = ["Semester 1", "Semester 2"];
+          offered_semester = ["Semester 1 & 2"];
         } else if (offered_semester) {
           offered_semester = [offered_semester];
         } else {
@@ -156,35 +155,44 @@ const CourseDetails = () => {
             programme_code: cfg.programme_code,
             prerequisite_codes: (cfg.prerequisite_codes || []).filter(Boolean),
           })),
+        typesByProgramme: (formData.typesByProgramme || [])
+          .filter((cfg) => cfg.programme_code && cfg.type)
+          .map((cfg) => ({
+            programme_code: cfg.programme_code,
+            type: cfg.type,
+          })),
       };
+
       if (!addCourse) {
-        branch = "update"
+        branch = "update";
         const res = await axiosClient.put(
           `/courses/${formData.course_code}`,
           payload
         );
-        showNotification("Course is updated successfully", "success")
+        showNotification("Course is updated successfully", "success");
         setFormData(res.data);
         setOriginalFormData(res.data);
-        setEditMode(false)
+        setEditMode(false);
       } else {
-        branch = "oncreate"
+        branch = "oncreate";
         const res = await axiosClient.post(`/courses`, payload);
         const savedCourse = res.data;
-        showNotification("Course is created successfully", "success")
-        setEditMode(false)
+        showNotification("Course is created successfully", "success");
+        setEditMode(false);
         navigate(`/admin/courses/${savedCourse.course_code}`, {
           state: {
             course_code: savedCourse.course_code,
             editMode: false,
             courses,
-            addCourse: false
+            addCourse: false,
           },
         });
       }
-      
     } catch (err) {
-      showNotification(`Error ${branch === "update" ? "updating" : "creating"} course` , "error")
+      showNotification(
+        `Error ${branch === "update" ? "updating" : "creating"} course`,
+        "error"
+      );
       console.error(err);
     }
   };
@@ -332,6 +340,14 @@ const CourseDetails = () => {
                   editMode={editMode}
                   addCourse={addCourse}
                 />
+
+                <ProgrammeTypesSession
+                  programmes={programmes}
+                  formData={formData}
+                  setFormData={setFormData}
+                  editMode={editMode}
+                  addCourse={addCourse}
+                />
               </div>
             </>
           )}
@@ -339,10 +355,10 @@ const CourseDetails = () => {
 
         {notification.show && (
           <Notification
-              message={notification.message}
-              type={notification.type}
-              isClosing={notification.isClosing}
-              onClose={closeNotification}
+            message={notification.message}
+            type={notification.type}
+            isClosing={notification.isClosing}
+            onClose={closeNotification}
           />
         )}
       </div>
@@ -362,7 +378,7 @@ const CourseInfoField = ({
   placeholder,
   onChange,
   addCourse,
-  readonly
+  readonly,
 }) => {
   let displayValue = value ?? "-";
   if (fieldKey == "type") {
@@ -378,7 +394,9 @@ const CourseInfoField = ({
         {icon && <div className="mr-3 mt-1 text-gray-400">{icon}</div>}
         <div className="w-full">
           <p className="text-sm text-gray-500 mb-1">{label}</p>
-          <p className="text-sm font-semibold text-gray-900">{displayValue ?? "-"}</p>
+          <p className="text-sm font-semibold text-gray-900">
+            {displayValue ?? "-"}
+          </p>
         </div>
       </div>
     );

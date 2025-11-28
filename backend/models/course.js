@@ -47,6 +47,20 @@ const courseSchema = new mongoose.Schema(
         ],
       },
     ],
+    typesByProgramme: [
+      {
+        programme: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Programme",
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: COURSE_TYPES,
+          required: true,
+        },
+      },
+    ],
     faculty: {
       type: String,
       default: "Faculty of Computer Science and Information Technology",

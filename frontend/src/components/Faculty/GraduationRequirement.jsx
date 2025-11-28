@@ -9,40 +9,74 @@ import {
   Paper,
   Stack,
   Autocomplete,
-  TextField
-} from '@mui/material';
-import { useState, useEffect } from 'react';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import axiosClient from '../../api/axiosClient';
-import { COURSE_TYPES, READABLE_COURSE_TYPES } from '../../constants/courseType';
+  TextField,
+} from "@mui/material";
+import { useState, useEffect } from "react";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import axiosClient from "../../api/axiosClient";
+import {
+  COURSE_TYPES,
+  READABLE_COURSE_TYPES,
+} from "../../constants/courseType";
+
+// Helper: get programme-specific type or fall back to global type
+const getEffectiveTypeForProgramme = (course, programme_code) => {
+  if (!course) return undefined;
+  if (!course.typesByProgramme) return course.type;
+
+  const cfg = course.typesByProgramme.find(
+    (t) => t.programme_code === programme_code
+  );
+
+  return cfg ? cfg.type : course.type;
+};
 
 const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
   const [requirements, setRequirements] = useState([]);
   const [courses, setCourses] = useState([]);
   const [showSelect, setShowSelect] = useState({});
   const [expandedCategories, setExpandedCategories] = useState([]);
-  const [grouped, setGrouped] = useState({})
+  const [grouped, setGrouped] = useState({});
 
+  const programmeCode = programmeEnrollment?.programme_code;
+
+  // Group existing requirements by *effective* type, not raw course.type
   useEffect(() => {
-    if(programmeEnrollment && programmeEnrollment.graduation_requirements){
-      const graduationRequirements = programmeEnrollment.graduation_requirements;
-
-      const hold = graduationRequirements.reduce((acc, course) => {
-        if (!acc[course.type]) acc[course.type] = [];
-        acc[course.type].push(course);
-        return acc;
-      }, {});
-      for(const type of COURSE_TYPES){
-        if(!hold[type]) hold[type] = []
-      }
-      setGrouped(hold)
-      setRequirements(graduationRequirements)
+    if (!programmeEnrollment || !programmeEnrollment.graduation_requirements) {
+      return;
     }
 
-  }, [programmeEnrollment.graduation_requirements]);
+    const graduationRequirements = programmeEnrollment.graduation_requirements;
 
+    const hold = graduationRequirements.reduce((acc, reqCourse) => {
+      // Try to find the full formatted course object from /courses
+      const fullCourse =
+        courses.find((c) => c.course_code === reqCourse.course_code) ||
+        reqCourse;
+
+      // Use programme-specific type if available on the full course
+      const effectiveType =
+        getEffectiveTypeForProgramme(fullCourse, programmeCode) ||
+        fullCourse.type;
+
+      if (!acc[effectiveType]) acc[effectiveType] = [];
+
+      // Keep the original course data, but force the effective type so UI is consistent
+      acc[effectiveType].push({ ...reqCourse, type: effectiveType });
+      return acc;
+    }, {});
+
+    for (const type of COURSE_TYPES) {
+      if (!hold[type]) hold[type] = [];
+    }
+
+    setGrouped(hold);
+    setRequirements(Object.values(hold).flat());
+  }, [programmeEnrollment?.graduation_requirements, programmeCode, courses]);
+
+  // Fetch all courses once
   useEffect(() => {
     const fetchCourses = async () => {
       try {
@@ -56,9 +90,16 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
   }, []);
 
   const handleDelete = (type, index) => {
+    const current = grouped[type] || [];
+    const updatedTypeList = current.filter((_, i) => i !== index);
 
-    grouped[type].splice(index, 1);
-    const flattened = Object.values(grouped).flat();
+    const newGrouped = {
+      ...grouped,
+      [type]: updatedTypeList,
+    };
+
+    const flattened = Object.values(newGrouped).flat();
+    setGrouped(newGrouped);
     setRequirements(flattened);
     onChange?.(flattened);
   };
@@ -66,46 +107,59 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
   const handleAddSelectChange = (type, selectedCourse) => {
     if (!selectedCourse) return;
 
-    grouped[type].push({ ...selectedCourse, type: type });
-    const flattened = Object.values(grouped).flat();
+    const current = grouped[type] || [];
+    const newCourse = { ...selectedCourse, type }; // store with effective type for this intake
+
+    const newGrouped = {
+      ...grouped,
+      [type]: [...current, newCourse],
+    };
+
+    const flattened = Object.values(newGrouped).flat();
+    setGrouped(newGrouped);
     setRequirements(flattened);
     onChange?.(flattened);
 
-    setShowSelect(prev => ({ ...prev, [type]: false }));
+    setShowSelect((prev) => ({ ...prev, [type]: false }));
   };
 
   const handleAddClick = (type) => {
-    setShowSelect(prev => ({ ...prev, [type]: true }));
-    setExpandedCategories(prev => 
+    setShowSelect((prev) => ({ ...prev, [type]: true }));
+    setExpandedCategories((prev) =>
       prev.includes(type) ? prev : [...prev, type]
     );
   };
 
-  const totalCreditHours = requirements.reduce((sum, course) => sum + (course.credit_hours || 0), 0);
+  const totalCreditHours = requirements.reduce(
+    (sum, course) => sum + (course.credit_hours || 0),
+    0
+  );
 
   const handleAccordionChange = (type) => (event, isExpanded) => {
-    setExpandedCategories(prev => 
-      isExpanded 
-        ? [...prev, type] 
-        : prev.filter(c => c !== type)
+    setExpandedCategories((prev) =>
+      isExpanded ? [...prev, type] : prev.filter((c) => c !== type)
     );
 
-    // hide select when collapsing
     if (!isExpanded) {
-      setShowSelect(prev => ({ ...prev, [type]: false }));
+      setShowSelect((prev) => ({ ...prev, [type]: false }));
     }
   };
 
   return (
-    <Box sx={{ width: '80%', mx: 'auto', mt: 4 }}>
+    <Box sx={{ width: "80%", mx: "auto", mt: 4 }}>
       <Typography variant="body1" gutterBottom>
-        Students are required to complete a total of <strong>{totalCreditHours}</strong> credit hours based on the course categories listed below.
+        Students are required to complete a total of{" "}
+        <strong>{totalCreditHours}</strong> credit hours based on the course
+        categories listed below.
       </Typography>
 
       {COURSE_TYPES.map((type, idx) => {
-        const coursesInCategory = grouped[type] ?? []
+        const coursesInCategory = grouped[type] ?? [];
         const formattedTitle = READABLE_COURSE_TYPES[type];
-        const totalCredits = coursesInCategory.reduce((sum, c) => sum + (c.credit_hours || 0), 0);
+        const totalCredits = coursesInCategory.reduce(
+          (sum, c) => sum + (c.credit_hours || 0),
+          0
+        );
 
         return (
           <Accordion
@@ -115,82 +169,103 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
             sx={{ mb: 2 }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography fontWeight="bold">{formattedTitle} ({totalCredits} credits)</Typography>
+              <Typography fontWeight="bold">
+                {formattedTitle} ({totalCredits} credits)
+              </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Stack spacing={1}>
-                {coursesInCategory.length > 0 ?
-                 coursesInCategory.map((course, idx2) => (
+                {coursesInCategory.length > 0 ? (
+                  coursesInCategory.map((course, idx2) => (
+                    <Paper
+                      elevation={0}
+                      key={idx2}
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        p: 1,
+                        "&:hover": { bgcolor: "#f0f0f0" },
+                      }}
+                    >
+                      <Typography variant="body2">
+                        {course.course_code} - {course.course_name} (
+                        {course.credit_hours} credits)
+                      </Typography>
+                      {editMode && (
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(type, idx2)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
+                    </Paper>
+                  ))
+                ) : (
                   <Paper
                     elevation={0}
-                    key={idx2}
                     sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
+                      display: "flex",
+                      alignItems: "center",
                       p: 1,
-                      '&:hover': { bgcolor: '#f0f0f0' },
-                    }}
-                  >
-                    <Typography variant="body2">
-                      {course.course_code} - {course.course_name} ({course.credit_hours} credits)
-                    </Typography>
-                    {editMode && (
-                      <IconButton color="error" onClick={() => handleDelete(type, idx2)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
-                  </Paper>
-                )) : (
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      p: 1,
-                      bgcolor: '#f9f9f9',
+                      bgcolor: "#f9f9f9",
                       borderRadius: 1,
-                      fontStyle: 'italic',
-                      color: 'text.secondary',
+                      fontStyle: "italic",
+                      color: "text.secondary",
                     }}
                   >
                     No courses in this category
                   </Paper>
-                )
-                }
-
-                {editMode && showSelect[type] && expandedCategories.includes(type) && (
-                  <Box sx={{ mt: 1 }}>
-                    <Autocomplete
-                      options={courses
-                        .filter(c => 
-                          c.type === type && 
-                          !coursesInCategory.some(existing => existing.course_code === c.course_code)
-                        )
-                      }
-                      getOptionLabel={(c) => `${c.course_code} - ${c.course_name} (${c.credit_hours} credits)`}
-                      onChange={(e, value) => handleAddSelectChange(type, value)}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Select a course"
-                          variant="outlined"
-                          size="small"
-                          sx={{
-                            bgcolor: 'background.paper',
-                            borderRadius: 1,
-                          }}
-                        />
-                      )}
-                      fullWidth
-                      sx={{
-                        '.MuiAutocomplete-popupIndicator': { right: 8 },
-                        '.MuiAutocomplete-clearIndicator': { right: 32 },
-                        mt: 0.5
-                      }}
-                    />
-                  </Box>
                 )}
+
+                {editMode &&
+                  showSelect[type] &&
+                  expandedCategories.includes(type) && (
+                    <Box sx={{ mt: 1 }}>
+                      <Autocomplete
+                        options={courses
+                          .filter((c) => {
+                            const effectiveType = getEffectiveTypeForProgramme(
+                              c,
+                              programmeCode
+                            );
+                            return effectiveType === type;
+                          })
+                          .filter(
+                            (c) =>
+                              !coursesInCategory.some(
+                                (existing) =>
+                                  existing.course_code === c.course_code
+                              )
+                          )}
+                        getOptionLabel={(c) =>
+                          `${c.course_code} - ${c.course_name} (${c.credit_hours} credits)`
+                        }
+                        onChange={(e, value) =>
+                          handleAddSelectChange(type, value)
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Select a course"
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                              bgcolor: "background.paper",
+                              borderRadius: 1,
+                            }}
+                          />
+                        )}
+                        fullWidth
+                        sx={{
+                          ".MuiAutocomplete-popupIndicator": { right: 8 },
+                          ".MuiAutocomplete-clearIndicator": { right: 32 },
+                          mt: 0.5,
+                        }}
+                      />
+                    </Box>
+                  )}
 
                 {editMode && (
                   <Button
@@ -199,7 +274,7 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
                     variant="contained"
                     color="primary"
                     onClick={() => handleAddClick(type)}
-                    sx={{ mt: 1, alignSelf: 'flex-start' }}
+                    sx={{ mt: 1, alignSelf: "flex-start" }}
                   >
                     Add Course
                   </Button>
