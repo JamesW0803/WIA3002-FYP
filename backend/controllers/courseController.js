@@ -1,4 +1,3 @@
-//courseController.js
 const Course = require("../models/Course");
 const Programme = require("../models/Programme");
 const {

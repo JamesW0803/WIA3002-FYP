@@ -313,13 +313,19 @@ exports.getAcademicProfile = async (req, res) => {
     // 4) Attach to response
     const payload = {
       ...json,
+      student: studentDoc,
       programme_intake_code,
       programmeIntake: intakeDoc || undefined,
     };
 
-    console.log("[API] getAcademicProfile payload:", {
-      studentId,
-      programme_intake_code,
+    console.log("[API] getAcademicProfile payload student:", {
+      id: studentDoc?._id,
+      department: studentDoc?.department,
+      programme: {
+        id: studentDoc?.programme?._id,
+        code: studentDoc?.programme?.programme_code,
+        department: studentDoc?.programme?.department,
+      },
     });
 
     res.json(payload);
