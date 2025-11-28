@@ -56,7 +56,7 @@ const formatStudent = async (student, {
         intakeSession : `${academicSessionEnrolled.year} ${academicSessionEnrolled.semester}`,
         currentSemester : getStudentCurrentSemester(academicSessionEnrolled, currentAcademicSession, sessionMap) ?? "-",
         expectedGraduation : expectedGraduationSession ? (expectedGraduationSession.year).substring(5) : "-",
-        progress : calculateStudentProgressPercentage(studentAcademicProfile.completed_credit_hours, programmeIntake.total_credit_hours),
+        progress : calculateStudentProgressPercentage(studentAcademicProfile?.completed_credit_hours ?? 0, programmeIntake.total_credit_hours),
         status : {
             status : student.status,
             status_notes : student.status_notes,

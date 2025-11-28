@@ -18,8 +18,9 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CourseStatusBadge from '../../constants/courseStatusStyle';
+import { getEffectiveTypeForProgramme } from '../../utils/getEffectiveCourseType';
 
-const CourseTable = ({ courses , coursesTaken}) => (
+const CourseTable = ({ courses , coursesTaken, programmeName}) => (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
       <TableHead>
@@ -34,7 +35,7 @@ const CourseTable = ({ courses , coursesTaken}) => (
       <TableBody>
         {courses.map((course, index) => {
           const takenCourse = coursesTaken.find(courseTakenObj => courseTakenObj.course.course_code === course.course_code);
-
+          const effectiveCourseType = getEffectiveTypeForProgramme(course, programmeName)
           return (
           <TableRow 
             key={index}
@@ -52,7 +53,7 @@ const CourseTable = ({ courses , coursesTaken}) => (
             <TableCell>{course.course_code}</TableCell>
             <TableCell>{course.course_name}</TableCell>
             <TableCell>{course.credit_hours}</TableCell>
-            <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
+            <TableCell>{READABLE_COURSE_TYPES[effectiveCourseType]}</TableCell>
             <TableCell>
                 <CourseStatusBadge status={takenCourse?.status || "Never Taken"} />
             </TableCell>
@@ -64,7 +65,7 @@ const CourseTable = ({ courses , coursesTaken}) => (
   </TableContainer>
 );
 
-const DefaultProgrammePlan = ({ programme_intake_id, academicProfile}) => {
+const DefaultProgrammePlan = ({ programme_intake_id, academicProfile, programmeName}) => {
     const [ programmeIntake, setProgrammeIntake ] = useState(null);
     const [ programmePlan, setProgrammePlan ] = useState(null);
     const [ programmePlanSortedByYear, setProgrammePlanSortedByYear ] = useState([]);
@@ -152,7 +153,11 @@ const DefaultProgrammePlan = ({ programme_intake_id, academicProfile}) => {
                     >
                       {"Semester " + (semIdx + 1)}
                     </Typography>
-                    <CourseTable courses={semesterObj.courses} coursesTaken={coursesTaken}/>
+                    <CourseTable 
+                      courses={semesterObj.courses}  
+                      coursesTaken={coursesTaken}
+                      programmeName={programmeName}
+                    />
                   </div>
                   ))}
               </div>

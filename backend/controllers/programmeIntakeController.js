@@ -137,7 +137,13 @@ const getProgrammeIntakeById = async (req, res) => {
     const { id } = req.params;
 
     const programmeIntake = await ProgrammeIntake.findById(id)
-      .populate("graduation_requirements")
+      .populate({
+        path: "graduation_requirements",
+        populate: {
+          path: "typesByProgramme.programme",
+          select: "programme_code programme_name",
+        },
+      })
       .populate("programme_id")
       .populate("academic_session_id")
       .populate({
@@ -146,6 +152,9 @@ const getProgrammeIntakeById = async (req, res) => {
           path: "semester_plans",
           populate: {
             path: "courses",
+            populate: {
+              path: "typesByProgramme.programme",
+            },
           },
         },
       });
@@ -168,7 +177,13 @@ const getProgrammeIntakeByCode = async (req, res) => {
     const programmeIntake = await ProgrammeIntake.findOne({
       programme_intake_code,
     })
-      .populate("graduation_requirements")
+      .populate({
+        path: "graduation_requirements",
+        populate: {
+          path: "typesByProgramme.programme",
+          select: "programme_code programme_name",
+        },
+      })
       .populate("programme_id")
       .populate("academic_session_id")
       .populate({
@@ -177,6 +192,9 @@ const getProgrammeIntakeByCode = async (req, res) => {
           path: "semester_plans",
           populate: {
             path: "courses",
+            populate: {
+              path: "typesByProgramme.programme",
+            },
           },
         },
       });
@@ -440,6 +458,8 @@ const editProgrammeIntake = async (req, res) => {
       programme,
       academicSession
     );
+
+    updatedData.programme_id = programme._id
 
     const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(
       programme_intake_id, // filter

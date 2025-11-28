@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CourseStatusBadge from '../../constants/courseStatusStyle';
+import { getEffectiveTypeForProgramme } from '../../utils/getEffectiveCourseType';
 
 const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) => {
   const [ programmeIntake, setProgrammeIntake ] = useState(null);
@@ -25,6 +26,7 @@ const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) =
       try {
         const response = await axiosClient.get(`/programme-intakes/id/${programme_intake_id}`);
         setProgrammeIntake(response.data);
+        console.log("programme intake: ", response.data)
       } catch (error) {
         console.error("Error fetching programme intake:", error);
       } finally {
@@ -41,14 +43,15 @@ const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) =
     if(programmeIntake && programmeIntake.graduation_requirements){
       const graduation_requirements = programmeIntake.graduation_requirements;
       const coursesByCategory = graduation_requirements.reduce( (acc, course) => {
-        if(!acc[course.type]){
-          acc[course.type] = {};
-          acc[course.type].courses = [];
-          acc[course.type].requiredCredits = 0;
+        const effectiveCourseType = getEffectiveTypeForProgramme(course, programmeIntake?.programme_name)
+        if(!acc[effectiveCourseType]){
+          acc[effectiveCourseType] = {};
+          acc[effectiveCourseType].courses = [];
+          acc[effectiveCourseType].requiredCredits = 0;
         }
 
-        acc[course.type].courses.push(course);
-        acc[course.type].requiredCredits += course.credit_hours;
+        acc[effectiveCourseType].courses.push(course);
+        acc[effectiveCourseType].requiredCredits += course.credit_hours;
         return acc;
       }, {});
       setGraduationRequirements(coursesByCategory);
@@ -60,14 +63,16 @@ const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) =
       const coursesObj = academicProfile.entries;
       const coursesByCategory = coursesObj.reduce( (acc, courseObj) => {
         const course = courseObj.course;
-        if(!acc[course.type]){
-          acc[course.type] = {};
-          acc[course.type].courses = [];
-          acc[course.type].completedCreditHours = 0;
+        const effectiveCourseType = getEffectiveTypeForProgramme(course, programmeIntake?.programme_name)
+
+        if(!acc[effectiveCourseType]){
+          acc[effectiveCourseType] = {};
+          acc[effectiveCourseType].courses = [];
+          acc[effectiveCourseType].completedCreditHours = 0;
         }
 
-        acc[course.type].courses.push(courseObj);
-        acc[course.type].completedCreditHours += course.credit_hours;
+        acc[effectiveCourseType].courses.push(courseObj);
+        acc[effectiveCourseType].completedCreditHours += course.credit_hours;
         return acc;
       }, {});
       setCoursesTaken(coursesByCategory);
@@ -97,7 +102,7 @@ const StudentGraduationRequirement = ({ programme_intake_id, academicProfile}) =
 const Header = ({ programmeIntake , academicProfile}) => {
   return (
       <Typography variant="body1" gutterBottom style={{ marginBottom: '1.5rem' }}>
-          Student has completed <span className='font-semibold'>{academicProfile.completed_credit_hours}</span> out of <span className='font-semibold'>{programmeIntake.total_credit_hours}</span>
+          Student has completed <span className='font-semibold'>{academicProfile?.completed_credit_hours ?? 0}</span> out of <span className='font-semibold'>{programmeIntake.total_credit_hours}</span>
           {" "}credit hours based on the minimum requirements for each course category.
       </Typography>
   )
