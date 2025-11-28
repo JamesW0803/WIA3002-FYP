@@ -1,6 +1,7 @@
 const Student = require("../models/Student");
 const ProgrammePlan = require("../models/ProgrammePlan");
 const SemesterPlan = require("../models/SemesterPlan");
+const Programme = require("../models/Programme");
 const Course = require("../models/Course");
 const AcademicSession = require("../models/AcademicSession");
 const { TYPE_PRIORITY } = require("../constants/courseType")
@@ -110,15 +111,20 @@ const editProgrammePlan = async (updatedProgrammePlan, programme, academicSessio
 
 const generateDraftProgrammePlan = async( req, res) => {
   try{
-    const { graduation_requirements, programme_plan } = req.body
+    const { 
+      graduation_requirements, 
+      programme_plan,
+      programme_name
+    } = req.body
 
+    const programme = await Programme.findOne({programme_name})
     const semesterPlans = programme_plan?.semester_plans
     const allocatedCourseCodes = semesterPlans.flatMap(semesterPlan => 
       semesterPlan.courses.map(course => course.course_code))
     const remainingCourses = graduation_requirements.filter((course) => !allocatedCourseCodes.includes(course.course_code))
     
     const sortedCourses = sortByLevelThenType(remainingCourses, TYPE_PRIORITY)
-    const topoSortedCourses = await topologicalSortCourses(sortedCourses)
+    const topoSortedCourses = await topologicalSortCourses(sortedCourses, programme)
     const generatedDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
     
 
@@ -150,7 +156,7 @@ const sortByLevelThenType = (courses, typeOrder) => {
 };
 
 
-const topologicalSortCourses = async (courses) => {
+const topologicalSortCourses = async (courses, programme) => {
   const courseMap = {};
   const inDegree = {};
   const graph = {};
@@ -166,24 +172,39 @@ const topologicalSortCourses = async (courses) => {
   // Fetch missing prerequisite courses from DB if not in the list
   for (const course of courses) {
     const courseId = course._id.toString();
-    const prereqs = course.prerequisites || [];
+    let prereqs = course.prerequisites || [];
 
-    for (const prereq of prereqs) {
+    const effectivePrereqObj = course.prerequisitesByProgramme?.find(prerequisiteObj => 
+      prerequisiteObj.programme_code === programme.programme_code
+    )
+
+    if(effectivePrereqObj && effectivePrereqObj.prerequisite_codes?.length !== 0){
+      prereqs = effectivePrereqObj.prerequisite_codes
+    }
+
+    const prereqCourses = await Course.find({
+      course_code: { $in: prereqs }
+    });
+
+
+    for (const prereq of prereqCourses) {
       const prereqId = prereq._id?.toString() || prereq.toString();
 
       if (!graph[prereqId]) {
         // Not in original list, try fetch from DB
-        const missingCourse = await Course.findById(prereqId);
-        if (missingCourse) {
-          courseMap[prereqId] = missingCourse;
-          inDegree[prereqId] = 0;
-          graph[prereqId] = [];
-        } else {
-          console.warn(
-            `⚠️ Prerequisite course with ID ${prereqId} not found in DB`
-          );
-          continue; // skip if not found
-        }
+        // const missingCourse = await Course.findById(prereqId);
+        // if (missingCourse) {
+        //   courseMap[prereqId] = missingCourse;
+        //   inDegree[prereqId] = 0;
+        //   graph[prereqId] = [];
+        // } else {
+        //   console.warn(
+        //     `⚠️ Prerequisite course with ID ${prereqId} not found in DB`
+        //   );
+        //   continue; // skip if not found
+        // }
+        throw new Error(`Prerequisites needed for course ${course.course_code} - ${course.course_name}`);
+   
       }
 
       graph[prereqId].push(courseId);

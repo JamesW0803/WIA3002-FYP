@@ -192,7 +192,8 @@ const handleOnGenerate = async () => {
   try{
     const payload = {
       graduation_requirements : programmeEnrollment.graduation_requirements,
-      programme_plan : programmeEnrollment.programme_plan
+      programme_plan : programmeEnrollment.programme_plan,
+      programme_name : programmeEnrollment.programme_name
     }
     const res = await axiosClient.post("/programme-plans/generate-draft", payload)
     const draftedSemesterPlans = res.data
@@ -229,7 +230,7 @@ const handleOnGenerate = async () => {
         {programmeEnrollment?.year} {programmeEnrollment?.semester}
       </Typography>
 
-      {onCreate || editMode &&
+      {(onCreate || editMode) &&
         <AutoGenerationCircularIntegration 
           onGenerate={handleOnGenerate} 
           success={generated}
