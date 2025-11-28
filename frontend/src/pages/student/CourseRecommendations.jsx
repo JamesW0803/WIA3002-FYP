@@ -29,6 +29,8 @@ import {
   getEffectiveTypeForProgrammeClient,
 } from "../../utils/courseRecommendationsUtils";
 
+const DEBUG_TAG = "[CourseRecommendations]";
+
 const PLAN_MODES = [
   { value: "regular", label: "Regular" },
   { value: "lighter", label: "Lighter" },
@@ -120,11 +122,9 @@ const CourseRecommendations = () => {
           }),
         ]);
 
-        setAllCourses(coursesRes.data);
-        setCompletedEntries(profileRes.data.entries);
-
-        // 🔹 NEW: infer student's programme_code from profile
+        const allFetchedCourses = coursesRes.data || [];
         const profile = profileRes.data;
+
         const programmeCode =
           profile?.student?.programme?.programme_code ||
           profile?.student?.programme_code ||
@@ -132,15 +132,12 @@ const CourseRecommendations = () => {
           profile?.programme_code ||
           null;
 
-        // 🔹 NEW: also use programmeIntake.programme_id when student/programme not populated
         const programmeId =
           profile?.student?.programme?._id ||
           profile?.programme?._id ||
           profile?.programmeIntake?.programme_id ||
           null;
 
-        // We probably don't have department on this profile at all yet,
-        // so this will almost certainly end up null (no dept filter on client).
         const departmentName =
           profile?.student?.programme?.department ||
           profile?.student?.department ||
@@ -152,7 +149,9 @@ const CourseRecommendations = () => {
         setStudentProgrammeId(programmeId);
         setStudentDepartment(departmentName);
 
-        // ---- existing programme-intake plan mapping logic ----
+        setAllCourses(allFetchedCourses);
+        setCompletedEntries(profileRes.data.entries || []);
+
         const programmeIntakeCode =
           profile.programme_intake_code ||
           profile.programmeIntake?.programme_intake_code;
@@ -169,18 +168,15 @@ const CourseRecommendations = () => {
             );
             mappingFromBackend = planRes.data?.semesterMapping || {};
           } catch (e) {
-            console.error(
-              "Failed to fetch programme plan mapping, got no semesterMapping:",
-              e
-            );
+            // silently ignore or add a small error log if you really want
           }
         }
 
         setSemesterMapping(mappingFromBackend);
 
-        const { years, missingCodes } = resolveDefaultPlanCourses(
+        const { years } = resolveDefaultPlanCourses(
           mappingFromBackend,
-          coursesRes.data,
+          allFetchedCourses,
           { electiveCreditHours: 3, electiveLabel: "Specialization Elective" }
         );
         setDefaultPlan(years);
@@ -193,20 +189,74 @@ const CourseRecommendations = () => {
           return next;
         });
 
-        if (missingCodes.length) {
-          console.warn(
-            "[DefaultPlan] Codes present in semesterMapping but not found in DB:",
-            missingCodes
+        // 🔽 NEW LOGIC: remaining courses based on faculty default plan
+        // 🔽 NEW LOGIC: remaining courses based on faculty default plan
+        let remaining;
+
+        if (mappingFromBackend && Object.keys(mappingFromBackend).length > 0) {
+          // Collect all course codes from the default plan (excluding placeholders)
+          const defaultPlanCodeSet = new Set();
+
+          Object.values(mappingFromBackend).forEach((sems) => {
+            Object.values(sems).forEach((codes) => {
+              (codes || []).forEach((code) => {
+                if (
+                  typeof code === "string" &&
+                  !code.startsWith(SPECIALIZATION_PREFIX) && // ignore SPECIALIZATION_ placeholders
+                  code !== "GAP YEAR" &&
+                  code !== "GAP SEMESTER" &&
+                  code !== "OUTBOUND"
+                ) {
+                  defaultPlanCodeSet.add(code);
+                }
+              });
+            });
+          });
+
+          const defaultPlanCourses = allFetchedCourses.filter((c) =>
+            defaultPlanCodeSet.has(c.course_code)
+          );
+
+          // ✅ Include ALL programme electives for this student (not yet passed)
+          const passedSetLocal = getPassedCodes(profileRes.data.entries || []);
+
+          const programmeElectiveCourses = allFetchedCourses.filter((c) => {
+            const effectiveType = getEffectiveTypeForProgrammeClient(
+              c,
+              programmeCode,
+              programmeId,
+              departmentName
+            );
+            return (
+              effectiveType === "programme_elective" &&
+              !passedSetLocal.has(c.course_code)
+            );
+          });
+
+          // Merge default-plan courses + programme electives, dedup by course_code
+          const byCode = new Map();
+          defaultPlanCourses.forEach((c) => byCode.set(c.course_code, c));
+          programmeElectiveCourses.forEach((c) => {
+            if (!byCode.has(c.course_code)) {
+              byCode.set(c.course_code, c);
+            }
+          });
+
+          const coursePool = Array.from(byCode.values());
+
+          remaining = getRemainingCourses(coursePool, profileRes.data.entries);
+        } else {
+          // Fallback: no faculty plan mapping found, keep old behaviour
+          remaining = getRemainingCourses(
+            allFetchedCourses,
+            profileRes.data.entries
           );
         }
 
-        const remaining = getRemainingCourses(
-          coursesRes.data,
-          profileRes.data.entries
-        );
         setRemainingCourses(remaining);
       } catch (err) {
-        console.error("Failed to fetch data:", err);
+        // optional: minimal error log
+        console.error(`${DEBUG_TAG} Failed to fetch data`, err);
       }
     };
 
@@ -430,39 +480,23 @@ const CourseRecommendations = () => {
     const passed = getPassedCodes(completedEntries);
     if (!allCourses.length) return [];
 
-    const globalElectives = allCourses.filter(
-      (c) => c.type === "programme_elective"
-    );
-
-    const sameDept = globalElectives.filter((c) => {
-      const dept = getCourseDepartment(c);
-      return !studentDepartment || !dept || dept === studentDepartment;
-    });
-
     const result = allCourses
       .filter((c) => {
-        // 1) Department filter
-        const courseDept = getCourseDepartment(c);
-        if (
-          studentDepartment &&
-          courseDept &&
-          courseDept !== studentDepartment
-        ) {
-          return false;
-        }
-
-        // 2) Per-programme type
         const effectiveType = getEffectiveTypeForProgrammeClient(
           c,
           studentProgrammeCode,
-          studentProgrammeId
+          studentProgrammeId,
+          studentDepartment
         );
 
-        return (
-          effectiveType === "programme_elective" && !passed.has(c.course_code)
-        );
+        const passedAlready = passed.has(c.course_code);
+
+        const keep = effectiveType === "programme_elective" && !passedAlready;
+
+        return keep;
       })
       .map((c) => ({ code: c.course_code, name: c.course_name }));
+
     return result;
   }, [
     allCourses,
@@ -476,23 +510,28 @@ const CourseRecommendations = () => {
     const code = String(course?.course_code || "");
 
     // SPECIALIZATION placeholders are always considered programme electives
-    if (code.startsWith(SPECIALIZATION_PREFIX)) return true;
+    if (code.startsWith(SPECIALIZATION_PREFIX)) {
+      return true;
+    }
 
-    // Check type for this programme
     const effectiveType = getEffectiveTypeForProgrammeClient(
       course,
       studentProgrammeCode,
-      studentProgrammeId
+      studentProgrammeId,
+      studentDepartment
     );
-    if (effectiveType !== "programme_elective") return false;
 
-    // Check department match
-    const courseDept = getCourseDepartment(course);
-    if (studentDepartment && courseDept && courseDept !== studentDepartment) {
-      return false;
+    // 1) First, if effective type says it's an elective, trust that
+    if (effectiveType === "programme_elective") {
+      return true;
     }
 
-    return true;
+    // 2) Fallback: if the raw course.type is programme_elective, still treat it as elective
+    if (course?.type === "programme_elective") {
+      return true;
+    }
+
+    return false;
   };
 
   const CourseTitleText = ({ course }) => {

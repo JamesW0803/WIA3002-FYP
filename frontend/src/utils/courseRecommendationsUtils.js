@@ -99,12 +99,44 @@ export const kiarSheLabel = (code, passedSet) => {
 };
 
 export const getCourseDepartment = (course) => {
-  const d = course?.department || null;
-  // Treat placeholders as "no department"
-  if (!d || d === "Unknown" || d === "N/A" || d === "NA") {
-    return null;
+  const rawDept = course?.department || null;
+
+  // 1) If we already have a concrete department, trust it.
+  if (
+    rawDept &&
+    rawDept !== "Unknown" &&
+    rawDept !== "N/A" &&
+    rawDept !== "NA"
+  ) {
+    return rawDept;
   }
-  return d;
+
+  // 2) Department is missing / 'Unknown' → try to infer from `typesByProgramme`.
+  const cfgs = Array.isArray(course?.typesByProgramme)
+    ? course.typesByProgramme
+    : [];
+
+  if (cfgs.length > 0) {
+    for (const cfg of cfgs) {
+      const prog = cfg?.programme;
+      if (prog && typeof prog === "object") {
+        // Try common department keys on the programme object
+        const inferredDept =
+          prog.department ||
+          prog.department_name ||
+          prog.dept ||
+          prog.deptName ||
+          null;
+
+        if (inferredDept) {
+          return inferredDept;
+        }
+      }
+    }
+  }
+
+  // 3) Still nothing → treat as no department (shared / truly global).
+  return null;
 };
 
 // ---- Tail compaction, WIA3003/WIA3001 arrangements ----
@@ -772,74 +804,67 @@ export const convertPlannerMapToUI = (plannerMap, allCourses) => {
 export const getEffectiveTypeForProgrammeClient = (
   course,
   programmeCode,
-  programmeId
+  programmeId,
+  studentDepartment
 ) => {
-  const configs = course.typesByProgramme || [];
+  if (!course) return null;
 
-  // Helper to robustly normalize programme ref
-  const normalizeProgId = (progRef) => {
-    if (!progRef) return null;
-    const t = typeof progRef;
+  const rawType = course.type;
+  const dept = course.department || null;
+  const configs = Array.isArray(course.typesByProgramme)
+    ? course.typesByProgramme
+    : [];
 
-    // Case: raw ObjectId string/number
-    if (t === "string" || t === "number") return String(progRef);
+  const isKnownDepartment =
+    dept && dept !== "Unknown" && dept !== "N/A" && dept !== "NA";
 
-    if (t === "object") {
-      // Common shapes:
-      // { _id: '...' }
-      if (progRef._id) return String(progRef._id);
-      // { id: '...' }
-      if (progRef.id) return String(progRef.id);
-      // Some serializers use programme / programme_id / value
-      if (progRef.programme) return String(progRef.programme);
-      if (progRef.programme_id) return String(progRef.programme_id);
-      if (progRef.value) return String(progRef.value);
-    }
-    return null;
-  };
+  const programmeIdStr = programmeId ? String(programmeId) : null;
 
-  const normalizeProgCode = (progRef) => {
-    if (!progRef || typeof progRef !== "object") return null;
-    return progRef.programme_code || progRef.code || progRef.shortCode || null;
-  };
+  const matchesStudentProgramme = (cfg) => {
+    if (!cfg || !cfg.programme) return false;
+    const p = cfg.programme;
 
-  // If there are per-programme configs, try to match them
-  if (configs.length > 0) {
-    if (!programmeCode && !programmeId) {
-      return course.type;
+    // CASE 1: programme is an ObjectId or already a string
+    if (typeof p === "string" || typeof p === "number") {
+      if (programmeIdStr && String(p) === programmeIdStr) return true;
     }
 
-    const programmeIdStr = programmeId ? String(programmeId) : null;
-    let matchedType = null;
-
-    for (const cfg of configs) {
-      const progRef = cfg.programme;
-      const normId = normalizeProgId(progRef);
-      const normCode = normalizeProgCode(progRef);
-
-      // Match by id first, then by code
-      if (programmeIdStr && normId && normId === programmeIdStr) {
-        matchedType = cfg.type;
-        break;
+    // CASE 2: programme is a populated object { _id, programme_code, ... }
+    if (typeof p === "object") {
+      if (programmeIdStr && p._id && String(p._id) === programmeIdStr) {
+        return true;
       }
-
-      if (programmeCode && normCode && normCode === programmeCode) {
-        matchedType = cfg.type;
-        break;
+      if (programmeCode && p.programme_code === programmeCode) {
+        return true;
       }
     }
 
-    // ✅ IMPORTANT behaviour change:
-    //  - If no config matched, we now fall back to the global type
-    //    instead of returning null (which excluded the course).
-    if (matchedType == null) {
-      return course.type;
+    return false;
+  };
+
+  const cfgForStudent = configs.find(matchesStudentProgramme) || null;
+
+  // -------- PROGRAMME ELECTIVES ONLY (your rules) --------
+  if (rawType === "programme_elective") {
+    // CASE A: department known → only that department can see it as an elective
+    if (isKnownDepartment) {
+      if (studentDepartment && studentDepartment === dept) {
+        return "programme_elective";
+      }
+      return "non_elective_for_this_programme";
     }
 
-    return matchedType;
+    // CASE B: department unknown → only listed programmes see it as elective
+    if (!cfgForStudent || cfgForStudent.type !== "programme_elective") {
+      return "non_elective_for_this_programme";
+    }
+    return "programme_elective";
   }
 
-  // No per-programme override → use global type
-  const globalType = course.type;
-  return globalType;
+  // -------- Other course types (core, uni, etc.) --------
+  if (cfgForStudent && cfgForStudent.type && cfgForStudent.type !== rawType) {
+    return cfgForStudent.type;
+  }
+
+  return rawType;
 };
