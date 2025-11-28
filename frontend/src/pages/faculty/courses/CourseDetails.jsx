@@ -34,6 +34,10 @@ const CourseDetails = () => {
       try {
         const res = await axiosClient.get(`/courses/${course_code}`);
         const course = res.data;
+        const offered_semester = course.offered_semester
+        if(offered_semester.includes("Semester 1") && offered_semester.includes("Semester 2")){
+          course.offered_semester = ["Semester 1 & 2"]
+        }
         setFormData(course);
         setOriginalFormData(course);
       } catch (err) {
@@ -129,7 +133,7 @@ const CourseDetails = () => {
 
       if (!Array.isArray(offered_semester)) {
         if (offered_semester === "Semester 1 & 2") {
-          offered_semester = ["Semester 1 & 2"];
+          offered_semester = ["Semester 1", "Semester 2"];
         } else if (offered_semester) {
           offered_semester = [offered_semester];
         } else {
@@ -170,8 +174,12 @@ const CourseDetails = () => {
           payload
         );
         showNotification("Course is updated successfully", "success");
-        setFormData(res.data);
-        setOriginalFormData(res.data);
+        const course = res.data
+        if(course.offered_semester.includes("Semester 1") && course.offered_semester.includes("Semester 2")){
+          course.offered_semester = ["Semester 1 & 2"]
+        }
+        setFormData(course);
+        setOriginalFormData(course);
         setEditMode(false);
       } else {
         branch = "oncreate";
