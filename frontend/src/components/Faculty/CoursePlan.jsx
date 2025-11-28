@@ -16,8 +16,9 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AutoGenerationCircularIntegration from "./AutoGenerationCircularIntegration";
 import axiosClient from "../../api/axiosClient";
+import { getEffectiveTypeForProgramme } from "../../utils/getEffectiveCourseType";
 
-const EditableCourseTable = ({ courses, onRemove, editMode = false, onCreate }) => (
+const EditableCourseTable = ({ courses, onRemove, editMode = false, programmeName="" }) => (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
       <TableHead>
@@ -31,12 +32,14 @@ const EditableCourseTable = ({ courses, onRemove, editMode = false, onCreate }) 
       </TableHead>
       <TableBody>
         {courses.length > 0 ? (
-          courses.map((course, idx) => (
+          courses.map((course, idx) => {
+            const effectiveCourseType = getEffectiveTypeForProgramme(course, programmeName)
+            return (
             <TableRow key={idx}>
               <TableCell>{course.course_code}</TableCell>
               <TableCell>{course.course_name}</TableCell>
               <TableCell>{course.credit_hours}</TableCell>
-              <TableCell>{READABLE_COURSE_TYPES[course.type]}</TableCell>
+              <TableCell>{READABLE_COURSE_TYPES[effectiveCourseType]}</TableCell>
               {editMode &&              
                 <TableCell>
                   <button
@@ -47,7 +50,7 @@ const EditableCourseTable = ({ courses, onRemove, editMode = false, onCreate }) 
                   </button>
                 </TableCell>}
             </TableRow>
-          ))
+          )})
         ) : (
           <TableRow>
             <TableCell
@@ -263,6 +266,7 @@ const handleOnGenerate = async () => {
                       courses={courses}
                       onRemove={(i) => handleRemoveCourse(semIndex, i)}
                       editMode={editMode}
+                      programmeName={programmeEnrollment?.programme_name}
                     />
 
                     {editMode && showSelect[semIndex] && (

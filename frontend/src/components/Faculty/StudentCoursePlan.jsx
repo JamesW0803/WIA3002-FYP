@@ -21,8 +21,9 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axiosClient from '../../api/axiosClient';
+import { getEffectiveTypeForProgramme } from '../../utils/getEffectiveCourseType';
 
-const CourseTable = ({ courses }) => {
+const CourseTable = ({ courses , programmeName}) => {
   return   (
   <TableContainer component={Paper} sx={{ mb: 2 }}>
     <Table>
@@ -37,6 +38,7 @@ const CourseTable = ({ courses }) => {
       <TableBody>
         {courses.map((courseObj, index) => {
           const course = courseObj.course
+          const effectiveCourseType = getEffectiveTypeForProgramme(course, programmeName)
           return (
           <TableRow key={index}>
             <TableCell>{course.course_code}</TableCell>
@@ -142,7 +144,7 @@ const StudentCoursePlan = () => {
                       <Typography variant="subtitle1" gutterBottom>
                         {"Semester " + (semIdx + 1)}
                       </Typography>
-                      <CourseTable courses={semesterObj.courses} />
+                      <CourseTable courses={semesterObj.courses} programmeName={""}/>
                     </div>
                     ))}
                 </div>

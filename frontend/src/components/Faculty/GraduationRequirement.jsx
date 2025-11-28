@@ -20,18 +20,7 @@ import {
   COURSE_TYPES,
   READABLE_COURSE_TYPES,
 } from "../../constants/courseType";
-
-// Helper: get programme-specific type or fall back to global type
-const getEffectiveTypeForProgramme = (course, programme_code) => {
-  if (!course) return undefined;
-  if (!course.typesByProgramme) return course.type;
-
-  const cfg = course.typesByProgramme.find(
-    (t) => t.programme_code === programme_code
-  );
-
-  return cfg ? cfg.type : course.type;
-};
+import { getEffectiveTypeForProgramme } from "../../utils/getEffectiveCourseType";
 
 const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
   const [requirements, setRequirements] = useState([]);
@@ -39,8 +28,7 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
   const [showSelect, setShowSelect] = useState({});
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [grouped, setGrouped] = useState({});
-
-  const programmeCode = programmeEnrollment?.programme_code;
+  const [programmeName, setProgrammeName] = useState(programmeEnrollment?.programme_name ?? "")
 
   // Group existing requirements by *effective* type, not raw course.type
   useEffect(() => {
@@ -58,7 +46,7 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
 
       // Use programme-specific type if available on the full course
       const effectiveType =
-        getEffectiveTypeForProgramme(fullCourse, programmeCode) ||
+        getEffectiveTypeForProgramme(fullCourse, programmeName) ||
         fullCourse.type;
 
       if (!acc[effectiveType]) acc[effectiveType] = [];
@@ -72,9 +60,13 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
       if (!hold[type]) hold[type] = [];
     }
 
+    if(programmeEnrollment?.programme_name !== programmeName){
+      setProgrammeName(programmeEnrollment?.programme_name)
+    }
+
     setGrouped(hold);
     setRequirements(Object.values(hold).flat());
-  }, [programmeEnrollment?.graduation_requirements, programmeCode, courses]);
+  }, [programmeEnrollment?.graduation_requirements, courses, programmeEnrollment.programme_name]);
 
   // Fetch all courses once
   useEffect(() => {
@@ -228,7 +220,7 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
                           .filter((c) => {
                             const effectiveType = getEffectiveTypeForProgramme(
                               c,
-                              programmeCode
+                              programmeName
                             );
                             return effectiveType === type;
                           })
