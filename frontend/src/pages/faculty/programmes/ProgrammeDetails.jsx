@@ -56,7 +56,6 @@ const ProgrammeDetails = () => {
         setLoading(false);
       }
     }
-    console.log("editMode: ", editMode)
     run();
 
   }, [programme_code]);

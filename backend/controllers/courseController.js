@@ -277,7 +277,8 @@ const getCourseByCode = async (req, res) => {
       .populate(
         "prerequisitesByProgramme.prerequisites",
         "course_code course_name"
-      );
+      )
+      .populate("typesByProgramme.programme", "programme_name programme_code");
 
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
@@ -382,7 +383,7 @@ const editCourse = async (req, res) => {
       }
 
       const programme = await Programme.findOne({
-        programme_code: programmeCode,
+        programme_code: programme_code,
       });
 
       if (!programme) {

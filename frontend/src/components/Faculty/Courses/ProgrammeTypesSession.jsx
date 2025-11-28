@@ -100,8 +100,8 @@ const ProgrammeTypesSession = ({
                   ))}
                 </select>
               ) : (
-                <p className="text-sm font-semibold text-gray-900">
-                  {cfg.programme_code || "-"}
+                <p className="text-sm font-semibold text-gray-700">
+                  {`${cfg.programme_code} - ${cfg.programme_name}` || "-"}
                 </p>
               )}
             </div>
@@ -122,8 +122,8 @@ const ProgrammeTypesSession = ({
                   ))}
                 </select>
               ) : (
-                <p className="text-sm text-gray-700">
-                  {cfg.type ? READABLE_COURSE_TYPES[cfg.type] || cfg.type : "-"}
+                <p className="text-sm font-semibold text-gray-700">
+                  {cfg.type ? (READABLE_COURSE_TYPES[cfg.type] || cfg.type) : "-"}
                 </p>
               )}
             </div>

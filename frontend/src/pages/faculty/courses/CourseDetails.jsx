@@ -129,7 +129,7 @@ const CourseDetails = () => {
 
       if (!Array.isArray(offered_semester)) {
         if (offered_semester === "Semester 1 & 2") {
-          offered_semester = ["Semester 1", "Semester 2"];
+          offered_semester = ["Semester 1 & 2"];
         } else if (offered_semester) {
           offered_semester = [offered_semester];
         } else {

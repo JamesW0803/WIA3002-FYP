@@ -1,8 +1,7 @@
 const PrerequisitesSession = ({ courses, formData, setFormData, editMode, addCourse}) => {
-  console.log("editMode: ", editMode)
   return (
   <div className="mt-8">
-    <span className="font-semibold ml-1 mb-2 block">Prerequisites</span>
+    <span className="text-lg font-bold text-gray-700 mb-4 block">Prerequisites</span>
     {formData.prerequisites?.length === 0 && !editMode && !addCourse && (
       <p className="text-sm text-gray-500 ml-1">No prerequisites</p>
     )}
