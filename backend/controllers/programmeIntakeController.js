@@ -294,6 +294,8 @@ const getGraduationRequirementsForStudent = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
+    const studentProgrammeId = student.programme?._id || student.programme;
+
     // 1. Determine the correct intake for this student
     let intake = student.programme_intake;
 

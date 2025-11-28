@@ -115,6 +115,73 @@ function toGapSets(profile, preferences) {
   return { gapYears, gapSemKeys, outboundSemKeys };
 }
 
+function deriveStudentProgrammeAndDepartment(profile) {
+  const programme = profile?.student?.programme || profile?.programme || null;
+
+  const programmeCode = programme?.programme_code || null;
+
+  const programmeId =
+    programme?._id || profile?.programmeIntake?.programme_id || null;
+
+  const department =
+    programme?.department ||
+    profile?.student?.department ||
+    profile?.department ||
+    null;
+
+  return { programmeCode, programmeId, department };
+}
+
+function getCourseDepartmentServer(course) {
+  return course?.department || null; // from Course.js schema
+}
+
+function getEffectiveTypeForProgrammeServer(
+  course,
+  programmeCode,
+  programmeId
+) {
+  const configs = course.typesByProgramme || [];
+
+  if (configs.length > 0) {
+    if (!programmeCode && !programmeId) return null;
+
+    const programmeIdStr = programmeId ? String(programmeId) : null;
+    let matchedType = null;
+
+    for (const cfg of configs) {
+      const progRef = cfg.programme;
+      const kind = typeof progRef;
+
+      // populated
+      if (progRef && kind === "object" && progRef._id) {
+        if (programmeIdStr && String(progRef._id) === programmeIdStr) {
+          matchedType = cfg.type;
+          break;
+        }
+        if (programmeCode && progRef.programme_code === programmeCode) {
+          matchedType = cfg.type;
+          break;
+        }
+        continue;
+      }
+
+      // raw ObjectId string
+      if (progRef && (kind === "string" || kind === "number")) {
+        if (programmeIdStr && String(progRef) === programmeIdStr) {
+          matchedType = cfg.type;
+          break;
+        }
+        continue;
+      }
+    }
+
+    return matchedType;
+  }
+
+  return course.type;
+}
+
 export default async function generateCustomPlan(
   userId,
   token,
@@ -132,6 +199,12 @@ export default async function generateCustomPlan(
 
     const allCourses = coursesRes.data || [];
     const profile = profileRes.data || {};
+
+    const { programmeCode, programmeId, department } =
+      deriveStudentProgrammeAndDepartment(profile);
+
+    const courseByCode = new Map(allCourses.map((c) => [c.course_code, c]));
+
     const { passed, takenByYS, lastYear, lastSem, everTaken } =
       analyzeProfile(profile);
     const { gapYears, gapSemKeys, outboundSemKeys } = toGapSets(
@@ -154,6 +227,25 @@ export default async function generateCustomPlan(
     const catalog = new Map();
     const prereqGraph = new Map();
     const dependents = new Map();
+
+    const isProgrammeElectiveForStudent = (course) => {
+      if (!course) return false;
+
+      // Department filter
+      const courseDept = getCourseDepartmentServer(course);
+      if (department && courseDept && courseDept !== department) {
+        return false;
+      }
+
+      // Programme-specific type
+      const effType = getEffectiveTypeForProgrammeServer(
+        course,
+        programmeCode,
+        programmeId
+      );
+
+      return effType === "programme_elective";
+    };
 
     for (const c of allCourses) {
       const code = c.course_code;
@@ -254,7 +346,7 @@ export default async function generateCustomPlan(
     ).length;
     const electivesPool = allCourses
       .filter(
-        (c) => c.type === "programme_elective" && !passed.has(c.course_code)
+        (c) => isProgrammeElectiveForStudent(c) && !passed.has(c.course_code)
       )
       .map((c) => c.course_code);
 
@@ -265,10 +357,13 @@ export default async function generateCustomPlan(
     for (const ys of Object.values(takenByYS)) {
       for (const code of ys) {
         if (!passed.has(code)) continue;
-        const info = catalog.get(code);
-        if (info?.type === "programme_elective") takenElectives.add(code);
+        const course = courseByCode.get(code);
+        if (course && isProgrammeElectiveForStudent(course)) {
+          takenElectives.add(code);
+        }
       }
     }
+
     // Assume 10 specialization slots (from your mapping) – adjust by passed electives
     specializationNeeded = Math.max(
       0,

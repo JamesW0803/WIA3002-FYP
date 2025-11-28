@@ -23,6 +23,7 @@ const formatCourse = (course) => {
   );
 
   const typesByProgramme = (course.typesByProgramme || []).map((cfg) => ({
+    programme: cfg.programme?._id ?? cfg.programme ?? null,
     programme_code: cfg.programme?.programme_code ?? cfg.programme_code ?? "-",
     programme_name: cfg.programme?.programme_name ?? cfg.programme_name ?? "",
     type: cfg.type ?? "-",

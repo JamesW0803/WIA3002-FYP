@@ -1,4 +1,3 @@
-//courseController.js
 const Course = require("../models/Course");
 const Programme = require("../models/Programme");
 const {
@@ -26,8 +25,6 @@ const getAllCourses = async (req, res) => {
     if (minimal === "true") {
       let studentProgrammeId = null;
 
-      // If a student is logged in, try to get their programme
-      // (same pattern as in checkCoursePrerequisites)
       if (req.user && req.user.role === "student") {
         const profile = await AcademicProfile.findOne({
           student: req.user.user_id,
@@ -44,7 +41,6 @@ const getAllCourses = async (req, res) => {
         studentProgrammeId = profile?.student?.programme?._id || null;
       }
 
-      // Pull courses with both global + programme-specific prereqs
       const mini = await Course.find(query)
         .select(
           "course_code course_name credit_hours prerequisites offered_semester prerequisitesByProgramme"
@@ -61,7 +57,6 @@ const getAllCourses = async (req, res) => {
       const minimalCourses = mini.map((course) => {
         let effectivePrereqs = course.prerequisites || [];
 
-        // If we know the student's programme, prefer programme-specific config
         if (studentProgrammeId) {
           const cfg = (course.prerequisitesByProgramme || []).find((p) =>
             p.programme.equals
@@ -79,7 +74,6 @@ const getAllCourses = async (req, res) => {
           code: course.course_code,
           name: course.course_name,
           credit: course.credit_hours,
-          // <- this is now the programme-specific list (if available)
           prerequisites: (effectivePrereqs || []).map((p) => p.course_code),
           offered_semester: course.offered_semester,
         };
@@ -88,28 +82,26 @@ const getAllCourses = async (req, res) => {
       return res.status(200).json(minimalCourses);
     }
 
-    // ==== FULL (NON-MINIMAL) RESPONSE – unchanged ====
+    // ==== FULL (NON-MINIMAL) RESPONSE ====
     const courses = await Course.find(query)
-      .populate({
-        path: "prerequisites",
-        select: "course_code course_name credit_hours offered_semester",
-      })
-      .populate({
-        path: "prerequisitesByProgramme.programme",
-        select: "programme_name programme_code",
-      })
-      .populate({
-        path: "prerequisitesByProgramme.prerequisites",
-        select: "course_code course_name credit_hours",
-      })
-      .populate({
-        path: "typesByProgramme.programme",
-        select: "programme_name programme_code",
-      });
+      .populate(
+        "prerequisites",
+        "course_code course_name credit_hours offered_semester"
+      )
+      .populate(
+        "prerequisitesByProgramme.programme",
+        "programme_name programme_code"
+      )
+      .populate(
+        "prerequisitesByProgramme.prerequisites",
+        "course_code course_name credit_hours"
+      )
+      .populate("typesByProgramme.programme", "programme_name programme_code");
 
     const formattedCourses = formatCourses(courses);
-    res.status(200).json(formattedCourses);
+    return res.status(200).json(formattedCourses);
   } catch (error) {
+    console.error("getAllCourses error:", error);
     res.status(500).json({ message: error.message });
   }
 };
