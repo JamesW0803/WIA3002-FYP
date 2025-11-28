@@ -47,6 +47,7 @@ const ProgrammeEnrollmentDetails = () => {
         setFormData(data);
         setOriginalFormData(data)
         setGraduationRequirements(data.graduation_requirements || []);
+        console.log("programme Enrollment data: ", data)
       } catch (err) {
         console.error(err);
       }finally{
@@ -186,7 +187,11 @@ const ProgrammeEnrollmentDetails = () => {
       if(!addProgrammeIntake){
         branch = "update"
         const res = await axiosClient.put(`/programme-intakes/${formData._id}`, formData);
-        const programmeIntake = res.data
+        const programmeIntake = {
+          ...res.data,
+          createdAt: formatDateToLocaleString(res.data.createdAt),
+          updatedAt: formatDateToLocaleString(res.data.updatedAt),
+        }
         showNotification("Programme enrollment is updated successfully", "success")
         setEditMode(false);
         setFormData(programmeIntake);

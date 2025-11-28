@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 const Student = require("../models/Student");
 const Admin = require("../models/Admin");
+const ProgrammeIntake = require("../models/ProgrammeIntake")
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
@@ -40,6 +41,12 @@ const register = async (req, res) => {
         throw new Error("EMAIL_EXISTS");
       }
 
+      const matricNo = (req.body.email).split("@")[0]
+      // 2c) matric no clash?
+      if (await User.findOne({ matricNo: matricNo }).session(session)) {
+        throw new Error("MATRIC_NO_EXISTS");
+      }
+
       // 3) hash
       const hashed = await bcrypt.hash(req.body.password, saltRounds);
 
@@ -51,9 +58,10 @@ const register = async (req, res) => {
         }).session(session);
         newUserDoc = new Student({
           username: req.body.name,
+          matricNo: matricNo,
           email: req.body.email,
           password: hashed,
-          role: "Student", // discriminatorKey
+          role: "student", // discriminatorKey
           contact: req.body.contact,
           faculty: req.body.faculty,
           department: req.body.department,

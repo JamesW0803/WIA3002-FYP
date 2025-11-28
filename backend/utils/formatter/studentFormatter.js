@@ -74,7 +74,7 @@ const formatStudent = async (
       ? expectedGraduationSession.year.substring(5)
       : "-",
     progress: calculateStudentProgressPercentage(
-      studentAcademicProfile.completed_credit_hours,
+      studentAcademicProfile?.completed_credit_hours ?? 0,
       programmeIntake.total_credit_hours
     ),
     status: {

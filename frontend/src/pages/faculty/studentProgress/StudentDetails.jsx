@@ -31,7 +31,6 @@ const StudentDetails = () => {
         const fetchStudent = async() => {
             const response = await axiosClient.get(`/students/${student_name}`)
             const currentStudent = response.data
-
             setStudent(currentStudent)
             setFormData(currentStudent); // initial form data
 
@@ -102,6 +101,7 @@ const StudentDetails = () => {
                 <DefaultProgrammePlan
                     academicProfile={student.academicProfile}
                     programme_intake_id={student.programme_intake_id}
+                    programmeName={student.programme_name}
                 />
                 )}
             </div>
