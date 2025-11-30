@@ -437,7 +437,11 @@ const editCourse = async (req, res) => {
 const checkCoursePrerequisites = async (req, res) => {
   try {
     const { courseCode, studentId } = req.params;
-    const { year, semester } = req.query;
+    let { year, semester } = req.query;
+
+    // normalise to numbers if present
+    const yearNum = year !== undefined ? Number(year) : undefined;
+    const semNum = semester !== undefined ? Number(semester) : undefined;
 
     // 1. Get course with all prerequisite info
     const course = await Course.findOne({ course_code: courseCode })
@@ -521,9 +525,9 @@ const checkCoursePrerequisites = async (req, res) => {
         const passed = entry.status === "Passed";
         const sameCourse = entry.course.course_code === prereq.course_code;
 
-        const beforeCurrentSem = year
-          ? entry.year < year ||
-            (entry.year === year && entry.semester < semester)
+        const beforeCurrentSem = yearNum
+          ? Number(entry.year) < yearNum ||
+            (Number(entry.year) === yearNum && Number(entry.semester) < semNum)
           : true;
 
         return passed && sameCourse && beforeCurrentSem;
