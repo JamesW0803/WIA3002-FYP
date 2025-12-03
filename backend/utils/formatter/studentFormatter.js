@@ -52,7 +52,14 @@ const formatStudent = async (
     intakeMap[`${student.programme._id}_${student.academicSession}`];
   const studentAcademicProfile = profileMap[student._id.toString()];
   const expectedGraduationSession =
-    getExpectedGraduation(programmeIntake, sessionMap) ?? "-";
+    getExpectedGraduation(programmeIntake, sessionMap) ?? null;
+
+  let expectedGraduation = "-";
+  if (expectedGraduationSession && expectedGraduationSession.year) {
+    const yearStr = expectedGraduationSession.year.toString();
+    // only substring if it's long enough
+    expectedGraduation = yearStr.length > 5 ? yearStr.substring(5) : yearStr;
+  }
 
   return {
     _id: student._id,
@@ -72,9 +79,7 @@ const formatStudent = async (
         currentAcademicSession,
         sessionMap
       ) ?? "-",
-    expectedGraduation: expectedGraduationSession
-      ? expectedGraduationSession.year.substring(5)
-      : "-",
+    expectedGraduation,
     progress: calculateStudentProgressPercentage(
       studentAcademicProfile?.completed_credit_hours ?? 0,
       programmeIntake?.total_credit_hours ?? 0
