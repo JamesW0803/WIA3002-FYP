@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 const Student = require("../models/Student");
 const Admin = require("../models/Admin");
-const ProgrammeIntake = require("../models/ProgrammeIntake")
+const ProgrammeIntake = require("../models/ProgrammeIntake");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
@@ -15,14 +15,36 @@ const multer = require("multer");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const upload = multer({ storage: multer.memoryStorage() });
 
-const checkUsernameExists = async (username) => {
+const usernameExists = async (username) => {
   const user = await User.findOne({ username });
   return !!user;
 };
 
-const checkEmailExists = async (email) => {
+const emailExists = async (email) => {
   const user = await User.findOne({ email });
   return !!user;
+};
+
+const checkUsernameExists = async (req, res) => {
+  try {
+    const username = req.params.username;
+    const exists = await usernameExists(username);
+    return res.json({ exists });
+  } catch (err) {
+    console.error("Error checking username:", err);
+    return res.status(500).json({ message: "Error checking username" });
+  }
+};
+
+const checkEmailExists = async (req, res) => {
+  try {
+    const email = req.params.email;
+    const exists = await emailExists(email);
+    return res.json({ exists });
+  } catch (err) {
+    console.error("Error checking email:", err);
+    return res.status(500).json({ message: "Error checking email" });
+  }
 };
 
 // authController.js
@@ -41,7 +63,7 @@ const register = async (req, res) => {
         throw new Error("EMAIL_EXISTS");
       }
 
-      const matricNo = (req.body.email).split("@")[0]
+      const matricNo = req.body.email.split("@")[0];
       // 2c) matric no clash?
       if (await User.findOne({ matricNo: matricNo }).session(session)) {
         throw new Error("MATRIC_NO_EXISTS");
@@ -89,7 +111,6 @@ const register = async (req, res) => {
     // committed successfully
     res.status(201).json({ message: "Registration successful" });
   } catch (err) {
-    // map our thrown errors to nice responses
     if (err.message === "USERNAME_EXISTS") {
       return res
         .status(400)
@@ -99,6 +120,11 @@ const register = async (req, res) => {
       return res
         .status(400)
         .json({ message: "Email already exists", field: "email" });
+    }
+    if (err.message === "MATRIC_NO_EXISTS") {
+      return res
+        .status(400)
+        .json({ message: "Matric number already exists", field: "matricNo" });
     }
     if (err.message === "INVALID_ROLE") {
       return res.status(400).json({ message: "Invalid role" });
@@ -215,11 +241,11 @@ const getStudentProfile = async (req, res) => {
       programme: student.programme ? student.programme.programme_name : "-",
       intakeYear: student.academicSession?.year || null,
       intakeSemester: student.academicSession?.semester || null,
-      // (you can still keep the formatted string if you like)
       intake: student.academicSession
         ? `${student.academicSession.year} – ${student.academicSession.semester}`
         : "-",
       username: student.username,
+      matricNo: student.matricNo,
       profileColor: student.profileColor,
       profilePicture: student.profilePicture,
     });

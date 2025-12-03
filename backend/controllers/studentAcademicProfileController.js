@@ -9,6 +9,24 @@ const {
 const Student = require("../models/Student");
 const ProgrammeIntake = require("../models/ProgrammeIntake");
 
+const gradeToPoint = (grade) => {
+  const scale = {
+    "A+": 4.0,
+    A: 4.0,
+    "A-": 3.7,
+    "B+": 3.3,
+    B: 3.0,
+    "B-": 2.7,
+    "C+": 2.3,
+    C: 2.0,
+    "C-": 1.7,
+    "D+": 1.3,
+    D: 1.0,
+    F: 0.0,
+  };
+  return scale[grade] ?? null;
+};
+
 exports.saveAcademicProfile = async (req, res) => {
   const studentId = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(studentId)) {
@@ -139,9 +157,12 @@ exports.saveAcademicProfile = async (req, res) => {
       })
     );
 
+    // --- completed credits + CGPA (latest attempt per course, like TranscriptView) ---
     let completed_credits = 0;
+    const latestByCourseCode = new Map();
 
-    for (const entry of entries) {
+    // use same chronological order as annotatedEntries
+    for (const entry of annotatedEntries) {
       // Fetch course with populated prerequisites so we can see course_code
       const course = await Course.findOne({ course_code: entry.code })
         .populate("prerequisites", "course_code")
@@ -175,7 +196,7 @@ exports.saveAcademicProfile = async (req, res) => {
       if (applicablePrereqs.length > 0) {
         const prereqCodes = applicablePrereqs.map((p) => p.course_code);
 
-        const sameSemesterPrereqs = entries.some(
+        const sameSemesterPrereqs = annotatedEntries.some(
           (e) =>
             e.year === entry.year &&
             e.semester === entry.semester &&
@@ -189,11 +210,34 @@ exports.saveAcademicProfile = async (req, res) => {
         }
       }
 
-      // -------- credit hours --------
+      const credit = course.credit_hours || 0;
+
+      // -------- completed credits (passed only) --------
       if (entry.status === "Passed") {
-        completed_credits += course.credit_hours || 0;
+        completed_credits += credit;
+      }
+
+      // -------- CGPA latest-attempt map --------
+      const point = gradeToPoint(entry.grade);
+      if (point !== null) {
+        // since we're looping in chronological order, each new attempt overwrites previous
+        latestByCourseCode.set(entry.code, { credit, point });
       }
     }
+
+    // Now compute CGPA from latestByCourseCode
+    let totalPoints = 0;
+    let totalCreditsForGpa = 0;
+
+    for (const { credit, point } of latestByCourseCode.values()) {
+      totalPoints += point * credit;
+      // match TranscriptView: exclude failed (0.0) from denominator
+      if (point > 0) {
+        totalCreditsForGpa += credit;
+      }
+    }
+
+    const cgpa = totalCreditsForGpa > 0 ? totalPoints / totalCreditsForGpa : 0;
 
     const validEntries = mappedEntries.filter((e) => e !== null);
 
@@ -202,6 +246,7 @@ exports.saveAcademicProfile = async (req, res) => {
       existingProfile.entries = validEntries;
       existingProfile.gaps = normalizedGaps;
       existingProfile.completed_credit_hours = completed_credits;
+      existingProfile.cgpa = cgpa;
       savedProfile = await existingProfile.save();
     } else {
       savedProfile = await AcademicProfile.create({
@@ -209,6 +254,7 @@ exports.saveAcademicProfile = async (req, res) => {
         entries: validEntries,
         gaps: normalizedGaps,
         completed_credit_hours: completed_credits,
+        cgpa,
       });
     }
 
