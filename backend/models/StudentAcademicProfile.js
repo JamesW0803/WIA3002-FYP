@@ -39,6 +39,10 @@ const academicProfileSchema = new mongoose.Schema(
       default: 0,
       required: true,
     },
+    cgpa: {
+      type: Number,
+      default: 0.0,
+    },
   },
   { timestamps: true }
 );

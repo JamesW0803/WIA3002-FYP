@@ -13,7 +13,6 @@ import Logo from "../../assets/logo.svg";
 import SignUpModal from "./SignUpModal";
 import axiosClient from "../../api/axiosClient";
 import Notification from "../../components/Students/AcademicProfile/Notification";
-import mongoose from "mongoose";
 
 export default function SignUpStudentPage() {
   const [formData, setFormData] = useState({
@@ -263,12 +262,6 @@ export default function SignUpStudentPage() {
       return;
     }
 
-    const programmeId = formData.programme;
-    if (!mongoose.Types.ObjectId.isValid(programmeId)) {
-      showNotification("Invalid programme selected", "error");
-      return;
-    }
-
     const payload = {
       name: formData.username,
       email: fullEmail,
@@ -276,7 +269,7 @@ export default function SignUpStudentPage() {
       role: "student",
       faculty: "Faculty of Computer Science and Information Technology",
       department: formData.department,
-      programme: programmeId,
+      programme: formData.programme,
       contact: formData.contact,
       academicSession: formData.academicSession,
       semester: selectedSession.semester,
@@ -294,27 +287,25 @@ export default function SignUpStudentPage() {
       console.error("Registration failed:", err);
       setIsSuccess(false);
 
-      // Handle duplicate email/username errors
-      if (err.response?.data?.message === "Email or username already exists") {
-        if (err.response.data.error.email) {
-          showNotification("This email is already registered", "error");
-          setValidationErrors((prev) => ({
-            ...prev,
-            email: "This email is already registered",
-          }));
-        }
-        if (err.response.data.error.username) {
-          showNotification("This username is already taken", "error");
-          setValidationErrors((prev) => ({
-            ...prev,
-            username: "This username is already taken",
-          }));
-        }
+      const message = err.response?.data?.message;
+      const field = err.response?.data?.field;
+
+      if (field === "email") {
+        showNotification("This email is already registered", "error");
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "This email is already registered",
+        }));
+      } else if (field === "username") {
+        showNotification("This username is already taken", "error");
+        setValidationErrors((prev) => ({
+          ...prev,
+          username: "This username is already taken",
+        }));
+      } else if (field === "matricNo") {
+        showNotification("This student ID is already registered", "error");
       } else {
-        showNotification(
-          err.response?.data?.message || "Registration failed",
-          "error"
-        );
+        showNotification(message || "Registration failed", "error");
       }
 
       setShowModal(true);

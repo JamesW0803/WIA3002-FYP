@@ -47,10 +47,10 @@ const StudentProfile = () => {
 
   const [notification, setNotification] = useState(null);
 
-  const [username] = useState("jwyn0803");
+  const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
-  const [email] = useState("22004837@siswa.um.edu.my");
-  const [studentId] = useState("22004837");
+  const [email, setEmail] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [intake, setIntake] = useState("-");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -73,14 +73,12 @@ const StudentProfile = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [removeProfilePic, setRemoveProfilePic] = useState(false);
 
-  const storedCgpa = parseFloat(localStorage.getItem("studentCGPA")) || 0.0;
-
   const [intakeYear, setIntakeYear] = useState(null);
   const [intakeSemester, setIntakeSemester] = useState(null);
   const [currentYear, setCurrentYear] = useState(null);
   const [currentSemester, setCurrentSemester] = useState(null);
   const [semesterNumber, setSemesterNumber] = useState(null);
-  const [cgpa] = useState(storedCgpa);
+  const [cgpa, setCgpa] = useState(0);
 
   const handleSetDefaultProfile = (color) => {
     setBgColor(color);
@@ -184,6 +182,11 @@ const StudentProfile = () => {
         const data = res.data;
         console.log("✅ Received student profile:", data);
 
+        setUsername(data.username || "");
+        setEmail(data.email || "");
+        setStudentId(
+          data.matricNo || (data.email ? data.email.split("@")[0] : "") || ""
+        );
         setIntakeYear(data.intakeYear);
         setIntakeSemester(data.intakeSemester);
         setFullName(data.fullName || "");
@@ -197,6 +200,7 @@ const StudentProfile = () => {
         setProgramme(data.programme);
         setDepartment(data.department);
         setIntake(data.intake);
+
         const curRes = await axiosClient.get(`/academic-sessions/current`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -210,6 +214,22 @@ const StudentProfile = () => {
           curRes.data.semester
         );
         setSemesterNumber(n);
+
+        const profileRes = await axiosClient.get(
+          `/academic-profile/${userId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const profileData = profileRes.data;
+
+        const finalCgpa =
+          typeof profileData.cgpa === "number" && !isNaN(profileData.cgpa)
+            ? profileData.cgpa
+            : 0;
+
+        setCgpa(finalCgpa);
       } catch (error) {
         console.error("❌ Failed to load student profile:", error);
         if (error.response) {
