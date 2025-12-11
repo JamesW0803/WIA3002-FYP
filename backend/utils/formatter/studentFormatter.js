@@ -251,6 +251,9 @@ const getProgressStatus = async (programmeIntake, academicProfile) => {
 };
 
 const getCurrentAcademicSession = async () => {
+
+  // add comment
+  
   const currentSession = await AcademicSession.findOne({ isCurrent: true });
   if (!currentSession) {
     throw new Error("No current academic session found");
