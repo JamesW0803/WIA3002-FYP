@@ -63,12 +63,12 @@ export const getEffectiveTypeForProgrammeClient = (
     if (!cfg || !cfg.programme) return false;
     const p = cfg.programme;
 
-    // CASE 1: programme is an ObjectId or already a string
+    // programme can be ObjectId string / number
     if (typeof p === "string" || typeof p === "number") {
       if (programmeIdStr && String(p) === programmeIdStr) return true;
     }
 
-    // CASE 2: programme is a populated object { _id, programme_code, ... }
+    // or populated object
     if (typeof p === "object") {
       if (programmeIdStr && p._id && String(p._id) === programmeIdStr) {
         return true;
@@ -83,9 +83,16 @@ export const getEffectiveTypeForProgrammeClient = (
 
   const cfgForStudent = configs.find(matchesStudentProgramme) || null;
 
-  // -------- PROGRAMME ELECTIVES ONLY (your rules) --------
+  // --- 1) Programme-specific override ALWAYS wins ---
+  // This is where WIC2004 becomes faculty_elective for DS and
+  // programme_elective for CSN.
+  if (cfgForStudent && cfgForStudent.type) {
+    return cfgForStudent.type;
+  }
+
+  // --- 2) No override: apply your special "programme_elective" rules ---
   if (rawType === "programme_elective") {
-    // CASE A: department known → only that department can see it as an elective
+    // department known → only that department's programmes see as programme_elective
     if (isKnownDepartment) {
       if (studentDepartment && studentDepartment === dept) {
         return "programme_elective";
@@ -93,18 +100,11 @@ export const getEffectiveTypeForProgrammeClient = (
       return "non_elective_for_this_programme";
     }
 
-    // CASE B: department unknown → only listed programmes see it as elective
-    if (!cfgForStudent || cfgForStudent.type !== "programme_elective") {
-      return "non_elective_for_this_programme";
-    }
-    return "programme_elective";
+    // department unknown and no typesByProgramme override → not an elective
+    return "non_elective_for_this_programme";
   }
 
-  // -------- Other course types (core, uni, etc.) --------
-  if (cfgForStudent && cfgForStudent.type && cfgForStudent.type !== rawType) {
-    return cfgForStudent.type;
-  }
-
+  // --- 3) Everything else just keeps its raw type ---
   return rawType;
 };
 

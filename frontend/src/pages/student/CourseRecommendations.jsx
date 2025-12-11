@@ -129,6 +129,19 @@ const CourseRecommendations = () => {
     return m;
   }, [allCourses]);
 
+  const getReadableTypeForStudent = (course) => {
+    const effectiveType = getEffectiveTypeForProgrammeClient(
+      course,
+      studentProgrammeCode,
+      studentProgrammeId,
+      studentDepartment
+    );
+
+    const t = effectiveType || course.type || "";
+    if (!t) return "";
+    return t.replace(/_/g, " ");
+  };
+
   // turn { "Year X": { "Semester Y": [codes...] } } into display structure
   const buildDisplayPlan = (plan) => {
     if (!plan || !Object.keys(plan).length) return [];
@@ -475,7 +488,7 @@ const CourseRecommendations = () => {
     }));
   };
 
-  const electiveOptions = useMemo(() => {
+  const programmeElectiveOptions = useMemo(() => {
     const passed = getPassedCodes(completedEntries);
     if (!allCourses.length) return [];
 
@@ -505,9 +518,40 @@ const CourseRecommendations = () => {
     studentDepartment,
   ]);
 
-  const isProgrammeElective = (course) => {
+  const facultyElectiveOptions = useMemo(() => {
+    const passed = getPassedCodes(completedEntries);
+    if (!allCourses.length) return [];
+
+    const result = allCourses
+      .filter((c) => {
+        const effectiveType = getEffectiveTypeForProgrammeClient(
+          c,
+          studentProgrammeCode,
+          studentProgrammeId,
+          studentDepartment
+        );
+
+        const passedAlready = passed.has(c.course_code);
+
+        const keep = effectiveType === "faculty_elective" && !passedAlready;
+
+        return keep;
+      })
+      .map((c) => ({ code: c.course_code, name: c.course_name }));
+
+    return result;
+  }, [
+    allCourses,
+    completedEntries,
+    studentProgrammeCode,
+    studentProgrammeId,
+    studentDepartment,
+  ]);
+
+  const isProgrammeElectiveCourse = (course) => {
     const code = String(course?.course_code || "");
 
+    // SPECIALIZATION_ slot = programme elective placeholder
     if (code.startsWith(SPECIALIZATION_PREFIX)) {
       return true;
     }
@@ -519,15 +563,18 @@ const CourseRecommendations = () => {
       studentDepartment
     );
 
-    if (effectiveType === "programme_elective") {
-      return true;
-    }
+    return effectiveType === "programme_elective";
+  };
 
-    if (course?.type === "programme_elective") {
-      return true;
-    }
+  const isFacultyElectiveCourse = (course) => {
+    const effectiveType = getEffectiveTypeForProgrammeClient(
+      course,
+      studentProgrammeCode,
+      studentProgrammeId,
+      studentDepartment
+    );
 
-    return false;
+    return effectiveType === "faculty_elective";
   };
 
   const CourseTitleText = ({ course }) => {
@@ -548,9 +595,15 @@ const CourseRecommendations = () => {
     );
   };
 
-  const ElectiveChooser = ({ course }) => {
-    if (!isProgrammeElective(course)) return null;
-    const list = electiveOptions.filter((o) => o.code !== course.course_code);
+  const ProgrammeElectiveChooser = ({ course }) => {
+    if (!isProgrammeElectiveCourse(course)) return null;
+
+    const list = programmeElectiveOptions.filter(
+      (o) => o.code !== course.course_code
+    );
+
+    if (!list.length) return null;
+
     return (
       <details className="mt-1">
         <summary className="text-xs text-blue-600 cursor-pointer">
@@ -564,7 +617,37 @@ const CourseRecommendations = () => {
           ))}
         </div>
         <div className="text-[11px] text-gray-500 mt-1">
-          Requirement: take any 10 programme electives in total.
+          Requirement: take the required number of programme electives for your
+          programme.
+        </div>
+      </details>
+    );
+  };
+
+  const FacultyElectiveChooser = ({ course }) => {
+    if (!isFacultyElectiveCourse(course)) return null;
+
+    const list = facultyElectiveOptions.filter(
+      (o) => o.code !== course.course_code
+    );
+
+    if (!list.length) return null;
+
+    return (
+      <details className="mt-1">
+        <summary className="text-xs text-blue-600 cursor-pointer">
+          OR choose 1 of {list.length} faculty electives
+        </summary>
+        <div className="mt-2 max-h-40 overflow-y-auto text-xs text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+          {list.map((opt) => (
+            <div key={opt.code}>
+              {opt.code}: {opt.name}
+            </div>
+          ))}
+        </div>
+        <div className="text-[11px] text-gray-500 mt-1">
+          Requirement: take the required number of faculty electives for your
+          programme.
         </div>
       </details>
     );
@@ -701,10 +784,15 @@ const CourseRecommendations = () => {
 
                         <div className="space-y-3">
                           {semester.courses.map((course, idx) => {
+                            // 🔍 Always rehydrate from courseMap if possible
+                            const fullCourse =
+                              courseMap.get(course.course_code) || course;
+
                             const orLabel = kiarSheLabel(
-                              course.course_code,
+                              fullCourse.course_code,
                               passedSet
                             );
+
                             return (
                               <div
                                 key={idx}
@@ -715,19 +803,25 @@ const CourseRecommendations = () => {
                                 </div>
                                 <div>
                                   <h4 className="font-semibold text-[#1E3A8A]">
-                                    <CourseTitleText course={course} />
+                                    <CourseTitleText course={fullCourse} />
                                   </h4>
-                                  <ElectiveChooser course={course} />
+
+                                  <ProgrammeElectiveChooser
+                                    course={fullCourse}
+                                  />
+                                  <FacultyElectiveChooser course={fullCourse} />
+
                                   {!orLabel && (
                                     <>
                                       <div className="text-sm text-gray-600">
-                                        {course.credit_hours} credits
+                                        {fullCourse.credit_hours} credits
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 capitalize">
-                                        {course.type.replace(/_/g, " ")}
+                                        {getReadableTypeForStudent(fullCourse)}
                                       </div>
                                     </>
                                   )}
+
                                   {orLabel && (
                                     <div className="text-xs text-gray-500 mt-1">
                                       Choose either one (counts once).
@@ -770,7 +864,7 @@ const CourseRecommendations = () => {
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>{course.credit_hours} credits</span>
                       <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full capitalize">
-                        {course.type.replace(/_/g, " ")}
+                        {getReadableTypeForStudent(course)}
                       </span>
                     </div>
 
@@ -941,19 +1035,21 @@ const CourseRecommendations = () => {
                                   <h4 className="font-semibold text-[#1E3A8A]">
                                     <CourseTitleText course={course} />
                                   </h4>
-                                  <ElectiveChooser course={course} />
+                                  <ProgrammeElectiveChooser course={course} />
+                                  <FacultyElectiveChooser course={course} />
                                   {!orLabel && (
                                     <>
                                       <div className="text-sm text-gray-600">
                                         {course.credit_hours} credits
                                       </div>
-                                      {course.type && (
+                                      {getReadableTypeForStudent(course) && (
                                         <div className="text-xs text-gray-500 mt-1 capitalize">
-                                          {course.type.replace(/_/g, " ")}
+                                          {getReadableTypeForStudent(course)}
                                         </div>
                                       )}
                                     </>
                                   )}
+
                                   {orLabel && (
                                     <div className="text-xs text-gray-500 mt-1">
                                       Choose either one (counts once).
