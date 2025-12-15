@@ -4,7 +4,7 @@ const User = require("./User"); // Base model
 const adminSchema = new mongoose.Schema({
   access_level: {
     type: String,
-    enum: ["super", "basic"],
+    enum: ["super", "basic", "academic_advisor", "hod", "tdid"],
     default: "basic",
   },
 });

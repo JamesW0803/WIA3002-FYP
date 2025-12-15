@@ -19,6 +19,7 @@ import MessageGroup from "../../components/chat/MessageGroup";
 import ConfirmDeleteModal from "../../components/chat/ConfirmDeleteModal";
 import ImageViewerModal from "../../components/chat/ImageViewerModal";
 import PlanViewerModal from "../../components/chat/PlanViewerModal";
+import CoursePlanReviewStatusBar from "../../components/Faculty/CoursePlanReviewStatusBar";
 
 const cls = (...arr) => arr.filter(Boolean).join(" ");
 const initials = (name = "") =>
@@ -37,6 +38,7 @@ export function HelpDesk() {
   const [tab, setTab] = useState("open");
   const [search, setSearch] = useState("");
   const [loadingLists, setLoadingLists] = useState(true);
+  const [coursePlanStatus, setCoursePlanStatus] = useState(2)
   const endRef = useRef(null);
 
   const [showDelete, setShowDelete] = useState(false);
@@ -342,6 +344,12 @@ export function HelpDesk() {
               )}
             </div>
           </div>
+          <CoursePlanReviewStatusBar 
+            status={coursePlanStatus}
+            accessLevel={"hod"}
+            setCoursePlanStatus={setCoursePlanStatus}
+          />
+
           {active && (
             <div className="flex items-center gap-3">
               {tab === "open" ? (
