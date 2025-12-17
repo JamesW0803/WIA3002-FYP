@@ -20,6 +20,7 @@ import ConfirmDeleteModal from "../../components/chat/ConfirmDeleteModal";
 import ImageViewerModal from "../../components/chat/ImageViewerModal";
 import PlanViewerModal from "../../components/chat/PlanViewerModal";
 import CoursePlanReviewPanel from "../../components/Faculty/Helpdesk/CoursePlanReviewPanel";
+import { useAuth } from "../../context/AuthContext";
 
 const cls = (...arr) => arr.filter(Boolean).join(" ");
 const initials = (name = "") =>
@@ -39,6 +40,8 @@ export function HelpDesk() {
   const [search, setSearch] = useState("");
   const [loadingLists, setLoadingLists] = useState(true);
   const [coursePlanStatus, setCoursePlanStatus] = useState(2)
+  const { user, setUser } = useAuth();
+  
   const endRef = useRef(null);
 
   const [showDelete, setShowDelete] = useState(false);
@@ -375,7 +378,7 @@ export function HelpDesk() {
           headerStudent && 
           <CoursePlanReviewPanel
             status={coursePlanStatus}
-            accessLevel={"hod"}
+            accessLevel={user.access_level}
             setCoursePlanStatus={setCoursePlanStatus}
           />
         }
