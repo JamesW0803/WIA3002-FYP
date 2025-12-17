@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Lock, Eye, EyeOff } from "lucide-react";
 import Logo from "../../assets/logo.svg";
 import SignUpModal from "./SignUpModal";
+import { useAlert } from "../../components/ui/AlertProvider";
 
 export default function SignUpAdvisorPage() {
   const [formData, setFormData] = useState({
@@ -17,6 +18,7 @@ export default function SignUpAdvisorPage() {
   const [showModal, setShowModal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
+  const { alert } = useAlert();
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -26,12 +28,12 @@ export default function SignUpAdvisorPage() {
     const { username, email, contact, password, confirmPassword } = formData;
 
     if (!username || !email || !contact || !password || !confirmPassword) {
-      alert("Please fill in all fields.");
+      alert("Please fill in all fields.", { title: "Error" });
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match.");
+      alert("Passwords do not match.", { title: "Error" });
       return;
     }
 

@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import axiosClient from "../../api/axiosClient";
 import getRemainingCourses from "../../utils/getRemainingCourses";
-import { findNextSemesterToPlan } from "../../components/Students/AcademicPlanner/utils/planHelpers";
 import { resolveDefaultPlanCourses } from "../../utils/defaultPlanResolver";
 import {
   SPECIALIZATION_PREFIX,
@@ -21,6 +20,8 @@ import {
   getEffectiveTypeForProgrammeClient,
 } from "../../utils/courseRecommendationsUtils";
 import generateCustomPlan from "../../utils/generateCustomPlan";
+import { useAlert } from "../../components/ui/AlertProvider";
+import { useNavigate } from "react-router-dom";
 
 const DEBUG_TAG = "[CourseRecommendations]";
 
@@ -115,6 +116,14 @@ const CourseRecommendations = () => {
   const [generatedPlan, setGeneratedPlan] = useState(null);
   const [planError, setPlanError] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [savePlanError, setSavePlanError] = useState(null);
+  const [planName, setPlanName] = useState("My Generated Plan");
+  const [planNotes, setPlanNotes] = useState("");
+
+  const navigate = useNavigate();
+  const { confirm, alert } = useAlert();
 
   const passedSet = useMemo(
     () => getPassedCodes(completedEntries),
@@ -481,6 +490,100 @@ const CourseRecommendations = () => {
     setCourseModalOpen(true);
   };
 
+  const handleSaveGeneratedPlan = async () => {
+    try {
+      setSavePlanError?.(null); // optional if you still keep inline error UI
+
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+
+      if (!token || !userId) {
+        alert("Missing token or user ID. Please log in again.", {
+          title: "Not logged in",
+        });
+        return;
+      }
+
+      if (!generatedPlan?.years?.length) {
+        alert("Please generate a course plan first.", {
+          title: "Nothing to save",
+        });
+        return;
+      }
+
+      setIsSavingPlan(true);
+
+      const plansRes = await axiosClient.get(
+        `/academic-plans/students/${userId}/plans`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const currentCount =
+        plansRes.data?.count ??
+        plansRes.data?.data?.length ??
+        plansRes.data?.plans?.length ??
+        0;
+
+      if (currentCount >= 3) {
+        alert(
+          "You already have 3 academic plans. Please delete an existing plan in Academic Planner before saving a new one.",
+          {
+            title: "Maximum Plans Reached",
+          }
+        );
+        return;
+      }
+
+      const yearsPayload = transformGeneratedPlanToAcademicPlanPayload(
+        generatedPlan.years
+      );
+
+      const payload = {
+        name: planName?.trim() || "My Generated Plan",
+        notes: planNotes || "",
+        years: yearsPayload,
+      };
+
+      const res = await axiosClient.post(
+        `/academic-plans/students/${userId}/plans`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!res.data?.success) {
+        alert(res.data?.message || "Failed to save plan.", {
+          title: "Save Failed",
+        });
+        return;
+      }
+
+      const go = await confirm(
+        "Your plan has been saved. Do you want to navigate to Academic Planner now?",
+        {
+          title: "Plan Saved",
+          confirmText: "Go",
+          cancelText: "Stay",
+        }
+      );
+
+      if (go) {
+        navigate("/academic-planner");
+      }
+    } catch (e) {
+      const msg = e?.response?.data?.message || "Failed to save plan.";
+
+      // backend safety net (in case count changed)
+      if (msg.toLowerCase().includes("up to 3")) {
+        alert(msg, { title: "Maximum Plans Reached" });
+        return;
+      }
+
+      alert(msg, { title: "Save Failed" });
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
   const toggleYear = (year) => {
     setExpandedYears((prev) => ({
       ...prev,
@@ -653,7 +756,6 @@ const CourseRecommendations = () => {
     );
   };
 
-  // === REAL GENERATE BUTTON HANDLER ===
   const handleGeneratePlan = async () => {
     try {
       setPlanError(null);
@@ -717,6 +819,43 @@ const CourseRecommendations = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const transformGeneratedPlanToAcademicPlanPayload = (generatedPlanYears) => {
+    return generatedPlanYears.map((y, yIndex) => ({
+      year: y.year || yIndex + 1,
+      isGapYear: false,
+      semesters: (y.semesters || []).map((s, sIndex) => {
+        const isGap =
+          s.courses?.some((c) => c.course_code === "GAP_YEAR") ||
+          s.courses?.some((c) => c.course_code === "GAP_SEMESTER");
+
+        return {
+          id: sIndex + 1,
+          name: s.name, // "Semester 1", "Semester 2"
+          completed: false,
+          isGap: !!isGap,
+          courses: (s.courses || [])
+            .filter((c) => {
+              // don’t send placeholders as real courses
+              const code = String(c.course_code || "");
+              return (
+                code &&
+                code !== "GAP_YEAR" &&
+                code !== "GAP_SEMESTER" &&
+                code !== "OUTBOUND" &&
+                !code.startsWith(SPECIALIZATION_PREFIX) // elective slot placeholder
+              );
+            })
+            .map((c) => ({
+              course_code: c.course_code,
+              credit_at_time: c.credit_hours || 0,
+              title_at_time: c.course_name || "",
+              // course: omitted; backend will hydrate via course_code
+            })),
+        };
+      }),
+    }));
   };
 
   return (
@@ -1065,6 +1204,44 @@ const CourseRecommendations = () => {
                   </div>
                 </div>
               ))}
+              <div className="mt-4 p-4 bg-gray-50 border rounded-md space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-gray-600">Plan name</label>
+                    <input
+                      className="w-full border rounded px-3 py-2"
+                      value={planName}
+                      onChange={(e) => setPlanName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      Notes (optional)
+                    </label>
+                    <input
+                      className="w-full border rounded px-3 py-2"
+                      value={planNotes}
+                      onChange={(e) => setPlanNotes(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {savePlanError && (
+                  <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                    {savePlanError}
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button
+                    className="bg-[#1E3A8A] text-white"
+                    onClick={handleSaveGeneratedPlan}
+                    disabled={isSavingPlan}
+                  >
+                    {isSavingPlan ? "Saving..." : "Save as Plan"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

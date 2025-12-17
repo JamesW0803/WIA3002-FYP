@@ -3,6 +3,7 @@ import SemesterCard from "./SemesterCard";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Plus } from "lucide-react";
+import { useAlert } from "../ui/AlertProvider";
 
 const YearCard = ({
   yearData,
@@ -13,6 +14,7 @@ const YearCard = ({
   completedCoursesByYear,
   isViewMode = false,
 }) => {
+  const { alert } = useAlert();
   const isGapYear = !!yearData.isGapYear;
   const handleAddSemester = () => {
     if (isViewMode || isGapYear) return;
@@ -23,7 +25,7 @@ const YearCard = ({
     const count = targetYear?.semesters?.length || 0;
 
     if (count >= 2) {
-      alert("Maximum 2 semesters per year.");
+      alert("Maximum 2 semesters per year.", { title: "Error" });
       return;
     }
 
