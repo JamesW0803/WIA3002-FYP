@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Printer, Search, FileText } from "lucide-react";
 import axiosClient from "../../api/axiosClient";
+import { useAlert } from "../ui/AlertProvider";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -15,6 +16,8 @@ export default function PlanViewerModal({
   const [loadedPlan, setLoadedPlan] = useState(null);
   const [query, setQuery] = useState("");
   const printRef = useRef(null);
+
+  const { alert } = useAlert();
 
   const data = plan || loadedPlan;
 
@@ -65,7 +68,10 @@ export default function PlanViewerModal({
         if (e.message === "NOT_FOUND" || e.response?.status === 404) {
           setLoadedPlan(null);
           setTimeout(
-            () => alert("This academic plan is no longer available."),
+            () =>
+              alert("This academic plan is no longer available.", {
+                title: "Error",
+              }),
             0
           );
         } else {

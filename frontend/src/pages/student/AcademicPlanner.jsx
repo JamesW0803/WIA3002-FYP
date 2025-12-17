@@ -13,6 +13,7 @@ import {
 import axiosClient from "../../api/axiosClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { normalizePlanForUI } from "../../utils/normalisePlan";
+import { useAlert } from "../../components/ui/AlertProvider";
 
 const AcademicPlanner = () => {
   const [activeTab, setActiveTab] = useState("program");
@@ -33,6 +34,8 @@ const AcademicPlanner = () => {
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [coursesError, setCoursesError] = useState(null);
   const [gapsByYear, setGapsByYear] = useState({});
+
+  const { alert } = useAlert();
 
   useEffect(() => {
     const fetchAcademicProfileAndPlans = async () => {
@@ -170,7 +173,7 @@ const AcademicPlanner = () => {
     );
 
     if (!canAddNewPlan(programPlans, tempPlans)) {
-      alert("Max 3 plans allowed.");
+      alert("Max 3 plans allowed.", { title: "Maximum Plans Reached" });
       return;
     }
 
@@ -198,7 +201,7 @@ const AcademicPlanner = () => {
       scrollToEditSection();
     } catch (error) {
       console.error("Error creating new plan", error);
-      alert("Failed to create plan.");
+      alert("Failed to create plan", { title: "Error creating new plan" });
     }
   };
 

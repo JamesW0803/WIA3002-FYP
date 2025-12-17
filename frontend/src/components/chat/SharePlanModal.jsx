@@ -3,6 +3,7 @@ import axiosClient from "../../api/axiosClient";
 import useChatStore from "../../stores/useChatStore";
 import { X, FileText, Send, Loader2, Printer } from "lucide-react";
 import PlanViewerModal from "./PlanViewerModal";
+import { useAlert } from "../ui/AlertProvider";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -107,6 +108,8 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
   const [viewerOpen, setViewerOpen] = useState(false);
 
   const { sendMessage } = useChatStore();
+
+  const { alert } = useAlert();
 
   useEffect(() => {
     if (!open) return;
@@ -216,7 +219,7 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
       onClose?.();
     } catch (e) {
       console.error("Share plan failed", e);
-      alert("Failed to share the plan. Please try again.");
+      alert("Failed to share the plan. Please try again.", { title: "Error" });
     } finally {
       setLoading(false);
     }

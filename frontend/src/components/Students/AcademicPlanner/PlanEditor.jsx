@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import PlanCard from "../PlanCard";
 import axiosClient from "../../../api/axiosClient";
 import { normalizePlanForUI } from "../../../utils/normalisePlan";
+import { useAlert } from "../../ui/AlertProvider";
 
 const PlanEditor = ({
   editingPlan,
@@ -24,6 +25,7 @@ const PlanEditor = ({
   originalPlan,
   onDiscard,
 }) => {
+  const { alert } = useAlert();
   // if we're building a brand-new plan, drive PlanCard from unsavedPlan;
   // otherwise use the saved programPlans array
   const cardPlans = isCreatingNew ? [unsavedPlan] : programPlans;
@@ -94,7 +96,8 @@ const PlanEditor = ({
       alert(
         `Some courses could not be matched to the catalog: ${missing.join(
           ", "
-        )}.\n\nWe'll try to save using 'course_code'.`
+        )}.\n\nWe'll try to save using 'course_code'.`,
+        { title: "Error" }
       );
     }
 
@@ -171,7 +174,10 @@ const PlanEditor = ({
     } catch (error) {
       console.error("Failed to save plan", error);
       alert(
-        `Failed to save plan: ${error.response?.data?.message || error.message}`
+        `Failed to save plan: ${
+          error.response?.data?.message || error.message
+        }`,
+        { title: "Error" }
       );
     }
   };

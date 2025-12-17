@@ -12,6 +12,7 @@ import {
   Image,
   User,
 } from "lucide-react";
+import { useAlert } from "../../components/ui/AlertProvider";
 
 const getInitials = (username) => {
   const match = username.match(/[a-zA-Z]/g) || [];
@@ -60,6 +61,8 @@ const AdminProfile = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [showProfilePicOptions, setShowProfilePicOptions] = useState(false);
+
+  const { alert } = useAlert();
 
   const handleSetDefaultProfile = (color) => {
     setBgColor(color);
@@ -116,7 +119,7 @@ const AdminProfile = () => {
     setShowPasswordModal(false);
 
     // Show success message
-    alert("Password changed successfully!");
+    alert("Password changed successfully!", { title: "Success" });
   };
 
   return (
