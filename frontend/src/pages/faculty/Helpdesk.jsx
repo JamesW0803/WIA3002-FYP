@@ -19,7 +19,7 @@ import MessageGroup from "../../components/chat/MessageGroup";
 import ConfirmDeleteModal from "../../components/chat/ConfirmDeleteModal";
 import ImageViewerModal from "../../components/chat/ImageViewerModal";
 import PlanViewerModal from "../../components/chat/PlanViewerModal";
-import CoursePlanReviewStatusBar from "../../components/Faculty/CoursePlanReviewStatusBar";
+import CoursePlanReviewPanel from "../../components/Faculty/Helpdesk/CoursePlanReviewPanel";
 
 const cls = (...arr) => arr.filter(Boolean).join(" ");
 const initials = (name = "") =>
@@ -344,11 +344,6 @@ export function HelpDesk() {
               )}
             </div>
           </div>
-          <CoursePlanReviewStatusBar 
-            status={coursePlanStatus}
-            accessLevel={"hod"}
-            setCoursePlanStatus={setCoursePlanStatus}
-          />
 
           {active && (
             <div className="flex items-center gap-3">
@@ -376,7 +371,14 @@ export function HelpDesk() {
             </div>
           )}
         </div>
-
+        {
+          headerStudent && 
+          <CoursePlanReviewPanel
+            status={coursePlanStatus}
+            accessLevel={"hod"}
+            setCoursePlanStatus={setCoursePlanStatus}
+          />
+        }
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
           {!active && (
             <EmptyLarge

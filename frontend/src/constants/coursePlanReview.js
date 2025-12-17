@@ -12,24 +12,35 @@ export const coursePlanReviewStatus = [
 
 export const reviewActionByAdmin = [
   {
+    key: 1,
+    completionLabel: "Requested for Review",
+    pendingLabel: "-",
+    approveAction: "-",
+    rejectAction: "-",
+    requiredAccess: "-",
+  },
+  {
     key: 2,
     completionLabel: "Reviewed by Academic Advisor",
-    actionLabel: "Approve as Advisor",
     pendingLabel: "Awaiting Advisor Review",
+    approveAction: "Review as Advisor",
+    rejectAction: "Request Revision",
     requiredAccess: "academic_advisor",
   },
   {
     key: 3,
     completionLabel: "Endorsed by HOD",
-    actionLabel: "Endorse as HOD",
     pendingLabel: "Awaiting HOD Endorsement",
+    approveAction: "Endorse as HOD",
+    rejectAction: "Withdrawal Endorsement",
     requiredAccess: "hod",
   },
   {
     key: 4,
     completionLabel: "Approved by TDID",
-    actionLabel: "Approve as TDID",
     pendingLabel: "Awaiting TDID Approval",
+    approveAction: "Approve as TDID",
+    rejectAction: "Reject as TDID",
     requiredAccess: "tdid",
   }
 ];
