@@ -8,8 +8,6 @@ export default function CoursePlanReviewModal({
   onClose,
   plan,
   academicProfile,
-
-  // 🔽 new props
   status,
   accessLevel,
   onAction,

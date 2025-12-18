@@ -55,7 +55,7 @@ const CourseReviewStatusBar = ({ status }) => {
 const CoursePlanReviewPanel = ({
   status,
   accessLevel,
-  setCoursePlanStatus,
+  onAction,
   onViewPlan,
 }) => {
   const adminStep = reviewActionByAdmin.find(
@@ -72,12 +72,6 @@ const CoursePlanReviewPanel = ({
 
   const isCompleted = status >= adminStep?.key;
 
-  const handleCoursePlanStatusChange = () => {
-    setCoursePlanStatus(
-      isCompleted ? adminStep.key - 1 : adminStep.key
-    );
-  };
-
   return (
     <div className="bg-white border-b">
       <div className="px-4 py-2 flex items-center justify-between gap-4">
@@ -93,7 +87,7 @@ const CoursePlanReviewPanel = ({
         <div className="flex items-center gap-3">
           {canAction && (
             <button
-              onClick={handleCoursePlanStatusChange}
+              onClick={() => onAction(isCompleted ? adminStep.key - 1 : adminStep.key)}
               className={cls(
                 "px-3 py-1.5 rounded-md text-sm font-medium transition",
                 isCompleted

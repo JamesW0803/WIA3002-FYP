@@ -41,7 +41,6 @@ export function HelpDesk() {
   const [tab, setTab] = useState("open");
   const [search, setSearch] = useState("");
   const [loadingLists, setLoadingLists] = useState(true);
-  const [coursePlanStatus, setCoursePlanStatus] = useState(2)
   const { user, setUser } = useAuth();
   
   const endRef = useRef(null);
@@ -75,6 +74,7 @@ export function HelpDesk() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [studentName, setStudentName] = useState("")
   const [student, setStudent] = useState()
+  const [coursePlanStatus, setCoursePlanStatus] = useState()
 
   useEffect(() => {
     connect();
@@ -95,7 +95,9 @@ export function HelpDesk() {
       try {
           const response = await axiosClient.get(`/chat/conversation/id/${conversationId}`);
           const conversation = response.data;
-          setCoursePlanToBeReviewed(conversation?.coursePlanToBeReviewed);
+          const plan = conversation?.coursePlanToBeReviewed
+          setCoursePlanToBeReviewed(plan);
+          setCoursePlanStatus(plan.status)
           setStudentName(conversation?.student?.username)
       }catch(error){
           console.error("Error fetching conversation.")
@@ -277,10 +279,23 @@ export function HelpDesk() {
     return messagesByConv[convId].length === 0;
   };
 
-  const handleOnViewPlanToBeReviewed = () => {
-    setCurrentCoursePlan(coursePlanToBeReviewed)
-    setPlanOpen(true);
-  }
+  const handleCoursePlanStatusChange = async (updatedStatus) => {
+    const planId = coursePlanToBeReviewed?._id;
+    if (!planId) return;
+
+    try {
+      const response = await axiosClient.patch(`/academic-plans/plans/${planId}/status`, {
+        status: updatedStatus,
+      });
+
+      if (response.data.success) {
+        setCoursePlanStatus(updatedStatus);
+        setCoursePlanToBeReviewed(response.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  };
 
   return (
     <div className="grid md:grid-cols-[360px_1fr] h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
@@ -430,7 +445,7 @@ export function HelpDesk() {
           <CoursePlanReviewPanel
             status={coursePlanStatus}
             accessLevel={user.access_level}
-            setCoursePlanStatus={setCoursePlanStatus}
+            onAction={handleCoursePlanStatusChange}
             onViewPlan={() => {setReviewOpen(true)}}
           />
         }
@@ -441,7 +456,7 @@ export function HelpDesk() {
           academicProfile={student?.academicProfile}
           status={coursePlanStatus}
           accessLevel={user.access_level}
-          onAction={setCoursePlanStatus}
+          onAction={handleCoursePlanStatusChange}
         /> 
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
           {!active && (

@@ -275,6 +275,44 @@ exports.updatePlan = async (req, res) => {
   }
 };
 
+// Update only the status of a plan (for Faculty/Admin review)
+exports.updatePlanStatus = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    const { status } = req.body;
+
+    // Validate Status input
+    if (!status) {
+      return res.status(400).json({ success: false, message: "Status is required" });
+    }
+
+    const updatedPlan = await AcademicPlan.findByIdAndUpdate(
+      planId,
+      { 
+        status, 
+        updatedAt: new Date() 
+      },
+      { new: true, runValidators: true }
+    ).populate({
+      path: "years.semesters.courses.course",
+      select: "course_code course_name credit_hours",
+    });
+
+    if (!updatedPlan) {
+      return res.status(404).json({ success: false, message: "Plan not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: updatedPlan,
+      message: `Plan status updated to ${status}`,
+    });
+  } catch (error) {
+    console.error("Error updating plan status:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // Delete
 exports.deletePlan = async (req, res) => {
   try {

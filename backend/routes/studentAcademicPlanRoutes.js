@@ -13,6 +13,7 @@ router.get("/students/:studentId/plans", academicPlanController.getUserPlans);
 // 2. Operations on a single plan by its own identifier:
 router.get("/plans/:planId", academicPlanController.getPlanById);
 router.put("/plans/:planId", academicPlanController.updatePlan);
+router.patch("/plans/:planId/status", academicPlanController.updatePlanStatus);
 router.delete("/plans/:planId", academicPlanController.deletePlan);
 router.patch(
   "/plans/:planId/set-default",

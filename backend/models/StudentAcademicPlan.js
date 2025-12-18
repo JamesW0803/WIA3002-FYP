@@ -62,6 +62,12 @@ const academicPlanSchema = new mongoose.Schema(
       unique: true,
       required: true,
     },
+    status : {
+      type: Number,
+      required: true,
+      default: 4,
+      enum: [1,2,3,4]
+    },
     name: {
       type: String,
       required: true,
