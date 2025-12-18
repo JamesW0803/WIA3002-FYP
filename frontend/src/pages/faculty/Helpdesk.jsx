@@ -20,6 +20,7 @@ import ConfirmDeleteModal from "../../components/chat/ConfirmDeleteModal";
 import ImageViewerModal from "../../components/chat/ImageViewerModal";
 import PlanViewerModal from "../../components/chat/PlanViewerModal";
 import CoursePlanReviewPanel from "../../components/Faculty/Helpdesk/CoursePlanReviewPanel";
+import axiosClient from "../../api/axiosClient";
 import { useAuth } from "../../context/AuthContext";
 
 const cls = (...arr) => arr.filter(Boolean).join(" ");
@@ -33,7 +34,7 @@ const initials = (name = "") =>
 
 export function HelpDesk() {
   const location = useLocation();
-  const { conversationId } = location.state || {};
+  const [conversationId, setConversationId] = useState(location.state?.conversationId || null)
 
   const [active, setActive] = useState(null);
   const [tab, setTab] = useState("open");
@@ -68,6 +69,9 @@ export function HelpDesk() {
 
   const [planOpen, setPlanOpen] = useState(false);
   const [planUrl, setPlanUrl] = useState(null);
+  const [ currentCoursePlan, setCurrentCoursePlan ] = useState(null)
+  const [ coursePlanToBeReviewed, setCoursePlanToBeReviewed ] = useState(null)
+
 
   useEffect(() => {
     connect();
@@ -82,6 +86,22 @@ export function HelpDesk() {
 
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    const fetchConversation = async () =>{
+      try {
+          const response = await axiosClient.get(`/chat/conversation/id/${conversationId}`);
+          const conversation = response.data;
+          setCoursePlanToBeReviewed(conversation?.coursePlanToBeReviewed);
+      }catch(error){
+          console.error("Error fetching conversation.")
+      }
+    }
+    if(conversationId){
+      fetchConversation();
+      openConversation(conversationId)
+    }
+  }, [conversationId])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -177,7 +197,18 @@ export function HelpDesk() {
     setViewerOpen(true);
   };
 
-  const openPlanViewer = (url) => {
+  const openPlanViewer = async (url) => {
+    const planId = url.planId
+    const fetchPlan = async () =>{
+      try {
+          const res = await axiosClient.get(`/academic-plans/plans/${planId}`)
+          const plan = res.data.data;
+          setCurrentCoursePlan(plan);
+      }catch(error){
+          console.error("Error fetching course plan.")
+      }
+    }
+    await fetchPlan();
     setPlanUrl(url);
     setPlanOpen(true);
   };
@@ -230,6 +261,11 @@ export function HelpDesk() {
     if (!messagesByConv[convId]) return false; 
     return messagesByConv[convId].length === 0;
   };
+
+  const handleOnViewPlanToBeReviewed = () => {
+    setCurrentCoursePlan(coursePlanToBeReviewed)
+    setPlanOpen(true);
+  }
 
   return (
     <div className="grid md:grid-cols-[360px_1fr] h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
@@ -304,7 +340,7 @@ export function HelpDesk() {
                 key={c._id}
                 convo={c}
                 active={active === c._id}
-                onClick={() => openConversation(c._id)}
+                onClick={() => setConversationId(c._id)}
                 unread={unreadCounts[c._id] || 0}
               />
             ))}
@@ -375,11 +411,12 @@ export function HelpDesk() {
           )}
         </div>
         {
-          headerStudent && 
+          coursePlanToBeReviewed && 
           <CoursePlanReviewPanel
             status={coursePlanStatus}
             accessLevel={user.access_level}
             setCoursePlanStatus={setCoursePlanStatus}
+            onViewPlan={handleOnViewPlanToBeReviewed}
           />
         }
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
@@ -441,6 +478,7 @@ export function HelpDesk() {
           open={planOpen}
           onClose={() => setPlanOpen(false)}
           planUrl={planUrl}
+          plan={currentCoursePlan}
         />
       </main>
     </div>

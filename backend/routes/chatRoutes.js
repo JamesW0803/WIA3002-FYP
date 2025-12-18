@@ -210,6 +210,41 @@ router.get("/conversation/:student_id", authenticate, async (req, res) => {
   }
 });
 
+router.get("/conversation/id/:conversation_id", authenticate, async (req, res) => {
+  try {
+    const role = req.user.role;
+    const me = req.user.user_id;
+    const { status = "open" } = req.query;
+    const { conversation_id } = req.params;
+
+    const filter = role === "admin" ? {} : { student: me };
+    if (["open", "done"].includes(status)) filter.status = status;
+
+    if (role === "admin") filter.deletedForAdmin = { $ne: true };
+    else filter.deletedForStudent = { $ne: true };
+
+    if (!conversation_id) {
+      return res.status(404).json({ message: "Conversation ID is required" });
+    }
+
+    const convo = await Conversation.findById(conversation_id)
+      .populate({
+        path: "student",
+        select: "username role profilePicture profileColor email",
+      })
+      .populate({
+        path: "lastMessage",
+        populate: { path: "sender", select: "username role profilePicture" },
+      })
+      .populate("coursePlanToBeReviewed");
+
+    res.json(convo);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to fetch conversation" });
+  }
+});
+
 router.delete("/conversations/:id", authenticate, async (req, res) => {
   try {
     const { id } = req.params;
