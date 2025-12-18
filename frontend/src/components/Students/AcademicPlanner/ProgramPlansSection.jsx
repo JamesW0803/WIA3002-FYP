@@ -8,6 +8,7 @@ import { generateNewPlanFromStartingPoint } from "../AcademicPlanner/utils/planH
 import axiosClient from "../../../api/axiosClient";
 import { normalizePlanForUI } from "../../../utils/normalisePlan";
 import { useAlert } from "../../ui/AlertProvider";
+import { useNavigate } from "react-router-dom";
 
 const ProgramPlansSection = ({
   programPlans,
@@ -31,6 +32,7 @@ const ProgramPlansSection = ({
   completedCoursesByYear,
   startingPlanPoint,
 }) => {
+  const navigate = useNavigate();
   const [backupPlan, setBackupPlan] = useState(null);
   const { confirm, alert } = useAlert();
   const closeAllModes = () => {
@@ -70,6 +72,27 @@ const ProgramPlansSection = ({
     openEditor(newPlan.id, { creatingNew: true });
     setTempPlans([...tempPlans, newPlan.id]);
     scrollToEditSection();
+  };
+
+  const handleSendToAdvisor = async (plan) => {
+    const ok = await confirm("Proceed to Contact Advisor Page?", {
+      title: "Sending plan...",
+      confirmText: "Proceed",
+      cancelText: "Cancel",
+      disableClose: false, // allow backdrop close if you want
+    });
+
+    if (!ok) return;
+
+    navigate("/chat-with-advisor", {
+      state: {
+        openTicketPreview: true,
+        planId: plan.id || plan._id,
+        planName: plan.name || "",
+        plan,
+        from: "academic-planner",
+      },
+    });
   };
 
   const resolveCourseId = (c) =>
@@ -318,6 +341,7 @@ const ProgramPlansSection = ({
                 }}
                 onView={() => handleViewPlan(plan)}
                 onSetCurrent={() => handleSetCurrentPlan(plan)}
+                onSendToAdvisor={handleSendToAdvisor}
               />
             ))}
 
