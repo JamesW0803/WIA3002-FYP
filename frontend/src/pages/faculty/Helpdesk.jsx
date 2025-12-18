@@ -20,6 +20,7 @@ import ConfirmDeleteModal from "../../components/chat/ConfirmDeleteModal";
 import ImageViewerModal from "../../components/chat/ImageViewerModal";
 import PlanViewerModal from "../../components/chat/PlanViewerModal";
 import CoursePlanReviewPanel from "../../components/Faculty/Helpdesk/CoursePlanReviewPanel";
+import CoursePlanReviewModal from "../../components/Faculty/Helpdesk/CoursePlanReviewModal";
 import axiosClient from "../../api/axiosClient";
 import { useAuth } from "../../context/AuthContext";
 
@@ -69,9 +70,11 @@ export function HelpDesk() {
 
   const [planOpen, setPlanOpen] = useState(false);
   const [planUrl, setPlanUrl] = useState(null);
-  const [ currentCoursePlan, setCurrentCoursePlan ] = useState(null)
-  const [ coursePlanToBeReviewed, setCoursePlanToBeReviewed ] = useState(null)
-
+  const [currentCoursePlan, setCurrentCoursePlan ] = useState(null)
+  const [coursePlanToBeReviewed, setCoursePlanToBeReviewed ] = useState(null)
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [studentName, setStudentName] = useState("")
+  const [student, setStudent] = useState()
 
   useEffect(() => {
     connect();
@@ -93,6 +96,7 @@ export function HelpDesk() {
           const response = await axiosClient.get(`/chat/conversation/id/${conversationId}`);
           const conversation = response.data;
           setCoursePlanToBeReviewed(conversation?.coursePlanToBeReviewed);
+          setStudentName(conversation?.student?.username)
       }catch(error){
           console.error("Error fetching conversation.")
       }
@@ -102,6 +106,17 @@ export function HelpDesk() {
       openConversation(conversationId)
     }
   }, [conversationId])
+
+  useEffect(() => {
+    const fetchStudent = async() => {
+        const response = await axiosClient.get(`/students/${studentName}`)
+        const currentStudent = response.data
+        setStudent(currentStudent)
+    }
+    if(studentName){
+      fetchStudent()
+    }
+  }, [studentName])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -416,9 +431,18 @@ export function HelpDesk() {
             status={coursePlanStatus}
             accessLevel={user.access_level}
             setCoursePlanStatus={setCoursePlanStatus}
-            onViewPlan={handleOnViewPlanToBeReviewed}
+            onViewPlan={() => {setReviewOpen(true)}}
           />
         }
+        <CoursePlanReviewModal
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          plan={coursePlanToBeReviewed}
+          academicProfile={student?.academicProfile}
+          status={coursePlanStatus}
+          accessLevel={user.access_level}
+          onAction={setCoursePlanStatus}
+        /> 
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
           {!active && (
             <EmptyLarge

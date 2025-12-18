@@ -236,8 +236,15 @@ router.get("/conversation/id/:conversation_id", authenticate, async (req, res) =
         path: "lastMessage",
         populate: { path: "sender", select: "username role profilePicture" },
       })
-      .populate("coursePlanToBeReviewed");
-
+      .populate({
+        path: "coursePlanToBeReviewed",
+        populate: {
+          path: "years.semesters.courses.course",
+          select:
+            "course_code course_name credit_hours prerequisites offered_semester type",
+        },
+      });
+      
     res.json(convo);
   } catch (e) {
     console.error(e);
