@@ -36,6 +36,49 @@ router.post("/conversations", authenticate, async (req, res) => {
   }
 });
 
+
+router.post("/conversations/review-request", authenticate, async (req, res) => {
+  try {
+    const me = req.user.user_id;
+    const role = req.user.role;
+    const { subject = "Plan Review Request", studentId, plan } = req.body;
+
+    const student = role === "admin" ? studentId || null : me;
+    if (!student)
+      return res.status(400).json({ message: "studentId required" });
+
+    // 1. Create the conversation
+    const convo = await Conversation.create({ 
+      student, 
+      subject, 
+      coursePlanToBeReviewed: plan._id,
+      status: "open"
+    });
+
+    // 2. IMPORTANT: Populate student info so Admin list looks correct immediately
+    const populatedConvo = await Conversation.findById(convo._id)
+      .populate({
+        path: "student",
+        select: "username role profilePicture profileColor email",
+      });
+
+    // 3. Emit the socket signal
+    const io = getIO && getIO();
+    if (io) {
+      // Send to all admins
+      io.to("admins").emit("conversation:new", populatedConvo);
+      
+      // Optionally send to the student's personal room
+      io.to(`user:${student}`).emit("conversation:new", populatedConvo);
+    }
+
+    res.status(201).json(populatedConvo);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to create conversation" });
+  }
+});
+
 router.post("/conversations/create-or-get", authenticate, async (req, res) => {
   try {
     const me = req.user.user_id;

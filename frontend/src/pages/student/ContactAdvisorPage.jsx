@@ -1,179 +1,42 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import {
-  Menu,
-  X,
-  Plus,
+  PlusCircle,
   Search,
-  Filter,
-  LifeBuoy,
-  LayoutDashboard,
-  Ticket,
-  BookOpen,
-  Settings,
-  ChevronRight,
-  Paperclip,
+  MessageSquarePlus,
+  Trash2,
+  Share2,
   ArrowLeft,
 } from "lucide-react";
-import useMediaQuery from "../../hooks/useMediaQuery";
-import useChatStore from "../../stores/useChatStore";
-import { useLocation } from "react-router-dom";
-import TicketPreviewModal from "../../components/chat/TicketPreviewModal";
-import TicketTimeline from "../../components/chat/TicketTimeline";
-import TicketPreviewPanel from "../../components/chat/TicketPreviewPanel";
-import PlanViewerModal from "../../components/chat/PlanViewerModal";
+import useChatStore, { DRAFT_CONVERSATION_ID } from "../../stores/useChatStore";
+import EmptySmall from "../../components/chat/EmptySmall";
+import EmptyLarge from "../../components/chat/EmptyLarge";
+import Section from "../../components/chat/Section";
+import ConversationItem from "../../components/chat/ConversationItem";
+import Composer from "../../components/chat/Composer";
+import DateChip from "../../components/chat/DateChip";
+import MessageGroup from "../../components/chat/MessageGroup";
+import ConfirmDeleteModal from "../../components/chat/ConfirmDeleteModal";
 import ImageViewerModal from "../../components/chat/ImageViewerModal";
 import SharePlanModal from "../../components/chat/SharePlanModal";
+import PlanViewerModal from "../../components/chat/PlanViewerModal";
+import useMediaQuery from "../../hooks/useMediaQuery";
 
-const cls = (...a) => a.filter(Boolean).join(" ");
+const cls = (...arr) => arr.filter(Boolean).join(" ");
 
-function StatusPill({ status }) {
-  const s = (status || "open").toLowerCase();
-  const map = {
-    open: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-    done: "bg-gray-100 text-gray-700 ring-gray-200",
-    resolved: "bg-gray-100 text-gray-700 ring-gray-200",
-    "in progress": "bg-amber-50 text-amber-800 ring-amber-200",
-  };
-  return (
-    <span
-      className={cls(
-        "inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ring-1",
-        map[s] || map.open
-      )}
-    >
-      {s === "done" ? "resolved" : s}
-    </span>
-  );
-}
+// NEW: View constants
+const VIEW_LIST = "list";
+const VIEW_CHAT = "chat";
 
-function Drawer({ open, onClose, children, title }) {
-  return (
-    <div
-      className={cls("fixed inset-0 z-50", open ? "" : "pointer-events-none")}
-    >
-      <div
-        className={cls(
-          "absolute inset-0 bg-black/40 transition-opacity",
-          open ? "opacity-100" : "opacity-0"
-        )}
-        onClick={onClose}
-      />
-      <div
-        className={cls(
-          "absolute left-0 top-0 h-full w-[82%] max-w-[320px] bg-white shadow-xl transition-transform",
-          open ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <div className="p-4 border-b flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <LifeBuoy className="w-5 h-5 text-brand" />
-            <div className="font-semibold">{title}</div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100"
-            aria-label="Close menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
+export function ContactAdvisorPage() {
+  const [active, setActive] = useState(null);
+  const [loadingLists, setLoadingLists] = useState(true);
+  const unreadCounts = useChatStore((s) => s.unreadCounts);
 
-function Modal({ open, title, onClose, children }) {
-  return (
-    <div
-      className={cls("fixed inset-0 z-50", open ? "" : "pointer-events-none")}
-    >
-      <div
-        className={cls(
-          "absolute inset-0 bg-black/40 transition-opacity",
-          open ? "opacity-100" : "opacity-0"
-        )}
-        onClick={onClose}
-      />
-      <div
-        className={cls(
-          "absolute left-1/2 top-1/2 w-[94%] max-w-[720px] -translate-x-1/2 -translate-y-1/2",
-          "bg-white rounded-2xl shadow-xl border overflow-hidden transition-transform",
-          open ? "scale-100" : "scale-95"
-        )}
-      >
-        <div className="px-5 py-4 border-b flex items-center justify-between">
-          <div className="font-semibold">{title}</div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="p-5">{children}</div>
-      </div>
-    </div>
-  );
-}
+  const [showDelete, setShowDelete] = useState(false);
+  const { deleteConversation } = useChatStore();
 
-function TicketCard({ t, active, onClick }) {
-  const last = t?.lastMessage;
-  const subtitle =
-    t?.subject || (last?.text ? last.text.slice(0, 80) : "No description yet.");
-
-  return (
-    <button
-      onClick={onClick}
-      className={cls(
-        "w-full text-left rounded-xl border p-3 hover:bg-gray-50 transition",
-        active
-          ? "border-brand ring-2 ring-brand/20 bg-brand/5"
-          : "border-gray-200"
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="font-medium truncate">
-          {t.subject?.trim() ? t.subject : "Untitled ticket"}
-        </div>
-        <StatusPill status={t.status} />
-      </div>
-      <div className="mt-1 text-xs text-gray-500 truncate">{subtitle}</div>
-      <div className="mt-2 flex items-center justify-between text-[11px] text-gray-400">
-        <span>
-          Updated {new Date(t.updatedAt || Date.now()).toLocaleString()}
-        </span>
-        <ChevronRight className="w-4 h-4" />
-      </div>
-    </button>
-  );
-}
-
-export default function ContactAdvisorPage() {
-  const isMobile = useMediaQuery("(max-width: 767px)");
-  const [navOpen, setNavOpen] = useState(false);
-
-  const location = useLocation();
-
-  // “Ticket” state
-  const [activeTicketId, setActiveTicketId] = useState(null);
-
-  // Create ticket preview flow
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [screen, setScreen] = useState("list"); // "list" | "detail" | "create"
-  const [draftPlan, setDraftPlan] = useState(null);
-  const [submittingTicket, setSubmittingTicket] = useState(false);
-  // draftPlan example: { planId, planName }
-  const [planViewerOpen, setPlanViewerOpen] = useState(false);
-  const [planAttachment, setPlanAttachment] = useState(null);
-
-  const [imgOpen, setImgOpen] = useState(false);
-  const [imgItems, setImgItems] = useState([]);
-  const [imgIndex, setImgIndex] = useState(0);
-
-  const [sharePlanOpen, setSharePlanOpen] = useState(false);
-
+  const endRef = useRef(null);
   const {
     connect,
     connected,
@@ -182,351 +45,396 @@ export default function ContactAdvisorPage() {
     studentDone,
     joinConversation,
     leaveConversation,
-    createConversation,
+    messagesByConv,
     sendMessage,
   } = useChatStore();
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerItems, setViewerItems] = useState([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
+  const [planAttachment, setPlanAttachment] = useState(null);
+
+  // NEW: detect "mobile" (tailwind md breakpoint)
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  // NEW: UI view (list vs chat) for small screens
+  const [view, setView] = useState(VIEW_LIST);
 
   useEffect(() => {
     connect();
     (async () => {
+      setLoadingLists(true);
       await loadLists();
+      setLoadingLists(false);
     })();
     // eslint-disable-next-line
   }, []);
 
+  // NEW: keep view in sync with screen size
   useEffect(() => {
-    // Only open when Academic Planner sends the student here with payload
-    const st = location.state;
-    if (st?.openTicketPreview && st?.planId) {
-      setDraftPlan({ planId: st.planId, planName: st.planName || "" });
-      setPreviewOpen(true);
-      setScreen("list");
-
-      // Clear the location state so refresh/back doesn't reopen it
-      window.history.replaceState({}, document.title);
+    if (!isMobile) {
+      // On tablet/desktop we always render split view
+      setView(VIEW_CHAT);
+    } else {
+      // On phones: if a conversation is active show chat, else list
+      setView(active ? VIEW_CHAT : VIEW_LIST);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isMobile, active]);
 
-  const tickets = useMemo(() => {
-    // You can add filters here (status, category, etc.)
-    return [...(studentOpen || []), ...(studentDone || [])];
-  }, [studentOpen, studentDone]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messagesByConv, active]);
 
-  const activeTicket = useMemo(
-    () => tickets.find((t) => t._id === activeTicketId) || null,
-    [tickets, activeTicketId]
+  const storeActiveId = useChatStore((s) => s.activeConversationId);
+  useEffect(() => {
+    if (
+      active === DRAFT_CONVERSATION_ID &&
+      storeActiveId &&
+      storeActiveId !== DRAFT_CONVERSATION_ID
+    ) {
+      setActive(storeActiveId);
+    }
+  }, [storeActiveId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const msgs = useMemo(
+    () => (active ? messagesByConv[active] || [] : []),
+    [active, messagesByConv]
   );
 
-  const { messagesByConv } = useChatStore();
-  const timelineMessages = messagesByConv[activeTicketId] || [];
+  const grouped = useMemo(() => {
+    const groups = [];
+    let currentDay = "";
+    let currentBlock = null;
+    msgs.forEach((m) => {
+      const day = new Date(m.createdAt).toDateString();
+      if (day !== currentDay) {
+        groups.push({ type: "date", when: m.createdAt });
+        currentDay = day;
+        currentBlock = null;
+      }
+      const mine = m.senderRole === "student";
+      if (!currentBlock || currentBlock.mine !== mine) {
+        currentBlock = { type: "msgs", mine, items: [m] };
+        groups.push(currentBlock);
+      } else {
+        currentBlock.items.push(m);
+      }
+    });
+    return groups;
+  }, [msgs]);
 
-  const goBackToList = () => {
-    if (activeTicketId) leaveConversation(activeTicketId);
-    setActiveTicketId(null);
-    setScreen("list");
+  const onOpen = async (c) => {
+    if (active) leaveConversation(active);
+    setActive(c._id);
+    await joinConversation(c._id);
+    if (isMobile) setView(VIEW_CHAT); // go to chat on phones
   };
 
-  const openTicket = async (t) => {
-    if (activeTicketId) leaveConversation(activeTicketId);
-    setActiveTicketId(t._id);
-    await joinConversation(t._id);
-    setScreen("detail");
+  const onNew = async () => {
+    if (active) leaveConversation(active);
+    setActive(DRAFT_CONVERSATION_ID);
+    if (isMobile) setView(VIEW_CHAT);
   };
 
-  const buildImageItems = (messages) => {
-    const items = [];
-    for (const m of messages) {
-      (m.attachments || []).forEach((att, idxInMessage) => {
-        const mime = att.mimeType || att.originalMimeType || "";
-        const isImage = mime.startsWith("image/") || att.type === "image";
-        if (!isImage) return;
+  const onBackToList = () => {
+    if (isMobile) setView(VIEW_LIST);
+  };
 
-        items.push({
-          url: att.url,
-          originalUrl: att.originalUrl,
-          name: att.name,
-          originalName: att.originalName,
-          caption: att.caption,
-          message: m,
-          createdAt: m.createdAt,
-          sender: m.sender,
-          idxInMessage,
-        });
+  const { setReplyTo } = useChatStore.getState();
+  const jumpToMessage = (id, imageIndex = null) => {
+    let el = null;
+    if (imageIndex != null) {
+      el = document.getElementById(`msg-${id}-img-${imageIndex}`);
+    }
+    if (!el) el = document.getElementById(`msg-${id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-yellow-400", "flash-highlight");
+      setTimeout(
+        () =>
+          el.classList.remove("ring-2", "ring-yellow-400", "flash-highlight"),
+        1200
+      );
+    }
+  };
+
+  const flattenImages = (convId) => {
+    const msgs = messagesByConv[convId] || [];
+    const out = [];
+    msgs.forEach((m) => {
+      (m.attachments || []).forEach((a, i) => {
+        if (a?.mimeType?.startsWith("image/")) {
+          out.push({
+            url: a.url,
+            name: a.name,
+            caption: a.caption,
+            message: m,
+            sender: m.sender,
+            createdAt: m.createdAt,
+            idxInMessage: i,
+          });
+        }
       });
-    }
-    return items;
+    });
+    return out;
   };
 
-  // 1) Open preview (do NOT submit yet)
-  const startCreateTicket = ({ planId = null, planName = "" } = {}) => {
-    setDraftPlan(planId ? { planId, planName } : null);
-    if (activeTicketId) leaveConversation(activeTicketId);
-    setActiveTicketId(null);
-    setScreen("create");
+  const openImageViewer = (message, idxInMessage) => {
+    const all = flattenImages(active);
+    const start = all.findIndex(
+      (it) =>
+        it.message?._id === message._id && it.idxInMessage === idxInMessage
+    );
+    setViewerItems(all);
+    setViewerIndex(Math.max(0, start));
+    setViewerOpen(true);
   };
 
-  // 2) Submit ticket (create + first message w/ plan attachment)
-  const submitTicketFromPreview = async ({ message, plan }) => {
-    try {
-      setSubmittingTicket(true);
-
-      const planName = plan?.planName || "";
-      const subject = planName
-        ? `Academic Plan Review: ${planName}`
-        : "Academic Plan Review";
-
-      const ticket = await createConversation({ subject });
-      await loadLists();
-
-      // open it
-      if (activeTicketId) leaveConversation(activeTicketId);
-      setActiveTicketId(ticket._id);
-      await joinConversation(ticket._id);
-      setScreen("detail");
-
-      // send initial message ONLY AFTER submit
-      const attachments = plan?.planId
-        ? [{ type: "plan", planId: plan.planId, planName: plan.planName }]
-        : [];
-
-      const text =
-        message?.trim() || "Hi advisor team, please review my academic plan.";
-
-      sendMessage(ticket._id, text, attachments);
-
-      setPreviewOpen(false);
-    } finally {
-      setSubmittingTicket(false);
-    }
+  const openPlanViewer = (attachment) => {
+    setPlanAttachment(attachment || null);
+    setPlanOpen(true);
   };
 
-  const NavContent = (
-    <div className="p-3 space-y-1">
-      <button
-        onClick={() => {
-          startCreateTicket();
-        }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-brand text-white hover:opacity-95"
-      >
-        <Plus className="w-4 h-4" />
-        <span className="text-sm font-medium">Create Ticket</span>
-      </button>
+  const nextImage = () =>
+    setViewerIndex((i) => (i + 1) % Math.max(1, viewerItems.length));
+  const prevImage = () =>
+    setViewerIndex(
+      (i) =>
+        (i - 1 + Math.max(1, viewerItems.length)) %
+        Math.max(1, viewerItems.length)
+    );
+  const replyToThisImage = (message, idx) => {
+    setViewerOpen(false);
+    setReplyTo({ ...message, __imageIndex: idx });
+  };
 
-      <button
-        onClick={() => {
-          if (activeTicketId) leaveConversation(activeTicketId);
-          setActiveTicketId(null);
-          setScreen("list");
-        }}
+  const goToMessageFromViewer = (id, idx) => {
+    setViewerOpen(false);
+    id && jumpToMessage(id, idx);
+  };
+
+  // Render
+  return (
+    <div
+      className={cls(
+        // Desktop/tablet: two columns; Phone: single stack
+        "h-[calc(100vh-80px)] bg-gray-50 overflow-hidden",
+        "grid md:grid-cols-[360px_1fr]"
+      )}
+    >
+      {/* Sidebar (LIST) */}
+      <aside
         className={cls(
-          "w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100",
-          screen === "list" && "bg-gray-100"
+          "border-r bg-white p-4 overflow-y-auto min-h-0",
+          // On phones, hide when in chat view
+          isMobile && view === VIEW_CHAT ? "hidden" : "block"
         )}
       >
-        <Ticket className="w-4 h-4" />
-        <span className="text-sm">My Tickets</span>
-      </button>
-
-      <div className="mt-4 px-3 py-2 text-xs text-gray-500">
-        <div className="flex items-center gap-2">
-          <span
-            className={cls(
-              "inline-block w-2 h-2 rounded-full",
-              connected ? "bg-emerald-500" : "bg-gray-300"
-            )}
-          />
-          <span>{connected ? "Connected" : "Connecting…"}</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
-      {/* Top bar (mobile) */}
-      <div className="md:hidden bg-white border-b px-3 py-3 flex items-center justify-between">
-        <button
-          onClick={() => setNavOpen(true)}
-          className="p-2 rounded-lg hover:bg-gray-100"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-        <div className="font-semibold">Helpdesk</div>
-        <button
-          onClick={() => startCreateTicket()}
-          className="p-2 rounded-lg bg-brand text-white"
-          aria-label="Create ticket"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Layout */}
-      <div className="h-full grid md:grid-cols-[260px_1fr]">
-        {/* Sidebar nav (desktop) */}
-        <aside className="hidden md:block border-r bg-white">
-          <div className="p-4 border-b flex items-center gap-2">
-            <LifeBuoy className="w-5 h-5 text-brand" />
-            <div className="font-semibold">Helpdesk</div>
+        {/* Small header for phones only */}
+        <div className="md:hidden mb-2">
+          <h1 className="text-lg font-semibold">Conversations</h1>
+          <div className="text-xs text-gray-500">
+            {connected ? "Connected" : "Connecting…"}
           </div>
-          {NavContent}
-        </aside>
-
-        {/* Content area */}
-        <div className="min-h-0 overflow-y-auto bg-gray-50">
-          {screen === "list" && (
-            <section className="bg-white h-full p-4 space-y-3">
-              {/* render ticket list ONLY */}
-              {tickets.map((t) => (
-                <TicketCard
-                  key={t._id}
-                  t={t}
-                  active={false}
-                  onClick={() => openTicket(t)}
-                />
-              ))}
-            </section>
-          )}
-
-          {screen === "create" && (
-            <div className="p-5">
-              <button
-                type="button"
-                onClick={() => setSharePlanOpen(true)}
-                className="mb-3 px-4 py-2 rounded-lg border hover:bg-gray-50"
-              >
-                Choose plan
-              </button>
-
-              <TicketPreviewPanel
-                initialPlan={draftPlan}
-                submitting={submittingTicket}
-                onCancel={() => setScreen("list")}
-                onSubmit={submitTicketFromPreview}
-              />
-
-              <SharePlanModal
-                open={sharePlanOpen}
-                onClose={() => setSharePlanOpen(false)}
-                mode="select"
-                onConfirmSelect={(p) => {
-                  setDraftPlan(p);
-                  setSharePlanOpen(false);
-                }}
-              />
-            </div>
-          )}
-
-          {screen === "detail" && activeTicket && (
-            <div className="p-5 space-y-4">
-              <button
-                onClick={goBackToList}
-                className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-                type="button"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </button>
-
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-xs text-gray-500">Ticket</div>
-                  <h1 className="text-xl font-semibold truncate">
-                    {activeTicket.subject || "Untitled ticket"}
-                  </h1>
-                </div>
-                <StatusPill status={activeTicket.status} />
-              </div>
-
-              <div className="grid lg:grid-cols-[1fr_320px] gap-4">
-                <div className="bg-white border rounded-2xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="font-semibold">
-                      Ticket No: {activeTicketId?.slice(-8)}
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <TicketTimeline
-                      messages={timelineMessages}
-                      onOpenPlan={(att) => {
-                        setPlanAttachment(att);
-                        setPlanViewerOpen(true);
-                      }}
-                      onOpenImage={({ message, attachmentIndex }) => {
-                        const items = buildImageItems(timelineMessages);
-                        const targetIdx = items.findIndex(
-                          (it) =>
-                            it.message?._id === message._id &&
-                            it.idxInMessage === attachmentIndex
-                        );
-                        setImgItems(items);
-                        setImgIndex(Math.max(0, targetIdx));
-                        setImgOpen(true);
-                      }}
-                    />
-
-                    <PlanViewerModal
-                      open={planViewerOpen}
-                      onClose={() => setPlanViewerOpen(false)}
-                      attachment={planAttachment}
-                    />
-
-                    <ImageViewerModal
-                      open={imgOpen}
-                      items={imgItems}
-                      index={imgIndex}
-                      onClose={() => setImgOpen(false)}
-                      onPrev={() => setImgIndex((i) => Math.max(0, i - 1))}
-                      onNext={() =>
-                        setImgIndex((i) => Math.min(imgItems.length - 1, i + 1))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-white border rounded-2xl p-4 space-y-3">
-                  <div className="font-semibold">Ticket info</div>
-                  <div className="text-sm">
-                    <div className="flex justify-between gap-3">
-                      <span className="text-gray-500">Created</span>
-                      <span>
-                        {new Date(
-                          activeTicket.createdAt || Date.now()
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-3 mt-2">
-                      <span className="text-gray-500">Category</span>
-                      <span>Academic Plan Review</span>
-                    </div>
-                    <div className="flex justify-between gap-3 mt-2">
-                      <span className="text-gray-500">Priority</span>
-                      <span>Normal</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* Mobile nav drawer */}
-      <Drawer open={navOpen} onClose={() => setNavOpen(false)} title="Helpdesk">
-        {NavContent}
-      </Drawer>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold hidden md:block">Your Conversations</h2>
+          <button
+            onClick={onNew}
+            className="inline-flex items-center gap-1 text-brand hover:underline"
+          >
+            <PlusCircle className="w-4 h-4" /> New
+          </button>
+        </div>
 
-      {/* Preview modal (the key requirement) */}
-      <TicketPreviewModal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        onSubmit={submitTicketFromPreview}
-        initialPlan={draftPlan}
-        submitting={submittingTicket}
-      />
+        <div className="relative mb-4">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+          <input
+            placeholder="Search"
+            className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-brand"
+            onChange={() => {
+              /* client-side filter if desired */
+            }}
+          />
+        </div>
+
+        <Section
+          title={`Open (${studentOpen.length})`}
+          loading={loadingLists}
+          count={studentOpen.length}
+        >
+          {studentOpen.length === 0 && !loadingLists && (
+            <EmptySmall
+              icon={MessageSquarePlus}
+              title="No open conversations"
+              subtitle={'Start a new one with "New".'}
+            />
+          )}
+          <div className="space-y-2">
+            {studentOpen.map((c) => (
+              <ConversationItem
+                key={c._id}
+                convo={c}
+                active={active === c._id}
+                onClick={() => onOpen(c)}
+                unread={unreadCounts[c._id] || 0}
+              />
+            ))}
+          </div>
+        </Section>
+
+        <Section
+          title={`Done (${studentDone.length})`}
+          loading={loadingLists}
+          count={studentDone.length}
+        >
+          <div className="space-y-2">
+            {studentDone.map((c) => (
+              <ConversationItem
+                key={c._id}
+                convo={{ ...c, status: "done" }}
+                active={active === c._id}
+                onClick={() => onOpen(c)}
+                unread={unreadCounts[c._id] || 0}
+              />
+            ))}
+          </div>
+        </Section>
+      </aside>
+
+      {/* Chat (MESSAGES) */}
+      <main
+        className={cls(
+          "flex flex-col min-h-0 overflow-hidden",
+          // On phones, hide when we’re on list view
+          isMobile && view === VIEW_LIST ? "hidden" : "flex"
+        )}
+      >
+        {/* Chat header */}
+        <div className="border-b bg-white px-3 sm:px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Back on phones */}
+            {isMobile && (
+              <button
+                onClick={onBackToList}
+                className="p-2 -ml-1 mr-1 rounded-full hover:bg-gray-100"
+                title="Back"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+            )}
+            <div
+              className={cls(
+                "w-2 h-2 rounded-full",
+                connected ? "bg-green-500" : "bg-gray-300"
+              )}
+            />
+            <h1 className="font-semibold truncate">Advisor Team</h1>
+          </div>
+
+          <div className="text-xs text-gray-500 flex items-center gap-3">
+            <span className="hidden sm:inline">
+              {connected ? "Connected" : "Connecting..."}
+            </span>
+
+            {active && (
+              <button
+                onClick={() => setShareOpen(true)}
+                className="inline-flex items-center gap-1 text-brand hover:underline"
+                title="Share one of your academic plans in this chat"
+              >
+                <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Share Plan</span>
+              </button>
+            )}
+            {active && active !== DRAFT_CONVERSATION_ID && (
+              <button
+                onClick={() => setShowDelete(true)}
+                className="inline-flex items-center gap-1 text-red-600 hover:underline"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Delete</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4">
+          {!active && (
+            <EmptyLarge
+              title="Select or start a conversation"
+              subtitle="Your previous conversations with the advisor team will appear here."
+            />
+          )}
+
+          <AnimatePresence>
+            {grouped.map((g, idx) =>
+              g.type === "date" ? (
+                <DateChip key={`d:${idx}`} when={g.when} />
+              ) : (
+                <MessageGroup
+                  key={`g:${idx}`}
+                  mine={g.mine}
+                  messages={g.items}
+                  onReply={(m) => setReplyTo(m)}
+                  onJumpTo={jumpToMessage}
+                  onOpenImage={openImageViewer}
+                  onOpenPlan={openPlanViewer}
+                />
+              )
+            )}
+          </AnimatePresence>
+          <div ref={endRef} />
+        </div>
+
+        <Composer
+          disabled={!active}
+          draftMode={active === DRAFT_CONVERSATION_ID}
+          onSendWithAttachments={(text, attachments) =>
+            sendMessage(active, text, attachments)
+          }
+        />
+
+        <ConfirmDeleteModal
+          open={showDelete}
+          role="student"
+          onClose={() => setShowDelete(false)}
+          onConfirm={(alsoDelete) => {
+            if (active && active !== DRAFT_CONVERSATION_ID) {
+              deleteConversation(active, alsoDelete);
+              // After deletion on phones, return to list
+              if (isMobile) setView(VIEW_LIST);
+            }
+          }}
+        />
+
+        <ImageViewerModal
+          open={viewerOpen}
+          items={viewerItems}
+          index={viewerIndex}
+          onClose={() => setViewerOpen(false)}
+          onPrev={prevImage}
+          onNext={nextImage}
+          onGoToMessage={goToMessageFromViewer}
+          onReplyImage={replyToThisImage}
+        />
+
+        <SharePlanModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          conversationId={active}
+        />
+
+        <PlanViewerModal
+          open={planOpen}
+          onClose={() => setPlanOpen(false)}
+          attachment={planAttachment}
+        />
+      </main>
     </div>
   );
 }
+
+export default ContactAdvisorPage;

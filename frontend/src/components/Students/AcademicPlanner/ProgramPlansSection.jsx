@@ -75,25 +75,34 @@ const ProgramPlansSection = ({
   };
 
   const handleSendToAdvisor = async (plan) => {
-    const ok = await confirm("Proceed to Contact Advisor Page?", {
-      title: "Sending plan...",
-      confirmText: "Proceed",
-      cancelText: "Cancel",
-      disableClose: false, // allow backdrop close if you want
-    });
+      // 1. Show the confirmation dialog
+      const ok = await confirm(
+        `Would you like to send a request to your advisor to review "${plan.name || "this plan"}"?`, 
+        {
+          title: "Request Plan Review",
+          confirmText: "Send for Review",
+          cancelText: "Cancel",
+          disableClose: false,
+        }
+      );
 
-    if (!ok) return;
+      // 2. If the user clicks "Cancel" or closes the modal, stop here
+      if (!ok) return;
 
-    navigate("/chat-with-advisor", {
-      state: {
-        openTicketPreview: true,
-        planId: plan.id || plan._id,
-        planName: plan.name || "",
-        plan,
-        from: "academic-planner",
-      },
-    });
-  };
+      // Create a conversation with plan to be reviewed as a request for the admin to review
+      const userId = localStorage.getItem("userId")
+      try{
+        const payload = {
+          studentId : userId,
+          plan : plan
+        }
+        const res = await axiosClient.post(`/chat/conversations/review-request`, payload)
+        const createdConverastion = res.data
+      }catch(error){
+        console.log("Error creating converastion with plan to be reviewed")
+      }
+
+    };
 
   const resolveCourseId = (c) =>
     c?._id ||
@@ -346,7 +355,7 @@ const ProgramPlansSection = ({
             ))}
 
           {programPlans.filter((plan) => !tempPlans.includes(plan.id)).length <
-            3 && (
+            2 && (
             <Card
               className="border-2 border-dashed border-gray-300 hover:border-[#1E3A8A] transition-colors flex flex-col items-center justify-center min-h-[200px] cursor-pointer"
               onClick={addPlan}

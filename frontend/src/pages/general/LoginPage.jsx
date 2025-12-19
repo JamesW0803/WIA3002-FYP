@@ -30,7 +30,6 @@ export default function LoginPage() {
       };
 
       const response = await axiosClient.post("/user/login", payload);
-
       if (response.status === 200) {
         const { token, user } = response.data;
 
@@ -44,7 +43,6 @@ export default function LoginPage() {
 
         // 3. store the decoded user_id
         localStorage.setItem("userId", userId);
-
         // (optionally) keep the user object around too
         localStorage.setItem("user", JSON.stringify(user));
         setUser(user);
