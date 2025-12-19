@@ -77,7 +77,7 @@ const SavedPlanCard = ({
   }, [menuOpen]);
 
   const canMarkCurrent = !isOutdated && !isCurrent && !!onSetCurrent;
-  const canSendAdvisor = !isOutdated && !!onSendToAdvisor;
+  const canSendAdvisor = !isOutdated && !isCurrent;
 
   const handleMarkCurrent = async () => {
     setMenuOpen(false);
@@ -124,73 +124,30 @@ const SavedPlanCard = ({
             </p>
           </div>
 
-          {/* Right side: badge + 3-dot menu */}
-          <div className="flex items-center gap-2 relative">
+          {/* Right side: badge + Send button */}
+          <div className="flex items-center gap-2 flex-shrink-0 self-start">
             {isCurrent && (
-              <span className="hidden sm:inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="hidden sm:inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Current plan
               </span>
             )}
 
-            <Button
-              ref={btnRef}
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-9 w-9 p-0 rounded-full hover:bg-gray-100"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              aria-label="Plan actions"
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              <MoreVertical className="w-5 h-5 text-gray-700" />
-            </Button>
-
-            {menuOpen && (
-              <div
-                ref={menuRef}
-                role="menu"
-                className="absolute right-0 top-10 z-50 w-48 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
+            {canSendAdvisor && (
+              <button
+                type="button"
+                onClick={handleSendAdvisor}
+                disabled={!canSendAdvisor}
+                className={`p-2 rounded-full transition-colors
+                  ${
+                    canSendAdvisor
+                      ? "hover:bg-gray-100 text-gray-700"
+                      : "text-gray-400 cursor-not-allowed"
+                  }`}
+                title="Send to advisor"
               >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleMarkCurrent}
-                  disabled={!canMarkCurrent}
-                  className={`w-full px-3 py-2.5 text-sm flex items-center gap-2 text-left
-                    ${
-                      canMarkCurrent
-                        ? "hover:bg-gray-50 text-gray-800"
-                        : "text-gray-400 cursor-not-allowed"
-                    }`}
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  {isCurrent ? "Marked as current" : "Mark as Current"}
-                </button>
-
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleSendAdvisor}
-                  disabled={!canSendAdvisor}
-                  className={`w-full px-3 py-2.5 text-sm flex items-center gap-2 text-left
-                    ${
-                      canSendAdvisor
-                        ? "hover:bg-gray-50 text-gray-800"
-                        : "text-gray-400 cursor-not-allowed"
-                    }`}
-                >
-                  <Send className="w-4 h-4" />
-                  Send to advisor
-                </button>
-
-                {isOutdated && (
-                  <div className="px-3 py-2 text-xs text-gray-500 border-t bg-gray-50">
-                    Update this plan before sending or marking it current.
-                  </div>
-                )}
-              </div>
+                <Send className="w-5 h-5" />
+              </button>
             )}
           </div>
         </div>
