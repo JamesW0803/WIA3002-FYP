@@ -44,7 +44,6 @@ export function HelpDesk() {
   const [subFilter, setSubFilter] = useState("all"); // New sub-filter: "all", "chat", "review"
   const [search, setSearch] = useState("");
   const [loadingLists, setLoadingLists] = useState(true);
-  const { user, setUser } = useAuth();
   
   const endRef = useRef(null);
 
@@ -78,6 +77,7 @@ export function HelpDesk() {
   const [studentName, setStudentName] = useState("")
   const [student, setStudent] = useState()
   const [coursePlanStatus, setCoursePlanStatus] = useState()
+  const { user, setUser } = useAuth();
 
   useEffect(() => {
     connect();
@@ -109,6 +109,7 @@ export function HelpDesk() {
       fetchConversation();
       openConversation(conversationId)
     }
+    console.log("conversationId: ", conversationId)
   }, [conversationId])
 
   useEffect(() => {

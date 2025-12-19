@@ -328,7 +328,6 @@ export default function SharePlanModal({
                 type="button"
                 disabled={!selectedPlan}
               >
-                View full plan
               </button>
               <button
                 onClick={doPrint}

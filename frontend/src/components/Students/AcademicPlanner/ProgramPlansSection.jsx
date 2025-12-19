@@ -9,6 +9,7 @@ import axiosClient from "../../../api/axiosClient";
 import { normalizePlanForUI } from "../../../utils/normalisePlan";
 import { useAlert } from "../../ui/AlertProvider";
 import { useNavigate } from "react-router-dom";
+import useChatStore from "../../../stores/useChatStore";
 
 const ProgramPlansSection = ({
   programPlans,
@@ -32,9 +33,11 @@ const ProgramPlansSection = ({
   completedCoursesByYear,
   startingPlanPoint,
 }) => {
+  const { sendMessage } = useChatStore();
   const navigate = useNavigate();
   const [backupPlan, setBackupPlan] = useState(null);
   const { confirm, alert } = useAlert();
+
   const closeAllModes = () => {
     setViewingPlan(null);
     setEditingPlan(null);
@@ -98,6 +101,14 @@ const ProgramPlansSection = ({
         }
         const res = await axiosClient.post(`/chat/conversations/review-request`, payload)
         const createdConverastion = res.data
+        await send(plan, createdConverastion?._id)
+        navigate(`/chat-with-advisor/`, { 
+          state : { 
+            conversationId: createdConverastion._id, 
+            notificationMessage: "Request is sent successfully",
+            notificationType: "success",
+          }})
+
       }catch(error){
         console.log("Error creating converastion with plan to be reviewed")
       }
@@ -323,6 +334,28 @@ const ProgramPlansSection = ({
       alert("Could not set this plan as current. Please try again.", {
         title: " ",
       });
+    }
+  };
+
+  const send = async (plan, conversationId) => {
+    if (!plan || !conversationId) return;
+    try {
+      const attachments = [];
+
+      attachments.push({
+        type: "plan",
+        planId: plan._id,
+        planName: plan.name,
+        mimeType: "application/vnd.academic-plan+json",
+        size: 0,
+        caption: "Academic plan",
+      });
+
+      const header = `REVIEW REQUEST: I have shared my plan "${plan.name}" for review and feedback.`;
+      await sendMessage(conversationId, header, attachments);
+    } catch (e) {
+      console.error("Share plan failed", e);
+      alert("Failed to share the plan. Please try again.", { title: "Error" });
     }
   };
 

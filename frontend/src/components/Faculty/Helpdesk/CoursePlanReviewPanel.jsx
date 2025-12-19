@@ -54,9 +54,9 @@ const CourseReviewStatusBar = ({ status }) => {
 
 const CoursePlanReviewPanel = ({
   status,
-  accessLevel,
-  onAction,
   onViewPlan,
+  accessLevel = "student",
+  onAction = null,
 }) => {
   const adminStep = reviewActionByAdmin.find(
     (step) => step.requiredAccess === accessLevel

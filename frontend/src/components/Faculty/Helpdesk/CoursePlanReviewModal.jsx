@@ -9,8 +9,8 @@ export default function CoursePlanReviewModal({
   plan,
   academicProfile,
   status,
-  accessLevel,
-  onAction,
+  accessLevel = "student",
+  onAction = null,
 }) {
   if (!open) return null;
 
