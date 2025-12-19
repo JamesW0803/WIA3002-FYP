@@ -246,8 +246,10 @@ function ReviewActionFooter({ status, accessLevel, onAction }) {
   );
 
   const canAction =
-    adminStep?.key === currentStep?.key ||
-    adminStep?.key - 1 === currentStep?.key;
+    status < 4 && (
+      adminStep?.key === currentStep?.key ||
+      adminStep?.key - 1 === currentStep?.key
+    )
 
   if (!canAction) return null;
 

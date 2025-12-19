@@ -201,7 +201,6 @@ function MessageGroup({
 
                       if (isPlan) {
                         const hasJson = !!a.url;
-                        console.log("is plan" )
                         return (
                           <div
                             key={i}

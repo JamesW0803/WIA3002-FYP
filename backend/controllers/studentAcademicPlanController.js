@@ -288,12 +288,33 @@ exports.updatePlanStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "Status is required" });
     }
 
+    // Prepare the update object
+    let updateFields = { 
+      status, 
+      updatedAt: new Date() 
+    };
+
+    // If status is 4 (e.g., Approved/Finalized), set this plan as default
+    if (status === 4) {
+      // 1. Find the plan first to get the student ID
+      const targetPlan = await AcademicPlan.findById(planId);
+      if (!targetPlan) {
+        return res.status(404).json({ success: false, message: "Plan not found" });
+      }
+
+      await AcademicPlan.deleteMany({ 
+        student: targetPlan.student, 
+        isDefault: true,
+        _id: { $ne: planId } 
+      });
+
+      // 3. Add isDefault to the current update operation
+      updateFields.isDefault = true;
+    }
+
     const updatedPlan = await AcademicPlan.findByIdAndUpdate(
       planId,
-      { 
-        status, 
-        updatedAt: new Date() 
-      },
+      updateFields,
       { new: true, runValidators: true }
     ).populate({
       path: "years.semesters.courses.course",
@@ -307,7 +328,7 @@ exports.updatePlanStatus = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: updatedPlan,
-      message: `Plan status updated to ${status}`,
+      message: `Plan status updated to ${status}${status === 4 ? " and set as current plan" : ""}`,
     });
   } catch (error) {
     console.error("Error updating plan status:", error);

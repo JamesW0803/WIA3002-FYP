@@ -67,8 +67,10 @@ const CoursePlanReviewPanel = ({
   );
 
   const canAction =
-    adminStep?.key === currentStep?.key ||
-    adminStep?.key - 1 === currentStep?.key;
+    status < 4 && (
+      adminStep?.key === currentStep?.key ||
+      adminStep?.key - 1 === currentStep?.key
+    )
 
   const isCompleted = status >= adminStep?.key;
 

@@ -61,7 +61,7 @@ const ProgramPlansSection = ({
       (plan) => !tempPlans.includes(plan.id)
     );
 
-    if (activePlans.length >= 3) {
+    if (activePlans.length >= 2) {
       alert("Max 3 plans allowed.", { title: "Maximum Plans Reached" });
       return;
     }

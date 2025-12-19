@@ -25,7 +25,7 @@ const SavedPlanCard = ({
   onSetCurrent,
   onSendToAdvisor, // ✅ NEW
 }) => {
-  const isCurrent = !!plan.isDefault;
+  const isCurrent = plan.isDefault;
 
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "short", day: "numeric" };
@@ -203,22 +203,26 @@ const SavedPlanCard = ({
             <Eye className="w-4 h-4" />
             View
           </Button>
-          <Button
-            variant="outline"
-            className="flex-1 text-sm flex items-center justify-center gap-2"
-            onClick={onEdit}
-          >
-            <Pencil className="w-4 h-4" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 text-sm flex items-center justify-center gap-2 text-red-600 hover:text-red-700"
-            onClick={onDelete}
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </Button>
+          {!isCurrent && 
+            <Button
+              variant="outline"
+              className="flex-1 text-sm flex items-center justify-center gap-2"
+              onClick={onEdit}
+            >
+              <Pencil className="w-4 h-4" />
+              Edit
+            </Button> 
+          }
+          {!isCurrent && 
+            <Button
+              variant="outline"
+              className="flex-1 text-sm flex items-center justify-center gap-2 text-red-600 hover:text-red-700"
+              onClick={onDelete}
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </Button>
+          }
         </div>
       </div>
     </Card>

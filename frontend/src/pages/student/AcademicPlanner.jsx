@@ -53,7 +53,12 @@ const AcademicPlanner = () => {
           }),
         ]);
         const profileData = profileRes.data;
-        const plansData = plansRes.data;
+        const tempPlans = plansRes.data.data
+        // Filter out plans with status 4 AND isDefault false
+        const filteredPlans = tempPlans.filter(plan => {
+          // We keep the plan UNLESS it satisfies both conditions (status 4 and !isDefault)
+          return !(plan.status === 4 && plan.isDefault === false);
+        });
 
         // Group courses by year -> semester
         const byYear = {};
@@ -112,8 +117,8 @@ const AcademicPlanner = () => {
 
         setStartingPlanPoint(nextToPlan);
 
-        if (plansData.success && plansData.data.length > 0) {
-          setProgramPlans(plansData.data.map(normalizePlanForUI));
+        if (plansRes.data.success && filteredPlans.length > 0) {
+          setProgramPlans(filteredPlans.map(normalizePlanForUI));
         }
       } catch (err) {
         console.error("Failed to fetch data", err);

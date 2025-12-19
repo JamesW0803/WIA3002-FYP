@@ -109,7 +109,6 @@ export function HelpDesk() {
       fetchConversation();
       openConversation(conversationId)
     }
-    console.log("conversationId: ", conversationId)
   }, [conversationId])
 
   useEffect(() => {
