@@ -53,9 +53,9 @@ const AcademicPlanner = () => {
           }),
         ]);
         const profileData = profileRes.data;
-        const tempPlans = plansRes.data.data
+        const tempPlans = plansRes.data.data;
         // Filter out plans with status 4 AND isDefault false
-        const filteredPlans = tempPlans.filter(plan => {
+        const filteredPlans = tempPlans.filter((plan) => {
           // We keep the plan UNLESS it satisfies both conditions (status 4 and !isDefault)
           return !(plan.status === 4 && plan.isDefault === false);
         });
@@ -118,7 +118,12 @@ const AcademicPlanner = () => {
         setStartingPlanPoint(nextToPlan);
 
         if (plansRes.data.success && filteredPlans.length > 0) {
-          setProgramPlans(filteredPlans.map(normalizePlanForUI));
+          setProgramPlans(
+            (filteredPlans || [])
+              .map(normalizePlanForUI)
+              .filter((p) => p && (p.id || p._id))
+              .map((p) => ({ ...p, id: p.id || p._id }))
+          );
         }
       } catch (err) {
         console.error("Failed to fetch data", err);
@@ -172,42 +177,36 @@ const AcademicPlanner = () => {
     console.log("Starting plan point updated:", startingPlanPoint);
   }, [startingPlanPoint]);
 
-  const addPlan = async () => {
-    const activePlans = programPlans.filter(
-      (plan) => !tempPlans.includes(plan.id)
-    );
+  const startCreatePlan = () => {
+    // Close other modes
+    setViewingPlan(null);
+    setEditingPlan(null);
 
+    // Enforce max plans using your helper
     if (!canAddNewPlan(programPlans, tempPlans)) {
-      alert("Max 3 plans allowed.", { title: "Maximum Plans Reached" });
+      alert("Max 2 plans allowed.", { title: "Maximum Plans Reached" });
       return;
     }
 
-    const userId = localStorage.getItem("userId");
+    const activePlans = (programPlans || [])
+      .filter(Boolean)
+      .filter((plan) => plan.id && !tempPlans.includes(plan.id));
 
-    try {
-      const newPlanData = generateNewPlanFromStartingPoint(
-        activePlans.length,
-        startingPlanPoint
-      );
+    // Build new plan (UI-only)
+    const newPlan = generateNewPlanFromStartingPoint(
+      activePlans.length,
+      startingPlanPoint
+    );
 
-      const token = localStorage.getItem("token");
-      const response = await axiosClient.post(
-        `/academic-plans/students/${userId}/plans`,
-        newPlanData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    const tempId = `tmp-${Date.now()}`;
+    const newPlanWithId = { ...newPlan, id: tempId };
 
-      const savedPlan = response.data.data;
-      setProgramPlans([...programPlans, { ...savedPlan, id: savedPlan._id }]);
-      setEditingPlan(savedPlan._id);
-      setTempPlans([...tempPlans, savedPlan._id]);
-      setIsCreatingNew(false);
-      setUnsavedPlan(null);
-      scrollToEditSection();
-    } catch (error) {
-      console.error("Error creating new plan", error);
-      alert("Failed to create plan", { title: "Error creating new plan" });
-    }
+    setUnsavedPlan(newPlanWithId);
+    setIsCreatingNew(true);
+    setEditingPlan(tempId);
+    setTempPlans((prev) => [...prev, tempId]);
+
+    scrollToEditSection();
   };
 
   const scrollToEditSection = () => {
@@ -251,7 +250,7 @@ const AcademicPlanner = () => {
           activeTab === "program" ? (
             <Button
               variant="defaultWithIcon"
-              onClick={addPlan}
+              onClick={startCreatePlan}
               // Hide on mobile, show from sm and up
               className="hidden sm:inline-flex"
             >
@@ -440,6 +439,7 @@ const AcademicPlanner = () => {
             </div>
 
             <ProgramPlansSection
+              onCreatePlan={startCreatePlan}
               startingPlanPoint={startingPlanPoint}
               allCourses={allCourses}
               completedCourses={completedCourses}

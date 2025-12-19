@@ -101,7 +101,10 @@ const PlanEditor = ({
       );
     }
 
-    if (isCreatingNew) delete payload.id;
+    if (isCreatingNew) {
+      delete payload.id;
+      delete payload._id;
+    }
 
     const totalSemesters = payload.years.reduce(
       (total, year) => total + year.semesters.length,

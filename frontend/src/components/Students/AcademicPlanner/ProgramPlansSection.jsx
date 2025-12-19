@@ -32,6 +32,7 @@ const ProgramPlansSection = ({
   allCourses,
   completedCoursesByYear,
   startingPlanPoint,
+  onCreatePlan,
 }) => {
   const { sendMessage, connect, connected, joinConversation } = useChatStore();
   const navigate = useNavigate();
@@ -54,27 +55,6 @@ const ProgramPlansSection = ({
     setViewingPlan(null); // ensure viewer closed
     setIsCreatingNew(creatingNew);
     setEditingPlan(planId); // open editor
-  };
-  const addPlan = () => {
-    closeAllModes();
-    const activePlans = programPlans.filter(
-      (plan) => !tempPlans.includes(plan.id)
-    );
-
-    if (activePlans.length >= 2) {
-      alert("Max 3 plans allowed.", { title: "Maximum Plans Reached" });
-      return;
-    }
-
-    const newPlan = generateNewPlanFromStartingPoint(
-      activePlans.length,
-      startingPlanPoint
-    );
-
-    setUnsavedPlan(newPlan);
-    openEditor(newPlan.id, { creatingNew: true });
-    setTempPlans([...tempPlans, newPlan.id]);
-    scrollToEditSection();
   };
 
   const handleSendToAdvisor = async (plan) => {
@@ -374,6 +354,11 @@ const ProgramPlansSection = ({
     }
   };
 
+  const visiblePlans = (programPlans || [])
+    .filter(Boolean)
+    .map((p) => ({ ...p, id: p.id || p._id }))
+    .filter((p) => p.id && !tempPlans.includes(p.id));
+
   return (
     <>
       {/* Saved Plans Section */}
@@ -382,31 +367,24 @@ const ProgramPlansSection = ({
           Your Saved Program Plans
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {programPlans
-            .filter((plan) => !tempPlans.includes(plan.id))
-            .map((plan) => (
-              <SavedPlanCard
-                key={plan.id}
-                plan={plan}
-                type="program"
-                isOutdated={isPlanOutdated(plan)}
-                onEdit={() => {
-                  handleEditPlan(plan);
-                }}
-                onDelete={() => {
-                  handleDeletePlan(plan);
-                }}
-                onView={() => handleViewPlan(plan)}
-                onSetCurrent={() => handleSetCurrentPlan(plan)}
-                onSendToAdvisor={handleSendToAdvisor}
-              />
-            ))}
+          {visiblePlans.map((plan) => (
+            <SavedPlanCard
+              key={plan.id}
+              plan={plan}
+              type="program"
+              isOutdated={isPlanOutdated(plan)}
+              onEdit={() => handleEditPlan(plan)}
+              onDelete={() => handleDeletePlan(plan)}
+              onView={() => handleViewPlan(plan)}
+              onSetCurrent={() => handleSetCurrentPlan(plan)}
+              onSendToAdvisor={handleSendToAdvisor}
+            />
+          ))}
 
-          {programPlans.filter((plan) => !tempPlans.includes(plan.id)).length <
-            2 && (
+          {visiblePlans.length < 2 && (
             <Card
               className="border-2 border-dashed border-gray-300 hover:border-[#1E3A8A] transition-colors flex flex-col items-center justify-center min-h-[200px] cursor-pointer"
-              onClick={addPlan}
+              onClick={onCreatePlan}
             >
               <div className="text-center p-4">
                 <Plus className="w-8 h-8 mx-auto text-gray-400 mb-2" />
@@ -439,20 +417,55 @@ const ProgramPlansSection = ({
           setTempPlans={setTempPlans}
           editSectionRef={editSectionRef}
           originalPlan={backupPlan}
-          onDiscard={() => {
+          onDiscard={async () => {
+            const isTemp = tempPlans.includes(editingPlan);
+
+            // Case 1: UI-only new plan (ProgramPlansSection local create)
             if (isCreatingNew) {
-              // undo the “new plan” placeholder
               setTempPlans((ts) => ts.filter((id) => id !== editingPlan));
               setUnsavedPlan(null);
-            } else {
-              // restore the backed-up version
+              setEditingPlan(null);
+              setBackupPlan(null);
+              setIsCreatingNew(false);
+              return;
+            }
+
+            // Case 2: Backend-created new plan (AcademicPlanner header create)
+            // backupPlan is null because we never backed it up.
+            // If it's temp, user cancelled -> delete it (or at least remove it from state).
+            if (!backupPlan && isTemp) {
+              try {
+                const token = localStorage.getItem("token");
+                await axiosClient.delete(
+                  `/academic-plans/plans/${editingPlan}`,
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
+              } catch (e) {
+                console.error("Failed to delete cancelled new plan", e);
+                // even if delete fails, still remove from UI to avoid nulls
+              }
+
               setProgramPlans((ps) =>
-                ps.map((p) => (p.id === editingPlan ? backupPlan : p))
+                (ps || []).filter((p) => p && p.id !== editingPlan)
+              );
+              setTempPlans((ts) => ts.filter((id) => id !== editingPlan));
+              setEditingPlan(null);
+              setBackupPlan(null);
+              return;
+            }
+
+            // Case 3: Normal editing of existing plan (backup exists)
+            if (backupPlan) {
+              setProgramPlans((ps) =>
+                (ps || []).map((p) => (p?.id === editingPlan ? backupPlan : p))
               );
             }
-            // close the editor
+
             setEditingPlan(null);
             setBackupPlan(null);
+            setIsCreatingNew(false);
           }}
         />
       )}

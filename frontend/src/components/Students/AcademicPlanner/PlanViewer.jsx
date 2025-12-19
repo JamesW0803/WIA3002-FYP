@@ -25,14 +25,8 @@ const PlanViewer = ({
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className="text-xl font-semibold text-gray-800">
-            {plan.name}
-          </h3>
-          {plan.notes && (
-            <p className="text-gray-600 mt-1">
-              {plan.notes}
-            </p>
-          )}
+          <h3 className="text-xl font-semibold text-gray-800">{plan.name}</h3>
+          {plan.notes && <p className="text-gray-600 mt-1">{plan.notes}</p>}
         </div>
         <div className="flex gap-2">
           {/* ✅ ONLY show Edit button if the plan is NOT default */}
@@ -49,7 +43,7 @@ const PlanViewer = ({
               Edit
             </Button>
           )}
-          
+
           <Button variant="outline" onClick={() => setViewingPlan(null)}>
             Close
           </Button>
