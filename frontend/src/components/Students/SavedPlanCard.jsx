@@ -1,4 +1,3 @@
-//SavedPlanCard.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -203,7 +202,7 @@ const SavedPlanCard = ({
             <Eye className="w-4 h-4" />
             View
           </Button>
-          {!isCurrent && 
+          {!isCurrent && (
             <Button
               variant="outline"
               className="flex-1 text-sm flex items-center justify-center gap-2"
@@ -211,9 +210,9 @@ const SavedPlanCard = ({
             >
               <Pencil className="w-4 h-4" />
               Edit
-            </Button> 
-          }
-          {!isCurrent && 
+            </Button>
+          )}
+          {!isCurrent && (
             <Button
               variant="outline"
               className="flex-1 text-sm flex items-center justify-center gap-2 text-red-600 hover:text-red-700"
@@ -222,7 +221,7 @@ const SavedPlanCard = ({
               <Trash2 className="w-4 h-4" />
               Delete
             </Button>
-          }
+          )}
         </div>
       </div>
     </Card>

@@ -33,7 +33,7 @@ const ProgramPlansSection = ({
   completedCoursesByYear,
   startingPlanPoint,
 }) => {
-  const { sendMessage } = useChatStore();
+  const { sendMessage, connect, connected, joinConversation } = useChatStore();
   const navigate = useNavigate();
   const [backupPlan, setBackupPlan] = useState(null);
   const { confirm, alert } = useAlert();
@@ -78,42 +78,46 @@ const ProgramPlansSection = ({
   };
 
   const handleSendToAdvisor = async (plan) => {
-      // 1. Show the confirmation dialog
-      const ok = await confirm(
-        `Would you like to send a request to your advisor to review "${plan.name || "this plan"}"?`, 
-        {
-          title: "Request Plan Review",
-          confirmText: "Send for Review",
-          cancelText: "Cancel",
-          disableClose: false,
-        }
-      );
-
-      // 2. If the user clicks "Cancel" or closes the modal, stop here
-      if (!ok) return;
-
-      // Create a conversation with plan to be reviewed as a request for the admin to review
-      const userId = localStorage.getItem("userId")
-      try{
-        const payload = {
-          studentId : userId,
-          plan : plan
-        }
-        const res = await axiosClient.post(`/chat/conversations/review-request`, payload)
-        const createdConverastion = res.data
-        await send(plan, createdConverastion?._id)
-        navigate(`/chat-with-advisor/`, { 
-          state : { 
-            conversationId: createdConverastion._id, 
-            notificationMessage: "Request is sent successfully",
-            notificationType: "success",
-          }})
-
-      }catch(error){
-        console.log("Error creating converastion with plan to be reviewed")
+    // 1. Show the confirmation dialog
+    const ok = await confirm(
+      `Would you like to send a request to your advisor to review "${
+        plan.name || "this plan"
+      }"?`,
+      {
+        title: "Request Plan Review",
+        confirmText: "Send for Review",
+        cancelText: "Cancel",
+        disableClose: false,
       }
+    );
 
-    };
+    // 2. If the user clicks "Cancel" or closes the modal, stop here
+    if (!ok) return;
+
+    // Create a conversation with plan to be reviewed as a request for the admin to review
+    const userId = localStorage.getItem("userId");
+    try {
+      const payload = {
+        studentId: userId,
+        planId: plan._id || plan.id,
+      };
+      const res = await axiosClient.post(
+        `/chat/conversations/review-request`,
+        payload
+      );
+      const createdConverastion = res.data;
+      await send(plan, createdConverastion?._id);
+      navigate(`/chat-with-advisor/`, {
+        state: {
+          conversationId: createdConverastion._id,
+          notificationMessage: "Request is sent successfully",
+          notificationType: "success",
+        },
+      });
+    } catch (error) {
+      console.log("Error creating converastion with plan to be reviewed");
+    }
+  };
 
   const resolveCourseId = (c) =>
     c?._id ||
@@ -340,11 +344,22 @@ const ProgramPlansSection = ({
   const send = async (plan, conversationId) => {
     if (!plan || !conversationId) return;
     try {
+      if (!connected) {
+        connect();
+      }
+      await joinConversation(conversationId);
+
       const attachments = [];
+
+      const planId = plan?._id || plan?.id;
+      if (!planId) {
+        alert("Could not send plan: missing plan id.", { title: "Error" });
+        return;
+      }
 
       attachments.push({
         type: "plan",
-        planId: plan._id,
+        planId,
         planName: plan.name,
         mimeType: "application/vnd.academic-plan+json",
         size: 0,
