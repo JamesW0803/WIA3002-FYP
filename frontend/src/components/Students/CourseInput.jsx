@@ -12,6 +12,7 @@ import {
   validateCourseAddition,
   canRetakeCourse,
 } from "./AcademicPlanner/utils/planHelpers";
+import { useAlert } from "../ui/AlertProvider";
 
 const CourseInput = ({
   onAdd,
@@ -27,6 +28,8 @@ const CourseInput = ({
   const [isMobile, setIsMobile] = useState(false);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+
+  const { alert } = useAlert();
 
   useEffect(() => {
     const handler = () =>
@@ -180,7 +183,7 @@ const CourseInput = ({
     );
 
     if (hasTaken && !canRetake) {
-      alert(`Cannot add course: ${reason}`);
+      alert(`Cannot add course: ${reason}`, { title: "Error" });
       return;
     }
 
@@ -201,7 +204,7 @@ const CourseInput = ({
       completedArray
     );
     if (!validation.isValid) {
-      alert(`Cannot add course: ${validation.message}`);
+      alert(`Cannot add course: ${validation.message}`, { title: "Error" });
       return;
     }
 

@@ -3,6 +3,7 @@ import YearCard from "./YearCard";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Plus } from "lucide-react";
+import { useAlert } from "../ui/AlertProvider";
 
 const PlanCard = ({
   plan,
@@ -13,6 +14,7 @@ const PlanCard = ({
   completedCoursesByYear,
   isViewMode = false,
 }) => {
+  const { alert } = useAlert();
   const addYear = () => {
     const lastYear = plan.years[plan.years.length - 1].year;
     const newYearNumber = lastYear + 1;
@@ -47,7 +49,7 @@ const PlanCard = ({
 
   const deleteYear = (yearToDelete) => {
     if (plan.years.length <= 1) {
-      alert("Cannot delete the only remaining year");
+      alert("Cannot delete the only remaining year", { title: "Error" });
       return;
     }
 

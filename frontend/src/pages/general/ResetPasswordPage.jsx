@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import axiosClient from "../../api/axiosClient";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAlert } from "../../components/ui/AlertProvider";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -10,10 +11,11 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { token } = useParams();
+  const { alert } = useAlert();
 
   const handleReset = async () => {
     if (password !== confirmPassword) {
-      alert("Passwords do not match.");
+      alert("Passwords do not match.", { title: "Error" });
       return;
     }
 
@@ -24,7 +26,7 @@ export default function ResetPasswordPage() {
       });
       navigate("/reset-success");
     } catch (err) {
-      alert("Token expired or invalid. Please try again.");
+      alert("Token expired or invalid. Please try again.", { title: "Error" });
     }
   };
 

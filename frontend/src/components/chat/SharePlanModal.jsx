@@ -3,13 +3,13 @@ import axiosClient from "../../api/axiosClient";
 import useChatStore from "../../stores/useChatStore";
 import { X, FileText, Send, Loader2, Printer } from "lucide-react";
 import PlanViewerModal from "./PlanViewerModal";
+import { useAlert } from "../ui/AlertProvider";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
 function PlanPreviewTable({ plan }) {
-  if (!plan) {
+  if (!plan)
     return <div className="text-sm text-gray-500">No plan selected.</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -21,18 +21,43 @@ function PlanPreviewTable({ plan }) {
 
           {(y.semesters || []).map((s) => {
             const rows = (s.courses || []).map((c) => ({
-              year: y.year,
-              semesterName: s.name,
               ...c,
+              course: c.course || c.courseDoc || null,
+              code: c.course?.course_code || c.code || c.course_code || "",
+              name: c.course?.course_name || c.name || c.title_at_time || "",
+              credit:
+                c.course?.credit_hours ?? c.credit ?? c.credit_at_time ?? 0,
+              offered_semester:
+                c.course?.offered_semester || c.offered_semester || [],
             }));
+
+            const isGapSemester = !!s.isGapSemester || !!s.gapSemester;
+
+            if (rows.length === 0 && isGapSemester) {
+              return (
+                <div key={s.id} className="mb-3">
+                  <div className="text-xs text-gray-600 mb-1">
+                    {s.name}
+                    <span className="ml-2 text-gray-400">• Gap semester</span>
+                  </div>
+                  <div className="text-xs text-gray-500 italic px-3 py-2 bg-gray-50 border border-dashed rounded-lg">
+                    This semester is marked as a gap semester (no courses
+                    planned).
+                  </div>
+                </div>
+              );
+            }
+
+            if (rows.length === 0) return null;
+
             const semTotal = rows.reduce(
               (t, c) => t + (Number(c.credit) || 0),
               0
             );
 
             return (
-              <div key={s.id} className="space-y-2">
-                <div className="text-xs text-gray-600">
+              <div key={s.id} className="mb-4">
+                <div className="text-xs text-gray-600 mb-2">
                   {s.name}
                   <span className="ml-2 text-gray-400">
                     • {rows.length} course{rows.length > 1 ? "s" : ""} •{" "}
@@ -40,26 +65,14 @@ function PlanPreviewTable({ plan }) {
                   </span>
                 </div>
 
-                <div className="overflow-x-auto border rounded-xl bg-white">
-                  {/* keep a min width so Code column never collapses out of view */}
-                  <table className="min-w-[820px] w-full text-sm">
+                <div className="overflow-x-auto border rounded-xl">
+                  <table className="min-w-[720px] w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border-b">
-                          Code
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border-b">
-                          Course
-                        </th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 border-b w-20">
-                          Credit
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border-b">
-                          Prerequisites
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border-b">
-                          Offered
-                        </th>
+                        <TH>Code</TH>
+                        <TH>Course</TH>
+                        <TH className="w-20 text-right">Credit</TH>
+                        <TH>Offered</TH>
                       </tr>
                     </thead>
                     <tbody>
@@ -68,22 +81,12 @@ function PlanPreviewTable({ plan }) {
                           key={`${c.code}-${i}`}
                           className="odd:bg-white even:bg-gray-50/60"
                         >
-                          <td className="px-3 py-2 border-b align-top font-medium">
-                            {c.course.course_code}
-                          </td>
-                          <td className="px-3 py-2 border-b align-top">
-                            {c.course.course_name}
-                          </td>
-                          <td className="px-3 py-2 border-b align-top text-right">
-                            {c.course.credit_hours ?? ""}
-                          </td>
-                          <td className="px-3 py-2 border-b align-top text-gray-600">
-                            {(c.course.prerequisites || []).join(", ") || "—"}
-                          </td>
-                          <td className="px-3 py-2 border-b align-top text-gray-600">
-                            {(c.course.offered_semester || []).join(", ") ||
-                              "—"}
-                          </td>
+                          <TD className="font-medium">{c.code || "—"}</TD>
+                          <TD>{c.name || "—"}</TD>
+                          <TD className="text-right">{c.credit ?? ""}</TD>
+                          <TD className="text-gray-600">
+                            {(c.offered_semester || []).join(", ") || "—"}
+                          </TD>
                         </tr>
                       ))}
                     </tbody>
@@ -98,7 +101,33 @@ function PlanPreviewTable({ plan }) {
   );
 }
 
-export default function SharePlanModal({ open, onClose, conversationId }) {
+function TH({ children, className = "" }) {
+  return (
+    <th
+      className={cls(
+        "px-3 py-2 text-left text-xs font-semibold text-gray-600 border-b",
+        className
+      )}
+    >
+      {children}
+    </th>
+  );
+}
+function TD({ children, className = "" }) {
+  return (
+    <td className={cls("px-3 py-2 border-b align-top", className)}>
+      {children}
+    </td>
+  );
+}
+
+export default function SharePlanModal({
+  open,
+  onClose,
+  conversationId,
+  mode = "send",
+  onConfirmSelect,
+}) {
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -107,6 +136,7 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
   const [viewerOpen, setViewerOpen] = useState(false);
 
   const { sendMessage } = useChatStore();
+  const { alert } = useAlert();
 
   useEffect(() => {
     if (!open) return;
@@ -128,11 +158,13 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
     })();
   }, [open]);
 
-  const previewRef = useState(null)[0];
+  const selectedPlan = useMemo(
+    () => plans.find((p) => p.identifier === selectedId) || null,
+    [plans, selectedId]
+  );
 
   const doPrint = () => {
-    const plan = selectedPlan;
-    if (!plan) return;
+    if (!selectedPlan) return;
     const node = document.getElementById("share-plan-preview-print");
     if (!node) return;
 
@@ -140,55 +172,26 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
     if (!w) return;
 
     const html = `
-    <html>
-      <head>
-        <title>${plan.name || "Academic Plan"}</title>
-        <style>
-          body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 24px; }
-          h1 { font-size: 20px; margin: 0 0 8px; }
-          .muted { color: #555; margin-bottom: 16px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
-          th { background: #f5f7fb; text-align: left; }
-          .section { margin: 16px 0 8px; font-weight: 600; }
-        </style>
-      </head>
-      <body>${node.innerHTML}</body>
-    </html>`;
+      <html>
+        <head>
+          <title>${selectedPlan.name || "Academic Plan"}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 24px; }
+            h1 { font-size: 20px; margin: 0 0 8px; }
+            .muted { color: #555; margin-bottom: 16px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+            th { background: #f5f7fb; text-align: left; }
+            .section { margin: 16px 0 8px; font-weight: 600; }
+          </style>
+        </head>
+        <body>${node.innerHTML}</body>
+      </html>`;
     w.document.write(html);
     w.document.close();
     w.focus();
     w.print();
     w.close();
-  };
-
-  const selectedPlan = useMemo(
-    () => plans.find((p) => p.identifier === selectedId) || null,
-    [plans, selectedId]
-  );
-
-  const planSummary = (plan) => {
-    if (!plan) return "";
-    const lines = [];
-    lines.push(`Plan: ${plan.name}`);
-    lines.push(`Semesters: ${plan.semesters} • Credits: ${plan.credits}`);
-    (plan.years || []).forEach((y) => {
-      lines.push(`\nYear ${y.year}`);
-      (y.semesters || []).forEach((s) => {
-        const codes = (s.courses || []).map((c) => c.code).join(", ") || "—";
-        lines.push(`  - ${s.name}: ${codes}`);
-      });
-    });
-    return lines.join("\n");
-  };
-
-  const stripMongo = (obj) => {
-    // remove _id and __v shallowly through structure
-    const replacer = (key, value) => {
-      if (key === "_id" || key === "__v") return undefined;
-      return value;
-    };
-    return JSON.stringify(obj, replacer, 2);
   };
 
   const send = async () => {
@@ -197,29 +200,39 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
     try {
       const attachments = [];
 
+      // Send as "plan" so TicketTimeline/Message renderer can detect it.
       if (includeJson) {
         attachments.push({
-          url: "",
-          name: selectedPlan.name,
+          type: "plan",
+          planId: selectedPlan._id,
+          planName: selectedPlan.name,
           mimeType: "application/vnd.academic-plan+json",
           size: 0,
           caption: "Academic plan",
-          type: "academic-plan",
-          planId: selectedPlan._id,
-          planName: selectedPlan.name,
         });
       }
+
       const header = `Shared academic plan: ${selectedPlan.name}`;
       const notePart = note.trim() ? `\n\nNote: ${note.trim()}` : "";
       const text = header + notePart;
+
       await sendMessage(conversationId, text, attachments);
       onClose?.();
     } catch (e) {
       console.error("Share plan failed", e);
-      alert("Failed to share the plan. Please try again.");
+      alert("Failed to share the plan. Please try again.", { title: "Error" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const confirmSelect = () => {
+    if (!selectedPlan) return;
+    onConfirmSelect?.({
+      planId: selectedPlan.identifier,
+      planName: selectedPlan.name || "",
+    });
+    onClose?.();
   };
 
   if (!open) return null;
@@ -228,22 +241,21 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
     <div className="fixed inset-0 z-[180]">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,94vw)] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-        {/* Header */}
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div className="font-semibold">Share Academic Plan</div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-full hover:bg-gray-100"
-            title="Close"
+            type="button"
           >
             <X className="w-5 h-5 text-gray-600" />
           </button>
         </div>
 
-        {/* Body */}
         <div className="grid md:grid-cols-[280px_1fr] gap-5 p-5 max-h-[70vh] overflow-y-auto">
           <div>
             <div className="text-sm text-gray-700 mb-2">Select a plan</div>
+
             <div className="space-y-2">
               {loading ? (
                 <div className="text-sm text-gray-500">Loading…</div>
@@ -301,12 +313,32 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value.slice(0, 1000))}
-                placeholder="E.g., Please review Semester 3 prerequisites."
+                placeholder="E.g. Please review Semester 3 prerequisites."
                 className="w-full border rounded-lg px-3 py-2 text-sm min-h-[80px]"
               />
               <div className="mt-1 text-[11px] text-gray-400">
                 {note.length}/1000
               </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setViewerOpen(true)}
+                className="px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm"
+                type="button"
+                disabled={!selectedPlan}
+              >
+                View full plan
+              </button>
+              <button
+                onClick={doPrint}
+                className="px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm inline-flex items-center gap-2"
+                type="button"
+                disabled={!selectedPlan}
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
             </div>
           </div>
 
@@ -328,29 +360,27 @@ export default function SharePlanModal({ open, onClose, conversationId }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-4 border-t flex items-center justify-end gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             disabled={loading}
+            type="button"
           >
             Cancel
           </button>
           <button
-            onClick={send}
-            disabled={loading || !selectedPlan || !conversationId}
+            onClick={mode === "send" ? send : confirmSelect}
+            disabled={
+              loading || !selectedPlan || (mode === "send" && !conversationId)
+            }
             className={cls(
               "px-4 py-2 rounded-lg text-white inline-flex items-center gap-2",
               loading ? "bg-gray-400" : "bg-brand hover:bg-brand/90"
             )}
+            type="button"
           >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-            {loading ? "Sending…" : "Send to Chat"}
+            {mode === "send" ? "Send to Chat" : "Confirm"}
           </button>
         </div>
 

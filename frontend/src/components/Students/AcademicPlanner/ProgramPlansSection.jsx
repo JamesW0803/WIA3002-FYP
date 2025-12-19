@@ -7,6 +7,8 @@ import { Plus } from "lucide-react";
 import { generateNewPlanFromStartingPoint } from "../AcademicPlanner/utils/planHelpers";
 import axiosClient from "../../../api/axiosClient";
 import { normalizePlanForUI } from "../../../utils/normalisePlan";
+import { useAlert } from "../../ui/AlertProvider";
+import { useNavigate } from "react-router-dom";
 
 const ProgramPlansSection = ({
   programPlans,
@@ -30,7 +32,9 @@ const ProgramPlansSection = ({
   completedCoursesByYear,
   startingPlanPoint,
 }) => {
+  const navigate = useNavigate();
   const [backupPlan, setBackupPlan] = useState(null);
+  const { confirm, alert } = useAlert();
   const closeAllModes = () => {
     setViewingPlan(null);
     setEditingPlan(null);
@@ -55,7 +59,7 @@ const ProgramPlansSection = ({
     );
 
     if (activePlans.length >= 3) {
-      alert("Max 3 plans allowed.");
+      alert("Max 3 plans allowed.", { title: "Maximum Plans Reached" });
       return;
     }
 
@@ -68,6 +72,27 @@ const ProgramPlansSection = ({
     openEditor(newPlan.id, { creatingNew: true });
     setTempPlans([...tempPlans, newPlan.id]);
     scrollToEditSection();
+  };
+
+  const handleSendToAdvisor = async (plan) => {
+    const ok = await confirm("Proceed to Contact Advisor Page?", {
+      title: "Sending plan...",
+      confirmText: "Proceed",
+      cancelText: "Cancel",
+      disableClose: false, // allow backdrop close if you want
+    });
+
+    if (!ok) return;
+
+    navigate("/chat-with-advisor", {
+      state: {
+        openTicketPreview: true,
+        planId: plan.id || plan._id,
+        planName: plan.name || "",
+        plan,
+        from: "academic-planner",
+      },
+    });
   };
 
   const resolveCourseId = (c) =>
@@ -168,9 +193,7 @@ const ProgramPlansSection = ({
       );
     } catch (err) {
       console.error("Failed to save plan", err);
-      alert(
-        `Failed to save plan: ${err.response?.data?.message || err.message}`
-      );
+      alert("Failed to save plan", { title: " " });
     } finally {
       // Exit edit mode
       setEditingPlan(null);
@@ -193,7 +216,12 @@ const ProgramPlansSection = ({
   };
 
   const handleDeletePlan = async (plan) => {
-    if (!window.confirm(`Delete plan “${plan.name}”?`)) return;
+    const ok = await confirm(`Delete plan “${plan.name}”?`, {
+      title: "Delete Plan",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+    if (!ok) return;
     try {
       const token = localStorage.getItem("token");
       await axiosClient.delete(`/academic-plans/plans/${plan.id}`, {
@@ -210,9 +238,10 @@ const ProgramPlansSection = ({
         setUnsavedPlan(null);
         setBackupPlan(null);
       }
+      alert("Plan deleted successfully.", { title: "Deleted" });
     } catch (err) {
       console.error("Failed to delete plan", err);
-      alert("Could not delete plan—please try again.");
+      alert("Could not delete plan—please try again.", { title: "Error" });
     }
   };
 
@@ -279,10 +308,12 @@ const ProgramPlansSection = ({
         }))
       );
 
-      alert(`“${plan.name}” is now your current plan!`);
+      alert(`“${plan.name}” is now your current plan!`, { title: " " });
     } catch (err) {
       console.error("Failed to set current plan", err);
-      alert("Could not set this plan as current. Please try again.");
+      alert("Could not set this plan as current. Please try again.", {
+        title: " ",
+      });
     }
   };
 
@@ -310,6 +341,7 @@ const ProgramPlansSection = ({
                 }}
                 onView={() => handleViewPlan(plan)}
                 onSetCurrent={() => handleSetCurrentPlan(plan)}
+                onSendToAdvisor={handleSendToAdvisor}
               />
             ))}
 

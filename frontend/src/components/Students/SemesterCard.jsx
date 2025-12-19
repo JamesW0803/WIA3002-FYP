@@ -5,6 +5,7 @@ import {
   validateCourseAddition,
   canRetakeCourse,
 } from "./AcademicPlanner/utils/planHelpers";
+import { useAlert } from "../ui/AlertProvider";
 
 const SemesterCard = ({
   planId,
@@ -18,6 +19,7 @@ const SemesterCard = ({
   onConfirmDraft,
   onCancelDraft,
 }) => {
+  const { alert } = useAlert();
   const MAX_CREDITS = 22;
 
   const actualSemester =
@@ -69,7 +71,8 @@ const SemesterCard = ({
   const addCourse = (courseCode) => {
     if (isGapSemester) {
       alert(
-        "This semester is marked as a gap semester. Undo the gap flag if you want to add courses."
+        "This semester is marked as a gap semester. Undo the gap flag if you want to add courses.",
+        { title: "Error" }
       );
       return;
     }
@@ -77,7 +80,9 @@ const SemesterCard = ({
     console.log("Attempting to add course:", courseCode);
     const courseToAdd = allCourses.find((c) => c.code === courseCode);
     if (!courseToAdd) {
-      alert(`Course ${courseCode} not found in course catalog`);
+      alert(`Course ${courseCode} not found in course catalog`, {
+        title: "Error",
+      });
       return;
     }
 
@@ -91,14 +96,15 @@ const SemesterCard = ({
 
     // If the student has taken it and it's not retakable (A/A+ case), block
     if (hasTaken && !canRetake) {
-      alert(`Cannot retake ${courseCode}. ${reason}`);
+      alert(`Cannot retake ${courseCode}. ${reason}`, { title: "Error" });
       return;
     }
 
     // Keep blocking if course is currently ongoing (you already had this)
     if (ongoingCourses.has(courseCode)) {
       alert(
-        `Course ${courseCode} is currently ongoing and cannot be taken again`
+        `Course ${courseCode} is currently ongoing and cannot be taken again`,
+        { title: "Error" }
       );
       return;
     }
@@ -123,7 +129,7 @@ const SemesterCard = ({
     );
     console.log("Validation result:", { isValid, message });
     if (!isValid) {
-      alert(`Cannot add ${courseCode}. ${message}`);
+      alert(`Cannot add ${courseCode}. ${message}`, { title: "Error" });
       return;
     }
 
@@ -165,7 +171,9 @@ const SemesterCard = ({
           // Still keep protection: cannot add twice in same semester
           const alreadyAdded = sem.courses.some((c) => c.code === courseCode);
           if (alreadyAdded) {
-            alert(`Course ${courseCode} already exists in this semester`);
+            alert(`Course ${courseCode} already exists in this semester`, {
+              title: "Error",
+            });
             return sem;
           }
 
@@ -176,7 +184,8 @@ const SemesterCard = ({
           );
           if (currentCredits + courseToAdd.credit > MAX_CREDITS) {
             alert(
-              `Adding this course would exceed the maximum credit limit of ${MAX_CREDITS} credits`
+              `Adding this course would exceed the maximum credit limit of ${MAX_CREDITS} credits`,
+              { title: "Error" }
             );
             return sem;
           }
@@ -312,7 +321,8 @@ const SemesterCard = ({
               onClick={() => {
                 if ((actualSemester?.courses?.length || 0) === 0) {
                   alert(
-                    "Please add at least one course before saving this semester."
+                    "Please add at least one course before saving this semester.",
+                    { title: "Error" }
                   );
                   return;
                 }

@@ -2,12 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import axiosClient from "../../api/axiosClient";
+import { useAlert } from "../../components/ui/AlertProvider";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showSignupChoiceModal, setShowSignupChoiceModal] = useState(false);
   const navigate = useNavigate();
+  const { alert } = useAlert();
 
   const handleSubmit = async () => {
     try {
@@ -17,7 +19,9 @@ export default function ForgotPasswordPage() {
       if (error.response?.status === 404) {
         setShowNotFoundModal(true);
       } else {
-        alert("Something went wrong. Please try again later.");
+        alert("Something went wrong. Please try again later.", {
+          title: "Error",
+        });
       }
     }
   };

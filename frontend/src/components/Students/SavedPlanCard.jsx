@@ -1,6 +1,7 @@
-import React from "react";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
+//SavedPlanCard.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
 import {
   CalendarDays,
   BookOpenText,
@@ -10,6 +11,8 @@ import {
   Trash2,
   Eye,
   CheckCircle2,
+  MoreVertical,
+  Send,
 } from "lucide-react";
 
 const SavedPlanCard = ({
@@ -20,6 +23,7 @@ const SavedPlanCard = ({
   onView,
   isOutdated = false,
   onSetCurrent,
+  onSendToAdvisor, // ✅ NEW
 }) => {
   const isCurrent = !!plan.isDefault;
 
@@ -40,6 +44,52 @@ const SavedPlanCard = ({
         ),
       0
     );
+
+  // --- Menu UX ---
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const btnRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+
+    const onMouseDown = (e) => {
+      const menuEl = menuRef.current;
+      const btnEl = btnRef.current;
+      if (!menuEl || !btnEl) return;
+
+      // close if click is outside both the menu and the trigger button
+      if (!menuEl.contains(e.target) && !btnEl.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onMouseDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onMouseDown);
+    };
+  }, [menuOpen]);
+
+  const canMarkCurrent = !isOutdated && !isCurrent && !!onSetCurrent;
+  const canSendAdvisor = !isOutdated && !!onSendToAdvisor;
+
+  const handleMarkCurrent = async () => {
+    setMenuOpen(false);
+    if (!canMarkCurrent) return;
+    await onSetCurrent();
+  };
+
+  const handleSendAdvisor = () => {
+    setMenuOpen(false);
+    if (!canSendAdvisor) return;
+    onSendToAdvisor(plan);
+  };
 
   return (
     <Card
@@ -74,22 +124,73 @@ const SavedPlanCard = ({
             </p>
           </div>
 
-          <div className="flex items-center">
-            {isCurrent ? (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          {/* Right side: badge + 3-dot menu */}
+          <div className="flex items-center gap-2 relative">
+            {isCurrent && (
+              <span className="hidden sm:inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Current plan
               </span>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-[11px] px-2 py-1 h-auto whitespace-nowrap"
-                onClick={onSetCurrent}
+            )}
+
+            <Button
+              ref={btnRef}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 p-0 rounded-full hover:bg-gray-100"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label="Plan actions"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <MoreVertical className="w-5 h-5 text-gray-700" />
+            </Button>
+
+            {menuOpen && (
+              <div
+                ref={menuRef}
+                role="menu"
+                className="absolute right-0 top-10 z-50 w-48 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
               >
-                <CalendarDays className="w-3 h-3 mr-1" />
-                Set as current
-              </Button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleMarkCurrent}
+                  disabled={!canMarkCurrent}
+                  className={`w-full px-3 py-2.5 text-sm flex items-center gap-2 text-left
+                    ${
+                      canMarkCurrent
+                        ? "hover:bg-gray-50 text-gray-800"
+                        : "text-gray-400 cursor-not-allowed"
+                    }`}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {isCurrent ? "Marked as current" : "Mark as Current"}
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleSendAdvisor}
+                  disabled={!canSendAdvisor}
+                  className={`w-full px-3 py-2.5 text-sm flex items-center gap-2 text-left
+                    ${
+                      canSendAdvisor
+                        ? "hover:bg-gray-50 text-gray-800"
+                        : "text-gray-400 cursor-not-allowed"
+                    }`}
+                >
+                  <Send className="w-4 h-4" />
+                  Send to advisor
+                </button>
+
+                {isOutdated && (
+                  <div className="px-3 py-2 text-xs text-gray-500 border-t bg-gray-50">
+                    Update this plan before sending or marking it current.
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -134,32 +235,32 @@ const SavedPlanCard = ({
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Actions (keep your existing buttons) */}
       <div className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-lg">
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
-            className="flex-1 text-sm flex items-center justify-center gap-1"
+            className="flex-1 text-sm flex items-center justify-center gap-2"
             onClick={onView}
           >
             <Eye className="w-4 h-4" />
-            <span>View</span>
+            View
           </Button>
           <Button
             variant="outline"
-            className="flex-1 text-sm flex items-center justify-center gap-1"
+            className="flex-1 text-sm flex items-center justify-center gap-2"
             onClick={onEdit}
           >
             <Pencil className="w-4 h-4" />
-            <span>Edit</span>
+            Edit
           </Button>
           <Button
-            variant="destructive"
-            className="flex-1 text-sm flex items-center justify-center gap-1"
+            variant="outline"
+            className="flex-1 text-sm flex items-center justify-center gap-2 text-red-600 hover:text-red-700"
             onClick={onDelete}
           >
             <Trash2 className="w-4 h-4" />
-            <span>Delete</span>
+            Delete
           </Button>
         </div>
       </div>
