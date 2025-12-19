@@ -14,6 +14,12 @@ import axiosClient from "../../api/axiosClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { normalizePlanForUI } from "../../utils/normalisePlan";
 import { useAlert } from "../../components/ui/AlertProvider";
+import {
+  sliceFacultyMappingFrom,
+  mappingToAcademicPlanYearsPayload,
+  getPlanFirstSemesterPoint,
+  isPlanStartingBefore,
+} from "../../utils/defaultPlanBuilder";
 
 const AcademicPlanner = () => {
   const [activeTab, setActiveTab] = useState("program");
@@ -53,9 +59,9 @@ const AcademicPlanner = () => {
           }),
         ]);
         const profileData = profileRes.data;
-        const tempPlans = plansRes.data.data;
+        const fetchedPlans = plansRes.data.data;
         // Filter out plans with status 4 AND isDefault false
-        const filteredPlans = tempPlans.filter((plan) => {
+        const filteredPlans = fetchedPlans.filter((plan) => {
           // We keep the plan UNLESS it satisfies both conditions (status 4 and !isDefault)
           return !(plan.status === 4 && plan.isDefault === false);
         });
@@ -117,14 +123,173 @@ const AcademicPlanner = () => {
 
         setStartingPlanPoint(nextToPlan);
 
-        if (plansRes.data.success && filteredPlans.length > 0) {
-          setProgramPlans(
-            (filteredPlans || [])
-              .map(normalizePlanForUI)
-              .filter((p) => p && (p.id || p._id))
-              .map((p) => ({ ...p, id: p.id || p._id }))
+        const ensureCourseCatalogLoaded = async () => {
+          if (allCourses && allCourses.length) return allCourses;
+
+          const token = localStorage.getItem("token");
+          if (!token) return [];
+
+          const response = await axiosClient.get("/courses?minimal=true", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          // Use the SAME shape your app expects (code/name/credit)
+          const validatedCourses = (response.data || []).map((course) => ({
+            _id: course._id || course.id || course._doc?._id,
+            code: course.code || course.course_code || "",
+            name: course.name || course.course_name || "",
+            credit: course.credit || course.credit_hours || 0,
+            prerequisites: course.prerequisites || [],
+            offered_semester: course.offered_semester || [],
+          }));
+
+          setAllCourses(validatedCourses);
+          return validatedCourses;
+        };
+
+        // Ensure exactly 1 "Default Plan" exists and is aligned to nextToPlan
+        const ensureDefaultPlan = async () => {
+          const token = localStorage.getItem("token");
+          const userId = localStorage.getItem("userId");
+          if (!token || !userId) return;
+
+          // use filteredPlans you already built in this effect :contentReference[oaicite:7]{index=7}
+          const existing = filteredPlans || [];
+          const existingDefault = existing.find((p) => p.isDefault);
+
+          // fetch faculty mapping (same as CourseRecommendations) :contentReference[oaicite:8]{index=8}
+          const programmeIntakeCode =
+            profileData.programme_intake_code ||
+            profileData.programmeIntake?.programme_intake_code;
+
+          let mappingFromBackend = {};
+          if (programmeIntakeCode) {
+            try {
+              const planRes = await axiosClient.get(
+                `/programme-intakes/programme-intakes/${programmeIntakeCode}/programme-plan`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              mappingFromBackend = planRes.data?.semesterMapping || {};
+            } catch (e) {
+              mappingFromBackend = {};
+            }
+          }
+
+          // If no mapping, don't auto-create (optional: you can still create an empty default)
+          if (!Object.keys(mappingFromBackend).length) return;
+
+          // Slice faculty mapping starting from student's next planning point
+          const remainingMapping = sliceFacultyMappingFrom(
+            mappingFromBackend,
+            nextToPlan
           );
-        }
+
+          // fetch course catalog for credits/titles
+          const catalog = await ensureCourseCatalogLoaded();
+
+          const yearsPayload = mappingToAcademicPlanYearsPayload(
+            remainingMapping,
+            catalog
+          );
+
+          // If mapping slice returns nothing (e.g. student already beyond mapping), skip
+          if (!yearsPayload.length) return;
+
+          // Case A: default exists → check alignment, update if outdated
+          if (existingDefault) {
+            const firstPoint = getPlanFirstSemesterPoint(existingDefault);
+            const outdated = isPlanStartingBefore(firstPoint, nextToPlan);
+
+            if (outdated) {
+              // PUT updated years into the same default plan
+              await axiosClient.put(
+                `/academic-plans/plans/${
+                  existingDefault._id || existingDefault.id
+                }`,
+                {
+                  ...existingDefault,
+                  name: "Default Plan",
+                  years: yearsPayload,
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+            }
+            return;
+          }
+
+          // Case B: no default exists
+          // If already 2 plans and NO default exists, convert ONE plan into the Default Plan
+          if (existing.length >= 2) {
+            // Prefer a non-default, non-archived plan; otherwise just pick the first
+            const candidate =
+              existing.find((p) => p.isDefault !== true && p.status !== 4) ||
+              existing.find((p) => p.isDefault !== true) ||
+              existing[0];
+
+            const candidateId = candidate?._id || candidate?.id;
+            if (!candidateId) return;
+
+            // Overwrite this plan into the faculty Default Plan (keeps plan count at 2)
+            await axiosClient.put(
+              `/academic-plans/plans/${candidateId}`,
+              {
+                ...candidate,
+                name: "Default Plan",
+                notes: "Faculty suggested course plan",
+                years: yearsPayload,
+                status: 1,
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            // Ensure it's marked as current/default
+            await axiosClient.patch(
+              `/academic-plans/plans/${candidateId}/set-default`,
+              {},
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            return;
+          }
+
+          // Otherwise create a new "Default Plan"
+          const createRes = await axiosClient.post(
+            `/academic-plans/students/${userId}/plans`,
+            {
+              name: "Default Plan",
+              notes: "Faculty suggested course plan",
+              years: yearsPayload,
+              status: 1,
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          const created = createRes.data?.data;
+          if (created?._id) {
+            // Make sure it's actually the default (needed when this is the 2nd plan) :contentReference[oaicite:9]{index=9}
+            await axiosClient.patch(
+              `/academic-plans/plans/${created._id}/set-default`,
+              {},
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          }
+        };
+
+        await ensureDefaultPlan();
+
+        const refreshed = await axiosClient.get(
+          `/academic-plans/students/${userId}/plans`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const refreshedPlans = (refreshed.data?.data || [])
+          .filter((plan) => !(plan.status === 4 && plan.isDefault === false))
+          .map(normalizePlanForUI)
+          .filter((p) => p && (p.id || p._id))
+          .map((p) => ({ ...p, id: p.id || p._id }));
+
+        setProgramPlans(refreshedPlans);
       } catch (err) {
         console.error("Failed to fetch data", err);
       }
@@ -134,6 +299,7 @@ const AcademicPlanner = () => {
   }, []);
 
   useEffect(() => {
+    if (allCourses.length) return;
     // In your useEffect for fetching courses:
     const fetchCourses = async () => {
       try {
@@ -168,7 +334,7 @@ const AcademicPlanner = () => {
     };
 
     fetchCourses();
-  }, []);
+  }, [allCourses.length]);
 
   const editSectionRef = useRef(null);
   const viewSectionRef = useRef(null);
