@@ -257,23 +257,28 @@ const useChatStore = create((set, get) => ({
     // Inside useChatStore.js -> connect function
     socket.on("conversation:new", (newConvo) => {
       const role = JSON.parse(localStorage.getItem("user"))?.role;
-      
+
       set((s) => {
         const isDone = (newConvo.status || "").toLowerCase() === "done";
-        const listKey = role === "admin" 
-          ? (isDone ? "adminDone" : "adminOpen") 
-          : (isDone ? "studentDone" : "studentOpen");
+        const listKey =
+          role === "admin"
+            ? isDone
+              ? "adminDone"
+              : "adminOpen"
+            : isDone
+            ? "studentDone"
+            : "studentOpen";
 
         // 1. Check if it already exists in the target list
-        const exists = s[listKey].some(c => c._id === newConvo._id);
-        
+        const exists = s[listKey].some((c) => c._id === newConvo._id);
+
         // 2. If it exists, don't add a duplicate
         if (exists) return s;
 
         // 3. Otherwise, add it to the top
         return {
           ...s,
-          [listKey]: [newConvo, ...s[listKey]]
+          [listKey]: [newConvo, ...s[listKey]],
         };
       });
     });
@@ -378,6 +383,9 @@ const useChatStore = create((set, get) => ({
           }
         : null;
 
+    const myRole =
+      JSON.parse(localStorage.getItem("user") || "{}")?.role || "student";
+
     set((s) => ({
       messagesByConv: {
         ...s.messagesByConv,
@@ -385,7 +393,7 @@ const useChatStore = create((set, get) => ({
           clientId,
           text,
           attachments,
-          senderRole: JSON.parse(localStorage.getItem("user"))?.role,
+          senderRole: myRole,
           createdAt: new Date().toISOString(),
           conversation: convKey,
           replyTo: previewReplyTo,
