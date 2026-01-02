@@ -13,6 +13,11 @@ const PlanViewer = ({
   allCourses,
   completedCoursesByYear,
 }) => {
+  // Find the plan object once to use for both details and logic
+  const plan = programPlans.find((p) => p.id === viewingPlan);
+
+  if (!plan) return null;
+
   return (
     <section
       ref={viewSectionRef}
@@ -20,30 +25,25 @@ const PlanViewer = ({
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className="text-xl font-semibold text-gray-800">
-            {programPlans.find((p) => p.id === viewingPlan)?.name}
-          </h3>
-          {programPlans.find((p) => p.id === viewingPlan)?.notes && (
-            <p className="text-gray-600 mt-1">
-              {programPlans.find((p) => p.id === viewingPlan)?.notes}
-            </p>
-          )}
+          <h3 className="text-xl font-semibold text-gray-800">{plan.name}</h3>
+          {plan.notes && <p className="text-gray-600 mt-1">{plan.notes}</p>}
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              const plan = programPlans.find((p) => p.id === viewingPlan);
-              if (plan) {
+          {/* ✅ ONLY show Edit button if the plan is NOT default */}
+          {!plan.isDefault && (
+            <Button
+              variant="outline"
+              onClick={() => {
                 setBackupPlan(plan);
-              }
-              setViewingPlan(null);
-              setEditingPlan(viewingPlan); // only one mode stays open
-              scrollToEditSection();
-            }}
-          >
-            Edit
-          </Button>
+                setViewingPlan(null);
+                setEditingPlan(viewingPlan);
+                scrollToEditSection();
+              }}
+            >
+              Edit
+            </Button>
+          )}
+
           <Button variant="outline" onClick={() => setViewingPlan(null)}>
             Close
           </Button>
@@ -51,7 +51,7 @@ const PlanViewer = ({
       </div>
 
       <PlanCard
-        plan={programPlans.find((p) => p.id === viewingPlan)}
+        plan={plan}
         setPlans={() => {}}
         plans={programPlans}
         allCourses={allCourses}

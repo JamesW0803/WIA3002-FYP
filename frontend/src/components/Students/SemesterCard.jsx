@@ -14,6 +14,7 @@ const SemesterCard = ({
   plans,
   setPlans,
   allCourses,
+  previousSemesters = [],
   isViewMode = false,
   completedCoursesByYear = {},
   onConfirmDraft,
@@ -21,6 +22,13 @@ const SemesterCard = ({
 }) => {
   const { alert } = useAlert();
   const MAX_CREDITS = 22;
+
+  const plannedPreviousCourses = useMemo(() => {
+    return (previousSemesters || [])
+      .filter((s) => !s?.isGap) // ignore gap semesters
+      .flatMap((s) => (s?.courses || []).map((c) => c?.code))
+      .filter(Boolean);
+  }, [previousSemesters]);
 
   const actualSemester =
     plans
@@ -45,6 +53,13 @@ const SemesterCard = ({
     });
     return passed;
   }, [completedCoursesByYear]);
+
+  const prereqPool = useMemo(() => {
+    // union: passed + planned previous
+    return Array.from(
+      new Set([...Array.from(passedCourses), ...plannedPreviousCourses])
+    );
+  }, [passedCourses, plannedPreviousCourses]);
 
   // Create a Set of all ongoing course codes
   const ongoingCourses = useMemo(() => {
@@ -109,10 +124,7 @@ const SemesterCard = ({
       return;
     }
 
-    // Build the list of "completed" courses used for prerequisite checking.
-    // For retakes we want prerequisites to still count, but we must NOT
-    // let validateCourseAddition think the target course itself is blocking.
-    const completedForPrereqs = Array.from(passedCourses);
+    const completedForPrereqs = [...prereqPool];
 
     if (hasTaken && canRetake) {
       const idx = completedForPrereqs.indexOf(courseCode);
@@ -341,6 +353,7 @@ const SemesterCard = ({
             onAdd={addCourse}
             allCourses={allCourses}
             passedCourses={Array.from(passedCourses)}
+            plannedPreviousCourses={plannedPreviousCourses}
             ongoingCourses={ongoingCourses}
             semester={actualSemester}
             completedCoursesByYear={completedCoursesByYear}

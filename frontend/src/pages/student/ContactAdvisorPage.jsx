@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import {
   PlusCircle,
@@ -21,6 +22,11 @@ import ImageViewerModal from "../../components/chat/ImageViewerModal";
 import SharePlanModal from "../../components/chat/SharePlanModal";
 import PlanViewerModal from "../../components/chat/PlanViewerModal";
 import useMediaQuery from "../../hooks/useMediaQuery";
+import CoursePlanReviewPanel from "../../components/Faculty/Helpdesk/CoursePlanReviewPanel";
+import CoursePlanReviewModal from "../../components/Faculty/Helpdesk/CoursePlanReviewModal";
+import axiosClient from "../../api/axiosClient";
+import Notification from "../../components/Students/AcademicProfile/Notification";
+import { useAcademicProfile } from "../../hooks/useAcademicProfile";
 
 const cls = (...arr) => arr.filter(Boolean).join(" ");
 
@@ -29,6 +35,11 @@ const VIEW_LIST = "list";
 const VIEW_CHAT = "chat";
 
 export function ContactAdvisorPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [conversationId, setConversationId] = useState(
+    location.state?.conversationId || null
+  );
   const [active, setActive] = useState(null);
   const [loadingLists, setLoadingLists] = useState(true);
   const unreadCounts = useChatStore((s) => s.unreadCounts);
@@ -55,11 +66,31 @@ export function ContactAdvisorPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [planAttachment, setPlanAttachment] = useState(null);
+  const [currentCoursePlan, setCurrentCoursePlan] = useState(null);
+  const [coursePlanToBeReviewed, setCoursePlanToBeReviewed] = useState(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [student, setStudent] = useState();
+  const [coursePlanStatus, setCoursePlanStatus] = useState();
 
   // NEW: detect "mobile" (tailwind md breakpoint)
   const isMobile = useMediaQuery("(max-width: 767px)");
   // NEW: UI view (list vs chat) for small screens
   const [view, setView] = useState(VIEW_LIST);
+
+  const { showNotification, closeNotification, notification } =
+    useAcademicProfile();
+
+  useEffect(() => {
+    if (location.state?.notificationMessage) {
+      const { notificationMessage, notificationType } = location.state;
+
+      showNotification(notificationMessage, notificationType);
+
+      // Clear the state so the page won’t show the notification on refresh
+      navigate(location.pathname, { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     connect();
@@ -67,9 +98,44 @@ export function ContactAdvisorPage() {
       setLoadingLists(true);
       await loadLists();
       setLoadingLists(false);
+      if (conversationId) {
+        onOpen(conversationId);
+      }
     })();
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    const fetchConversation = async () => {
+      try {
+        const response = await axiosClient.get(
+          `/chat/conversation/id/${conversationId}`
+        );
+        const conversation = response.data;
+        const plan = conversation?.coursePlanToBeReviewed;
+        setCoursePlanToBeReviewed(plan);
+        setCoursePlanStatus(plan?.status);
+        setStudentName(conversation?.student?.username);
+      } catch (error) {
+        console.error("Error fetching conversation.");
+      }
+    };
+    if (conversationId) {
+      fetchConversation();
+      onOpen(conversationId);
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    const fetchStudent = async () => {
+      const response = await axiosClient.get(`/students/${studentName}`);
+      const currentStudent = response.data;
+      setStudent(currentStudent);
+    };
+    if (studentName) {
+      fetchStudent();
+    }
+  }, [studentName]);
 
   // NEW: keep view in sync with screen size
   useEffect(() => {
@@ -102,10 +168,14 @@ export function ContactAdvisorPage() {
     [active, messagesByConv]
   );
 
+  const myRole =
+    JSON.parse(localStorage.getItem("user") || "{}")?.role || "student";
+
   const grouped = useMemo(() => {
     const groups = [];
     let currentDay = "";
     let currentBlock = null;
+
     msgs.forEach((m) => {
       const day = new Date(m.createdAt).toDateString();
       if (day !== currentDay) {
@@ -113,7 +183,8 @@ export function ContactAdvisorPage() {
         currentDay = day;
         currentBlock = null;
       }
-      const mine = m.senderRole === "student";
+
+      const mine = m.senderRole === myRole;
       if (!currentBlock || currentBlock.mine !== mine) {
         currentBlock = { type: "msgs", mine, items: [m] };
         groups.push(currentBlock);
@@ -121,13 +192,15 @@ export function ContactAdvisorPage() {
         currentBlock.items.push(m);
       }
     });
+
     return groups;
   }, [msgs]);
 
-  const onOpen = async (c) => {
+  const onOpen = async (conversationId) => {
     if (active) leaveConversation(active);
-    setActive(c._id);
-    await joinConversation(c._id);
+    setActive(conversationId);
+    setConversationId(conversationId);
+    await joinConversation(conversationId);
     if (isMobile) setView(VIEW_CHAT); // go to chat on phones
   };
 
@@ -278,7 +351,7 @@ export function ContactAdvisorPage() {
                 key={c._id}
                 convo={c}
                 active={active === c._id}
-                onClick={() => onOpen(c)}
+                onClick={() => onOpen(c._id)}
                 unread={unreadCounts[c._id] || 0}
               />
             ))}
@@ -296,7 +369,7 @@ export function ContactAdvisorPage() {
                 key={c._id}
                 convo={{ ...c, status: "done" }}
                 active={active === c._id}
-                onClick={() => onOpen(c)}
+                onClick={() => onOpen(c._id)}
                 unread={unreadCounts[c._id] || 0}
               />
             ))}
@@ -360,6 +433,21 @@ export function ContactAdvisorPage() {
             )}
           </div>
         </div>
+
+        {coursePlanToBeReviewed && (
+          <CoursePlanReviewPanel
+            status={coursePlanStatus}
+            onViewPlan={() => setReviewOpen(true)}
+          />
+        )}
+
+        <CoursePlanReviewModal
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          plan={coursePlanToBeReviewed}
+          academicProfile={student?.academicProfile}
+          status={coursePlanStatus}
+        />
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4">
           {!active && (
@@ -432,6 +520,14 @@ export function ContactAdvisorPage() {
           onClose={() => setPlanOpen(false)}
           attachment={planAttachment}
         />
+        {notification.show && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            isClosing={notification.isClosing}
+            onClose={closeNotification}
+          />
+        )}
       </main>
     </div>
   );

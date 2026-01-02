@@ -21,6 +21,7 @@ const CourseInput = ({
   semester,
   ongoingCourses = new Set(),
   passedCourses,
+  plannedPreviousCourses = [],
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -38,6 +39,15 @@ const CourseInput = ({
     window.addEventListener("resize", handler);
     return () => window.removeEventListener("resize", handler);
   }, []);
+
+  const prereqPool = useMemo(() => {
+    const passedArr = Array.isArray(passedCourses)
+      ? passedCourses
+      : Array.from(passedCourses || []);
+    return Array.from(
+      new Set([...passedArr, ...(plannedPreviousCourses || [])])
+    );
+  }, [passedCourses, plannedPreviousCourses]);
 
   const getCourseStatus = useCallback(
     (courseCode) => {
@@ -106,11 +116,7 @@ const CourseInput = ({
         };
       }
 
-      // Build completed list for prereq validation – remove the target
-      // course itself if it's a retake, so we don't let it block itself.
-      const completedArray = Array.isArray(passedCourses)
-        ? [...passedCourses]
-        : Array.from(passedCourses || []);
+      const completedArray = [...prereqPool];
 
       if (hasTaken && canRetake) {
         const idx = completedArray.indexOf(course.code);
@@ -130,7 +136,7 @@ const CourseInput = ({
     filteredCourses,
     semester,
     allCourses,
-    passedCourses,
+    prereqPool,
     completedCoursesByYear,
   ]);
 
@@ -188,9 +194,7 @@ const CourseInput = ({
     }
 
     // Prepare completed list for prerequisite checking
-    const completedArray = Array.isArray(passedCourses)
-      ? [...passedCourses]
-      : Array.from(passedCourses || []);
+    const completedArray = [...prereqPool];
 
     if (hasTaken && canRetake) {
       const idx = completedArray.indexOf(selectedCourse.code);

@@ -34,6 +34,17 @@ export const AlertProvider = ({ children }) => {
   // Promise-based confirm (super convenient)
   const confirm = (message, options = {}) =>
     new Promise((resolve) => {
+      const cancelClose = () => {
+        setState((s) => ({
+          ...s,
+          open: false,
+          onConfirm: null,
+          isLoading: false,
+          onCloseOverride: null,
+        }));
+        resolve(false);
+      };
+
       setState({
         open: true,
         title: options.title || "Confirm",
@@ -42,21 +53,18 @@ export const AlertProvider = ({ children }) => {
         cancelText: options.cancelText || "No",
         disableClose: !!options.disableClose,
         isLoading: false,
+        onCloseOverride: cancelClose,
         onConfirm: () => {
-          close();
+          setState((s) => ({
+            ...s,
+            open: false,
+            onConfirm: null,
+            isLoading: false,
+            onCloseOverride: null,
+          }));
           resolve(true);
         },
       });
-
-      // cancel/close => resolve(false)
-      const originalClose = close;
-      const cancelClose = () => {
-        originalClose();
-        resolve(false);
-      };
-
-      // patch close behavior for this confirm instance
-      setState((s) => ({ ...s, onCloseOverride: cancelClose }));
     });
 
   // Support close override for confirm

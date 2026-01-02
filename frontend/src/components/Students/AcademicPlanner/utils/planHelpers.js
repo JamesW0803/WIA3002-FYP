@@ -29,8 +29,10 @@ export const generateNewPlan = (existingPlansCount, completedCourses = []) => {
   };
 };
 
-export const canAddNewPlan = (plans, tempPlans, maxPlans = 3) => {
-  const activePlans = plans.filter((plan) => !tempPlans.includes(plan.id));
+export const canAddNewPlan = (plans, tempPlans, maxPlans = 2) => {
+  const activePlans = (plans || [])
+    .filter(Boolean)
+    .filter((plan) => plan.id && !tempPlans.includes(plan.id));
   return activePlans.length < maxPlans;
 };
 

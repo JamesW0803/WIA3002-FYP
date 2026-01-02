@@ -162,13 +162,14 @@ const login = async (req, res) => {
     const payload = {
       user_id: user.id,
       role: user.role,
+      ...(user.role === "admin" && { access_level: user.access_level })
     };
 
     const token = generateToken(payload, "1h");
     // Optionally return user details
     res
       .status(200)
-      .json({ token, user: { username: user.username, role: user.role } });
+      .json({ token, user: { username: user.username, role: user.role , access_level : user.access_level} });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Login failed", error: err.message });

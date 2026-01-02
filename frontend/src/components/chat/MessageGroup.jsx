@@ -164,7 +164,7 @@ function MessageGroup({
                   >
                     {atts.map((a, i) => {
                       const isImg = a.mimeType?.startsWith("image/");
-                      const isPlan = a.type === "academic-plan" && a.planId;
+                      const isPlan = a.type === "plan" && a.planId;
 
                       if (isImg) {
                         return (
@@ -201,7 +201,6 @@ function MessageGroup({
 
                       if (isPlan) {
                         const hasJson = !!a.url;
-
                         return (
                           <div
                             key={i}

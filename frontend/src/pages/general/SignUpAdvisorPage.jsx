@@ -43,6 +43,7 @@ export default function SignUpAdvisorPage() {
       name: formData.username,
       email: formData.email,
       password: formData.password,
+      contact: formData.contact,
       role: "admin",
       access_level: "basic",
     };

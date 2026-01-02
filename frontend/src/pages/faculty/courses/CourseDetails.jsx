@@ -26,8 +26,7 @@ const CourseDetails = () => {
   const [courses, setCourses] = useState([]);
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { showNotification, closeNotification, notification } =
-    useAcademicProfile();
+  const { showNotification, closeNotification, notification } = useAcademicProfile();
 
   useEffect(() => {
     const fetchCourse = async () => {

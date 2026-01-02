@@ -10,6 +10,12 @@ const conversationSchema = new Schema(
       required: true,
       index: true,
     },
+    coursePlanToBeReviewed: {
+      type: Schema.Types.ObjectId,
+      ref: "StudentAcademicPlan",
+      required: false,
+      default: null,
+    },
     subject: { type: String, default: "" },
     status: {
       type: String,
