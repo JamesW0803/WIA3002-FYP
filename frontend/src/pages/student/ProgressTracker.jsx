@@ -267,19 +267,6 @@ const ProgressTracker = () => {
 
       const effectiveType = getEffectiveType(courseFull, studentProgramme);
 
-      if (!effectiveType) {
-        console.warn(
-          "⚠️ Cannot resolve course type (typesByProgramme overrides global):",
-          {
-            code,
-            globalType: courseFull.type,
-            typesByProgramme: courseFull.typesByProgramme,
-            studentProgrammeId,
-          }
-        );
-        return; // skip counting
-      }
-
       const cat = categoryMap[effectiveType];
       const cr = coursesMap[code] || 0;
 
