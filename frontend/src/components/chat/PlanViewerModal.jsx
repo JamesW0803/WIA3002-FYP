@@ -94,12 +94,22 @@ export default function PlanViewerModal({
       (y.semesters || []).forEach((s) => {
         (s.courses || []).forEach((c) => {
           const courseDoc = c.course || {};
+          const rawPrereqs = courseDoc.prerequisites || [];
+          const prerequisites = rawPrereqs
+            .map((p) => {
+              if (typeof p === "object" && p !== null) {
+                return p.course_code || p.course_name || "";
+              }
+              return p;
+            })
+            .filter(Boolean);
+
           out.push({
             year: y.year,
             semesterName: s.name,
             code: courseDoc.course_code || c.course_code || c.code || "",
             name: courseDoc.course_name || c.title_at_time || c.name || "",
-            prerequisites: courseDoc.prerequisites || [],
+            prerequisites: prerequisites, // Use the processed array
             offered_semester: courseDoc.offered_semester || [],
             credit:
               courseDoc.credit_hours ?? c.credit_at_time ?? c.credit ?? null,

@@ -327,8 +327,7 @@ export default function SharePlanModal({
                 className="px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm"
                 type="button"
                 disabled={!selectedPlan}
-              >
-              </button>
+              ></button>
               <button
                 onClick={doPrint}
                 className="px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm inline-flex items-center gap-2"
