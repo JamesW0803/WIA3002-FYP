@@ -15,6 +15,7 @@ const CATEGORY_ORDER = [
   "Faculty Core",
   "Programme Core",
   "University Courses",
+  "Faculty Electives",
   "Specialization Electives",
   "SHE Cluster",
 ];
@@ -25,6 +26,7 @@ const categoryMap = {
   university_language: "University Courses",
   university_cocurriculum: "University Courses",
   university_other: "University Courses",
+  faculty_elective: "Faculty Electives",
   programme_elective: "Specialization Electives",
   she_cluster_1: "SHE Cluster",
   she_cluster_2: "SHE Cluster",
@@ -115,6 +117,43 @@ const ProgressTracker = () => {
   const [updatedAt, setUpdatedAt] = useState(new Date());
   const [selectedCat, setSelectedCat] = useState(null);
 
+  const [studentProgramme, setStudentProgramme] = useState({
+    id: null,
+    code: null,
+    name: null,
+  });
+
+  const [studentProgrammeId, setStudentProgrammeId] = useState(null);
+  const [coursesByCode, setCoursesByCode] = useState({});
+
+  const getEffectiveType = (course, programme) => {
+    if (!course) return null;
+
+    const typesConfig = course.typesByProgramme;
+
+    if (Array.isArray(typesConfig) && typesConfig.length > 0) {
+      if (!programme?.id && !programme?.code && !programme?.name) return null;
+
+      const match = typesConfig.find((cfg) => {
+        const p = cfg.programme;
+
+        const pId = p?._id ?? p;
+        const pCode = p?.programme_code ?? p;
+        const pName = p?.programme_name ?? p;
+
+        return (
+          (programme?.id && String(pId) === String(programme.id)) ||
+          (programme?.code && String(pCode) === String(programme.code)) ||
+          (programme?.name && String(pName) === String(programme.name))
+        );
+      });
+
+      return match?.type ?? null; // keep your "no fallback if overrides exist" rule
+    }
+
+    return course.type ?? null;
+  };
+
   const [creditRequirements, setCreditRequirements] = useState(
     CATEGORY_ORDER.reduce((acc, cat) => {
       acc[cat] = 0;
@@ -149,11 +188,17 @@ const ProgressTracker = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         const map = {};
+        const fullMap = {};
+
         res.data.forEach((course) => {
           const code = course.course_code || course.code;
           map[code] = course.credit_hours || course.credit || 0;
+
+          fullMap[code] = course;
         });
+
         setCoursesMap(map);
+        setCoursesByCode(fullMap);
       } catch (err) {
         console.error("Failed to load courses", err);
       }
@@ -176,6 +221,20 @@ const ProgressTracker = () => {
           }
         );
 
+        // Get student's programme ID to use for type resolution
+        const programmeId = res.data?.intake?.programme?._id;
+        if (programmeId) {
+          setStudentProgrammeId(programmeId);
+        }
+
+        const programme = res.data?.intake?.programme;
+
+        setStudentProgramme({
+          id: programme?._id ?? null,
+          code: programme?.programme_code ?? null,
+          name: programme?.programme_name ?? null,
+        });
+
         const { requirementsByCategory } = res.data || {};
 
         if (requirementsByCategory) {
@@ -193,21 +252,36 @@ const ProgressTracker = () => {
     fetchRequirements();
   }, []);
 
+  // Calculate completed credits per category
   useEffect(() => {
     const counts = Object.keys(creditRequirements).reduce((acc, cat) => {
       acc[cat] = 0;
       return acc;
     }, {});
+
     entries.forEach((entry) => {
-      if (entry.status === "Passed") {
-        const cat = categoryMap[entry.course.type];
-        const cr = coursesMap[entry.course.course_code] || 0;
-        if (cat) counts[cat] += cr;
-      }
+      if (entry.status !== "Passed") return;
+
+      const code = entry.course.course_code;
+      const courseFull = coursesByCode[code] || entry.course;
+
+      const effectiveType = getEffectiveType(courseFull, studentProgramme);
+
+      const cat = categoryMap[effectiveType];
+      const cr = coursesMap[code] || 0;
+
+      counts[cat] += cr;
     });
+
     setCompletedByCategory(counts);
     setUpdatedAt(new Date());
-  }, [entries, coursesMap]);
+  }, [
+    entries,
+    coursesMap,
+    coursesByCode,
+    studentProgrammeId, // Re-run when programme ID is loaded
+    creditRequirements,
+  ]);
 
   const creditsEarned = Object.values(completedByCategory).reduce(
     (s, v) => s + v,
@@ -226,6 +300,7 @@ const ProgressTracker = () => {
     "Faculty Core": <BookOpenCheck className="w-5 h-5 sm:w-6 sm:h-6" />,
     "Programme Core": <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />,
     "University Courses": <BookOpenCheck className="w-5 h-5 sm:w-6 sm:h-6" />,
+    "Faculty Electives": <BookOpenCheck className="w-5 h-5 sm:w-6 sm:h-6" />,
     "Specialization Electives": (
       <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
     ),
@@ -236,9 +311,15 @@ const ProgressTracker = () => {
   // Derived list (memoized for lightness)
   const filteredCourses = useMemo(() => {
     if (!selectedCat) return [];
-    const list = entries.filter(
-      (e) => categoryMap[e.course.type] === selectedCat && e.status === "Passed"
-    );
+    const list = entries.filter((e) => {
+      if (e.status !== "Passed") return false;
+
+      const code = e.course.course_code;
+      const courseFull = coursesByCode[code] || e.course;
+      const effectiveType = getEffectiveType(courseFull, studentProgrammeId);
+
+      return categoryMap[effectiveType] === selectedCat;
+    });
     // unique by course_code, with credit lookup
     const seen = new Set();
     const out = [];
@@ -255,7 +336,7 @@ const ProgressTracker = () => {
       });
     }
     return out;
-  }, [entries, coursesMap, selectedCat]);
+  }, [entries, coursesMap, coursesByCode, selectedCat, studentProgrammeId]);
 
   const open = !!selectedCat;
 

@@ -318,7 +318,11 @@ const getGraduationRequirementsForStudent = async (req, res) => {
       .populate({
         path: "graduation_requirements",
         model: "Course",
-        select: "course_code course_name credit_hours type",
+        select: "course_code course_name credit_hours type typesByProgramme",
+        populate: {
+          path: "typesByProgramme.programme",
+          select: "programme_code programme_name",
+        },
       })
       .populate("academic_session_id")
       .populate("programme_id");
@@ -461,7 +465,7 @@ const editProgrammeIntake = async (req, res) => {
       academicSession
     );
 
-    updatedData.programme_id = programme._id
+    updatedData.programme_id = programme._id;
 
     const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(
       programme_intake_id, // filter
