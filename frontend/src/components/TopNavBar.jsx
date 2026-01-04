@@ -13,7 +13,8 @@ import {
   HelpCircle,
   Home,
 } from "lucide-react";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import useChatStore from "../stores/useChatStore";
 
 const iconMap = {
   Dashboard: Home,
@@ -26,11 +27,17 @@ const iconMap = {
   Helpdesk: HelpCircle,
 };
 
+// 2. Define which nav items should show the chat badge
+const CHAT_NAV_TITLES = ["Helpdesk", "Support", "Chat", "Messages"];
+
 const TopNavBar = () => {
   const { user } = useAuth();
   const navItems =
     user?.role === "student" ? STUDENT_NAV_ITEMS : ADMIN_NAV_ITEMS;
   const location = useLocation();
+
+  // 3. Destructure chat store
+  const { connect, connected, loadUnreadCounts, unreadCounts } = useChatStore();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMobileSub, setOpenMobileSub] = useState(null);
@@ -43,24 +50,37 @@ const TopNavBar = () => {
   const overlayRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  // Scroll direction tracking
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
 
-  // Configuration - adjust these values to fine-tune behavior
-  const SCROLL_THRESHOLD = 100; // Scroll down this much before hiding
-  const SCROLL_TOLERANCE = 10; // Minimum scroll delta to trigger show/hide
-  const HIDE_DELAY = 300; // Delay before hiding (ms)
+  const SCROLL_THRESHOLD = 100;
+  const SCROLL_TOLERANCE = 10;
 
+  // 4. Calculate Total Unread Count
+  const totalUnread = useMemo(() => {
+    return Object.values(unreadCounts || {}).reduce(
+      (acc, count) => acc + count,
+      0
+    );
+  }, [unreadCounts]);
+
+  // 5. Initialize Global Socket Connection & Fetch Counts
+  useEffect(() => {
+    if (user) {
+      // Connect if not already connected
+      if (!connected) connect();
+      // Load initial counts (in case socket events missed during reload)
+      loadUnreadCounts();
+    }
+  }, [user, connected, connect, loadUnreadCounts]);
+
+  // ... (Existing Scroll Logic stays the same) ...
   const updateNavbar = useCallback(() => {
     const currentScrollY = window.scrollY;
-
-    // Determine scroll direction
     const scrollDirection =
       currentScrollY > lastScrollY.current ? "down" : "up";
     const scrollDelta = Math.abs(currentScrollY - lastScrollY.current);
 
-    // Update scrolled state for background changes
     setScrolled(currentScrollY > 10);
 
     if (!mobileOpen) {
@@ -70,17 +90,14 @@ const TopNavBar = () => {
         scrollDelta > SCROLL_TOLERANCE &&
         !hidden
       ) {
-        // Hide navbar when scrolling down past threshold
         setHidden(true);
       } else if (
         (scrollDirection === "up" && scrollDelta > SCROLL_TOLERANCE) ||
         currentScrollY <= SCROLL_THRESHOLD
       ) {
-        // Show navbar when scrolling up or near top
         setHidden(false);
       }
     } else {
-      // Always show navbar when mobile menu is open
       setHidden(false);
     }
 
@@ -96,40 +113,30 @@ const TopNavBar = () => {
   }, [updateNavbar]);
 
   useEffect(() => {
-    // Initialize scroll position
     lastScrollY.current = window.scrollY;
     setScrolled(window.scrollY > 10);
-
-    // Add scroll event listener with passive for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
-
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [handleScroll]);
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
     setOpenMobileSub(null);
   }, [location.pathname]);
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => (document.body.style.overflow = "");
   }, [mobileOpen]);
 
-  // Reset navbar to visible when clicking on links or interacting
   const resetNavbarVisibility = useCallback(() => {
     setHidden(false);
-    lastScrollY.current = window.scrollY; // Reset scroll tracking
+    lastScrollY.current = window.scrollY;
   }, []);
 
-  // Enhanced click handlers that reset navbar visibility
   const handleLinkClick = () => {
     resetNavbarVisibility();
     setMobileOpen(false);
@@ -141,11 +148,10 @@ const TopNavBar = () => {
     setOpenMobileSub(null);
   };
 
-  // Dropdown hover delay
   const handleMouseEnter = (key) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setOpenMenuKey(key);
-    resetNavbarVisibility(); // Keep navbar visible when interacting with dropdowns
+    resetNavbarVisibility();
   };
 
   const handleMouseLeave = () => {
@@ -162,18 +168,27 @@ const TopNavBar = () => {
   };
 
   const linkBase =
-    "inline-flex items-center h-10 px-4 rounded-xl text-sm font-semibold transition-all duration-200";
+    "inline-flex items-center h-10 px-4 rounded-xl text-sm font-semibold transition-all duration-200 relative"; // Added 'relative'
   const linkIdle = "text-slate-700 hover:text-blue-700 hover:bg-blue-50/80";
   const linkActive = "text-blue-700 bg-blue-100/80 ring-2 ring-blue-200/50";
 
   const mobileLinkBase =
-    "flex items-center w-full px-4 py-3 text-base font-medium transition-all duration-200 rounded-xl";
+    "flex items-center w-full px-4 py-3 text-base font-medium transition-all duration-200 rounded-xl relative"; // Added 'relative'
   const mobileLinkIdle = "text-slate-700 hover:text-blue-700 hover:bg-blue-50";
   const mobileLinkActive = "text-blue-700 bg-blue-100 font-semibold";
 
+  // 6. Helper to render the badge
+  const Badge = ({ count }) => {
+    if (!count || count <= 0) return null;
+    return (
+      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white animate-in zoom-in duration-200">
+        {count > 9 ? "9+" : count}
+      </span>
+    );
+  };
+
   return (
     <>
-      {/* Enhanced navbar with smooth hide/show transitions */}
       <div
         id="topNavBar"
         className={[
@@ -182,9 +197,8 @@ const TopNavBar = () => {
           "navbar-opaque",
           scrolled ? "navbar-opaque-scrolled" : "",
         ].join(" ")}
-        onMouseEnter={resetNavbarVisibility} // Show navbar when mouse enters
+        onMouseEnter={resetNavbarVisibility}
       >
-        {/* Main navigation bar */}
         <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
@@ -205,8 +219,13 @@ const TopNavBar = () => {
               <nav aria-label="Primary" className="flex items-center gap-1">
                 {navItems.map((item, index) => {
                   const IconComponent = iconMap[item.title];
+                  // 7. Check if this item is a chat item
+                  const showBadge =
+                    CHAT_NAV_TITLES.includes(item.title) && totalUnread > 0;
 
                   if (item.submenu) {
+                    // ... (Submenu Logic - usually chat isn't a dropdown parent, but handled if needed)
+                    // Existing submenu code...
                     const isAnySubItemActive = item.submenu.some(
                       (subItem) => location.pathname === subItem.path
                     );
@@ -237,8 +256,11 @@ const TopNavBar = () => {
                               isOpen ? "rotate-180" : ""
                             }`}
                           />
-                        </button>
 
+                          {/* Badge on parent if needed (optional) */}
+                          {showBadge && <Badge count={totalUnread} />}
+                        </button>
+                        {/* ... Submenu dropdown code ... */}
                         <div
                           className={`absolute top-full mt-2 min-w-[240px] rounded-2xl bg-white border border-slate-200/80 shadow-xl p-2 dropdown-animate ${
                             isOpen
@@ -285,6 +307,9 @@ const TopNavBar = () => {
                         <IconComponent className="mr-2 h-4 w-4" />
                       )}
                       {item.title}
+
+                      {/* 8. Render Badge on Desktop Link */}
+                      {showBadge && <Badge count={totalUnread} />}
                     </Link>
                   );
                 })}
@@ -292,6 +317,7 @@ const TopNavBar = () => {
 
               {/* Profile */}
               <div className="ml-4 pl-4 border-l border-slate-200/60">
+                {/* ... existing profile code ... */}
                 <Link
                   to={
                     user?.role === "student"
@@ -299,7 +325,6 @@ const TopNavBar = () => {
                       : "/admin/profile"
                   }
                   className="profile-icon inline-flex items-center gap-2 p-2 rounded-xl hover:bg-slate-50/80 transition-all duration-200 group"
-                  aria-label="Profile"
                   onClick={handleLinkClick}
                 >
                   <div className="relative">
@@ -313,7 +338,7 @@ const TopNavBar = () => {
               </div>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Add small dot if unread messages exist */}
             <div className="flex items-center lg:hidden">
               <button
                 type="button"
@@ -321,15 +346,17 @@ const TopNavBar = () => {
                   setMobileOpen((v) => !v);
                   resetNavbarVisibility();
                 }}
-                aria-label="Toggle menu"
-                aria-controls="mobile-menu"
-                aria-expanded={mobileOpen}
-                className="inline-flex items-center justify-center rounded-2xl p-2.5 hover:bg-slate-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="relative inline-flex items-center justify-center rounded-2xl p-2.5 hover:bg-slate-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 {mobileOpen ? (
                   <X className="h-6 w-6 text-slate-700" />
                 ) : (
                   <Menu className="h-6 w-6 text-slate-700" />
+                )}
+
+                {/* 9. Small indicator on the hamburger menu itself if unread */}
+                {!mobileOpen && totalUnread > 0 && (
+                  <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white" />
                 )}
               </button>
             </div>
@@ -360,12 +387,8 @@ const TopNavBar = () => {
                   <LogoFrame img={Logo} title="Plan It" />
                 </div>
                 <button
-                  onClick={() => {
-                    setMobileOpen(false);
-                    resetNavbarVisibility();
-                  }}
+                  onClick={() => setMobileOpen(false)}
                   className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                  aria-label="Close menu"
                 >
                   <X className="h-5 w-5 text-slate-600" />
                 </button>
@@ -374,6 +397,8 @@ const TopNavBar = () => {
               <div className="space-y-1">
                 {navItems.map((item) => {
                   const IconComponent = iconMap[item.title];
+                  const showBadge =
+                    CHAT_NAV_TITLES.includes(item.title) && totalUnread > 0;
 
                   if (!item.submenu) {
                     const isActive = location.pathname === item.path;
@@ -383,17 +408,26 @@ const TopNavBar = () => {
                         to={item.path}
                         className={`${mobileLinkBase} ${
                           isActive ? mobileLinkActive : mobileLinkIdle
-                        }`}
+                        } justify-between`}
                         onClick={handleMobileLinkClick}
                       >
-                        {IconComponent && (
-                          <IconComponent className="mr-3 h-5 w-5" />
+                        <div className="flex items-center">
+                          {IconComponent && (
+                            <IconComponent className="mr-3 h-5 w-5" />
+                          )}
+                          {item.title}
+                        </div>
+                        {/* 10. Mobile Badge */}
+                        {showBadge && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            {totalUnread > 9 ? "9+" : totalUnread} New
+                          </span>
                         )}
-                        {item.title}
                       </Link>
                     );
                   }
 
+                  // Mobile Submenu logic...
                   const isOpen = openMobileSub === item.title;
                   return (
                     <div key={item.title} className="space-y-1">
@@ -412,13 +446,18 @@ const TopNavBar = () => {
                           )}
                           {item.title}
                         </div>
-                        <ChevronDown
-                          className={`h-4 w-4 transition-transform duration-200 ${
-                            isOpen ? "rotate-180" : ""
-                          }`}
-                        />
+                        <div className="flex items-center gap-2">
+                          {showBadge && (
+                            <span className="h-2 w-2 rounded-full bg-red-500" />
+                          )}
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform duration-200 ${
+                              isOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </div>
                       </button>
-
+                      {/* ... mobile submenu children ... */}
                       <div
                         className={`ml-8 space-y-1 overflow-hidden transition-all duration-300 ${
                           isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
@@ -446,7 +485,6 @@ const TopNavBar = () => {
                   );
                 })}
               </div>
-
               <div className="mt-6 pt-4 border-t border-slate-200/60">
                 <Link
                   to={
@@ -467,8 +505,6 @@ const TopNavBar = () => {
           </div>
         </div>
       </div>
-
-      {/* Spacer for fixed navbar */}
       <div className="h-16" />
     </>
   );

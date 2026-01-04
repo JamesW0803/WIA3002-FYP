@@ -92,14 +92,19 @@ const useChatStore = create((set, get) => ({
   },
 
   connect: async () => {
+    // 1. Check if socket already exists
+    const { socket: existingSocket } = get();
+    if (existingSocket && existingSocket.connected) return;
+
     const token = localStorage.getItem("token");
+
+    // 2. Only create if needed
     const socket = makeSocket(token);
     set({ socket });
 
     socket.on("connect", () => set({ connected: true }));
     socket.on("disconnect", () => set({ connected: false }));
 
-    // IMPORTANT: Do NOT append to messages here.
     // This event is for inbox/list previews only.
     socket.on(
       "conversation:updated",
