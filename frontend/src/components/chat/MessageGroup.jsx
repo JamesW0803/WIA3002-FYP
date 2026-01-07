@@ -165,6 +165,8 @@ function MessageGroup({
                     {atts.map((a, i) => {
                       const isImg = a.mimeType?.startsWith("image/");
                       const isPlan = a.type === "plan" && a.planId;
+                      console.log("isPlan: ", isPlan);
+                      console.log("a: ", a);
 
                       if (isImg) {
                         return (
