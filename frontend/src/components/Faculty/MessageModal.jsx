@@ -43,13 +43,16 @@ const MessageModal = ({ open, onClose, student, coursePlan=false, onSuccess=null
         attachments.push({
           url: blobUrl,
           name: filename,
-          mimeType: "application/json",
-          size: file.size,
-          caption: "Academic plan export",
+          mimeType: "application/vnd.academic-plan+json",
           originalUrl: blobUrl,
           originalName: filename,
-          originalMimeType: "application/json",
+          originalMimeType: "application/vnd.academic-plan+json",
           originalSize: file.size,
+          type: "plan",
+          planId: coursePlan._id,
+          planName: coursePlan.name,
+          size: 0,
+          caption: "Academic plan",
         });
       }
       const res = await axiosClient.post("/chat/conversations/create-or-get", {
