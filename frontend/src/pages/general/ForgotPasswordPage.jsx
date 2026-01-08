@@ -6,23 +6,53 @@ import { useAlert } from "../../components/ui/AlertProvider";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showSignupChoiceModal, setShowSignupChoiceModal] = useState(false);
   const navigate = useNavigate();
   const { alert } = useAlert();
 
+  // Simple email pattern (UI-level)
+  const isValidEmail = (value) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  const trimmedEmail = email.trim();
+  const canSubmit = trimmedEmail.length > 0 && isValidEmail(trimmedEmail);
+
   const handleSubmit = async () => {
+    if (!canSubmit) return;
+    const trimmed = email.trim();
+
+    // 1) required
+    if (!trimmed) {
+      setEmailError("Email is required.");
+      return;
+    }
+
+    // 2) valid format
+    if (!isValidEmail(trimmed)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+
+    setEmailError("");
+
     try {
-      await axiosClient.post("user/request-reset", { email });
+      // 3) check existence first
+      const res = await axiosClient.get(
+        `user/check-email/${encodeURIComponent(trimmed)}`
+      );
+      if (!res.data.exists) {
+        setShowNotFoundModal(true);
+        return;
+      }
+
+      // 4) then request reset
+      await axiosClient.post("user/request-reset", { email: trimmed });
       navigate("/email-sent");
     } catch (error) {
-      if (error.response?.status === 404) {
-        setShowNotFoundModal(true);
-      } else {
-        alert("Something went wrong. Please try again later.", {
-          title: "Error",
-        });
-      }
+      alert("Something went wrong. Please try again later.", {
+        title: "Error",
+      });
     }
   };
 
@@ -40,26 +70,53 @@ export default function ForgotPasswordPage() {
         >
           <ArrowLeft className="mr-1 w-4 h-4" /> Back to Login
         </button>
+
         <h2 className="text-xl font-semibold mb-4 text-[#1E3A8A]">
           Forgot Password
         </h2>
+
         <label className="block mb-2 text-[#1E3A8A]">
           Enter your email address
         </label>
+
         <input
           required
           type="email"
           placeholder="example@email.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border border-[#1E3A8A] px-4 py-2 rounded-md mb-4"
+          onChange={(e) => {
+            const val = e.target.value;
+            setEmail(val);
+
+            // optional live validation
+            if (!val.trim()) setEmailError("");
+            else if (!isValidEmail(val))
+              setEmailError("Please enter a valid email address.");
+            else setEmailError("");
+          }}
+          className={`w-full border px-4 py-2 rounded-md mb-2 ${
+            emailError ? "border-red-500" : "border-[#1E3A8A]"
+          }`}
         />
+
+        {emailError && (
+          <p className="text-red-600 text-sm mb-3">{emailError}</p>
+        )}
+
         <button
           onClick={handleSubmit}
-          className="w-full bg-[#1E3A8A] text-white font-medium py-2 rounded-md hover:bg-white hover:text-[#1E3A8A] border border-[#1E3A8A] transition"
+          disabled={!canSubmit}
+          className={`w-full font-medium py-2 rounded-md border transition
+    ${
+      canSubmit
+        ? "bg-[#1E3A8A] text-white border-[#1E3A8A] hover:bg-white hover:text-[#1E3A8A]"
+        : "bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed"
+    }`}
         >
           Submit
         </button>
+
+        {/* ...keep your modals as-is... */}
         {showNotFoundModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
             <div className="bg-white px-10 py-8 rounded shadow-md text-center w-[400px] min-h-[175px]">
