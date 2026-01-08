@@ -169,7 +169,7 @@ const login = async (req, res) => {
     // Optionally return user details
     res
       .status(200)
-      .json({ token, user: { username: user.username, role: user.role , access_level : user.access_level} });
+      .json({ token, user: { _id: user._id, username: user.username, role: user.role , access_level : user.access_level} });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Login failed", error: err.message });
@@ -222,6 +222,29 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const getAdminByUsername = async (req, res) => {
+  try {
+    const username = req.params.username;
+    const admin = await Admin.findOne({ username });
+
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+    res.status(200).json({
+      email: admin.email,
+      contact: admin.contact,
+      username: admin.username,
+      access_level: admin.access_level,
+      role: "admin",
+      createdAt: admin.createdAt,
+      profileColor: admin.profileColor,
+      profilePicture: admin.profilePicture,
+    });
+  }
+  catch (error) {
+    res.status(500).json({ message: "Failed to fetch admin profile", error });
+  }
+};
+
 const getStudentProfile = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -252,6 +275,34 @@ const getStudentProfile = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch student profile", error });
+  }
+};
+
+const updateAdminById = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { username, contact } = req.body;
+    const update = { username, contact };
+
+    const admin = await Admin.findByIdAndUpdate(userId, update, {
+      new: true,
+    });
+
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+    res.json({
+      username: admin.username,
+      contact: admin.contact,
+      email: admin.email,
+      access_level: admin.access_level,
+      role: "admin",
+      createdAt: admin.createdAt,
+      profileColor: admin.profileColor,
+      profilePicture: admin.profilePicture,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error updating profile", error: err });
   }
 };
 
@@ -356,7 +407,9 @@ module.exports = {
   checkUsernameExists,
   checkEmailExists,
   getStudentProfile,
+  getAdminByUsername,
   updateStudentProfile,
+  updateAdminById,
   upload,
   changePassword,
 };
