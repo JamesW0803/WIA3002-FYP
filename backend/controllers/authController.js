@@ -38,7 +38,17 @@ const checkUsernameExists = async (req, res) => {
 
 const checkEmailExists = async (req, res) => {
   try {
-    const email = req.params.email;
+    const email = decodeURIComponent(req.params.email || "")
+      .trim()
+      .toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      return res
+        .status(400)
+        .json({ exists: false, message: "Invalid email format" });
+    }
+
     const exists = await emailExists(email);
     return res.json({ exists });
   } catch (err) {
@@ -162,14 +172,20 @@ const login = async (req, res) => {
     const payload = {
       user_id: user.id,
       role: user.role,
-      ...(user.role === "admin" && { access_level: user.access_level })
+      ...(user.role === "admin" && { access_level: user.access_level }),
     };
 
     const token = generateToken(payload, "1h");
     // Optionally return user details
-    res
-      .status(200)
-      .json({ token, user: { _id: user._id, username: user.username, role: user.role , access_level : user.access_level} });
+    res.status(200).json({
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        role: user.role,
+        access_level: user.access_level,
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Login failed", error: err.message });
@@ -179,28 +195,52 @@ const login = async (req, res) => {
 const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(404).json({ message: "Email not found" });
+    const emailNormalized = (email || "").trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(emailNormalized)) {
+      return res.status(400).json({ message: "Invalid email format" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "15m",
-    });
+    // Basic validation
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email: emailNormalized });
+
+    // Security choice:
+    // Option 1 (recommended): ALWAYS return 200 to avoid email enumeration
+    // Option 2: return 404 (your current behavior)
+    if (!user) {
+      return res
+        .status(200)
+        .json({ message: "If the email exists, a reset link has been sent." });
+    }
+
+    const token = jwt.sign(
+      { id: user._id.toString(), purpose: "password_reset" },
+      process.env.RESET_PASSWORD_SECRET,
+      { expiresIn: "15m" }
+    );
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
+
     await sendEmail(email, {
       subject: "Password Reset",
-      html: `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`,
+      html: `
+        <p>You requested to reset your password.</p>
+        <p>Click the link below to reset it (expires in 15 minutes):</p>
+        <p><a href="${resetLink}">${resetLink}</a></p>
+        <p>If you didn’t request this, you can ignore this email.</p>
+      `,
     });
 
-    res.status(200).json({ message: "Reset link sent" });
+    return res
+      .status(200)
+      .json({ message: "If the email exists, a reset link has been sent." });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ message: "Error sending reset link", error: error.message });
+    return res.status(500).json({ message: "Error sending reset link" });
   }
 };
 
@@ -208,15 +248,32 @@ const resetPassword = async (req, res) => {
   const { token, password } = req.body;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json({ message: "Token and password are required" });
+    }
 
+    // (Optional) enforce password strength on backend too
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 8 characters" });
+    }
+
+    const decoded = jwt.verify(token, process.env.RESET_PASSWORD_SECRET);
+
+    if (decoded.purpose !== "password_reset") {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+
+    const user = await User.findById(decoded.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     user.password = await bcrypt.hash(password, 10);
     await user.save();
 
-    res.status(200).json({ message: "Password updated" });
+    return res.status(200).json({ message: "Password updated" });
   } catch (err) {
     return res.status(400).json({ message: "Invalid or expired token" });
   }
@@ -239,8 +296,7 @@ const getAdminByUsername = async (req, res) => {
       profileColor: admin.profileColor,
       profilePicture: admin.profilePicture,
     });
-  }
-  catch (error) {
+  } catch (error) {
     res.status(500).json({ message: "Failed to fetch admin profile", error });
   }
 };

@@ -90,6 +90,147 @@ const buildRemainingDefaultPlan = (mapping, entries) => {
   return result;
 };
 
+const getGapYearOptions = (entries, semesterMapping) => {
+  const { startYear } = getNextSemesterAfterLastEntry(entries);
+
+  // Prefer mapping max year if available, else allow next ~2 years
+  const allYearNums = Object.keys(semesterMapping || {}).map((k) =>
+    parseInt(String(k).replace("Year ", ""), 10)
+  );
+  const maxMapYear = allYearNums.length
+    ? Math.max(...allYearNums)
+    : startYear + 2;
+
+  const opts = [];
+  for (let y = startYear; y <= maxMapYear; y++) opts.push(y);
+
+  return opts;
+};
+
+const applyGapYearToPlanMap = (planMap, gapYear) => {
+  if (!planMap || !Object.keys(planMap).length || !gapYear) return planMap;
+
+  // flatten all semesters into linear index -> codes
+  const flat = new Map(); // semIndex -> codes[]
+  let minIdx = Infinity;
+  let maxIdx = -Infinity;
+
+  Object.entries(planMap).forEach(([yKey, sems]) => {
+    const y = parseInt(String(yKey).replace("Year ", ""), 10);
+    Object.entries(sems || {}).forEach(([sKey, codes]) => {
+      const s = parseInt(String(sKey).replace("Semester ", ""), 10);
+      const idx = getSemIndex(y, s);
+      flat.set(idx, (codes || []).slice());
+      minIdx = Math.min(minIdx, idx);
+      maxIdx = Math.max(maxIdx, idx);
+    });
+  });
+
+  if (!isFinite(minIdx)) return planMap;
+
+  const gapStartIdx = getSemIndex(gapYear, 1);
+
+  // rebuild with shifting
+  const shifted = new Map();
+
+  for (const [idx, codes] of flat.entries()) {
+    if (idx < gapStartIdx) {
+      shifted.set(idx, codes);
+    } else {
+      shifted.set(idx + 2, codes); // push 1 year = 2 semesters
+    }
+  }
+
+  // insert the gap year (both semesters)
+  shifted.set(getSemIndex(gapYear, 1), ["GAP YEAR"]);
+  shifted.set(getSemIndex(gapYear, 2), ["GAP YEAR"]);
+
+  // convert back to {Year X:{Semester Y:[...]}}
+  const out = {};
+  const indices = Array.from(shifted.keys()).sort((a, b) => a - b);
+
+  for (const idx of indices) {
+    const y = Math.floor(idx / 2) + 1;
+    const s = (idx % 2) + 1;
+    const yKey = `Year ${y}`;
+    const sKey = `Semester ${s}`;
+    if (!out[yKey]) out[yKey] = {};
+    out[yKey][sKey] = shifted.get(idx);
+  }
+
+  return out;
+};
+
+// build a list of future semester options (starting from next sem after last entry)
+const getFutureSemesterOptions = (entries, semesterMapping) => {
+  const { startYear, startSem } = getNextSemesterAfterLastEntry(entries);
+  const startIndex = getSemIndex(startYear, startSem);
+
+  const allYearNums = Object.keys(semesterMapping || {}).map((k) =>
+    parseInt(String(k).replace("Year ", ""), 10)
+  );
+  const maxMapYear = allYearNums.length
+    ? Math.max(...allYearNums)
+    : startYear + 2;
+
+  const opts = [];
+  for (let y = startYear; y <= maxMapYear; y++) {
+    for (let s = 1; s <= 2; s++) {
+      const idx = getSemIndex(y, s);
+      if (idx < startIndex) continue;
+      opts.push({ year: y, sem: s });
+    }
+  }
+  return opts;
+};
+
+// shift everything from breakIdx forward by +1 semester, insert placeholder at breakIdx
+const applyOneSemesterBreakToPlanMap = (planMap, breakChoice, placeholder) => {
+  if (!planMap || !Object.keys(planMap).length) return planMap;
+  if (!breakChoice?.year || !breakChoice?.sem) return planMap;
+
+  const flat = new Map(); // idx -> codes[]
+  let minIdx = Infinity;
+
+  Object.entries(planMap).forEach(([yKey, sems]) => {
+    const y = parseInt(String(yKey).replace("Year ", ""), 10);
+    Object.entries(sems || {}).forEach(([sKey, codes]) => {
+      const s = parseInt(String(sKey).replace("Semester ", ""), 10);
+      const idx = getSemIndex(y, s);
+      flat.set(idx, (codes || []).slice());
+      minIdx = Math.min(minIdx, idx);
+    });
+  });
+
+  if (!isFinite(minIdx)) return planMap;
+
+  const breakIdx = getSemIndex(breakChoice.year, breakChoice.sem);
+  const shifted = new Map();
+
+  for (const [idx, codes] of flat.entries()) {
+    if (idx < breakIdx) shifted.set(idx, codes);
+    else shifted.set(idx + 1, codes); // push by 1 semester
+  }
+
+  // insert the "empty" semester
+  shifted.set(breakIdx, [placeholder]);
+
+  // convert back
+  const out = {};
+  const indices = Array.from(shifted.keys()).sort((a, b) => a - b);
+
+  for (const idx of indices) {
+    const y = Math.floor(idx / 2) + 1;
+    const s = (idx % 2) + 1;
+    const yKey = `Year ${y}`;
+    const sKey = `Semester ${s}`;
+    if (!out[yKey]) out[yKey] = {};
+    out[yKey][sKey] = shifted.get(idx);
+  }
+
+  return out;
+};
+
 const CourseRecommendations = () => {
   const [allCourses, setAllCourses] = useState([]);
   const [defaultPlan, setDefaultPlan] = useState([]);
@@ -121,6 +262,15 @@ const CourseRecommendations = () => {
   const [savePlanError, setSavePlanError] = useState(null);
   const [planName, setPlanName] = useState("My Generated Plan");
   const [planNotes, setPlanNotes] = useState("");
+
+  const [gapYearModalOpen, setGapYearModalOpen] = useState(false);
+  const [selectedGapYear, setSelectedGapYear] = useState(null);
+
+  const [gapSemModalOpen, setGapSemModalOpen] = useState(false);
+  const [selectedGapSem, setSelectedGapSem] = useState(null);
+
+  const [outboundModalOpen, setOutboundModalOpen] = useState(false);
+  const [selectedOutboundSem, setSelectedOutboundSem] = useState(null);
 
   const navigate = useNavigate();
   const { confirm, alert } = useAlert();
@@ -257,12 +407,31 @@ const CourseRecommendations = () => {
         outboundSemesters: [{ year: startYear, sem: startSem }],
       };
     }
-    // regular / lighter → no special gaps
-    return {};
+    if (planMode === "lighter") {
+      return {
+        creditProfile: "lighter",
+        // optional explicit numbers (you can tweak these):
+        softCreditLimit: 15,
+        hardCreditLimit: 18,
+      };
+    }
+    return { creditProfile: "regular" };
   };
 
   const handlePlanModeChange = (mode) => {
     setPlanMode(mode);
+    if (mode !== "gapYear") {
+      setSelectedGapYear(null);
+      setGapYearModalOpen(false);
+    }
+    if (mode !== "gapSem") {
+      setSelectedGapSem(null);
+      setGapSemModalOpen(false);
+    }
+    if (mode !== "outbound") {
+      setSelectedOutboundSem(null);
+      setOutboundModalOpen(false);
+    }
   };
 
   useEffect(() => {
@@ -770,15 +939,64 @@ const CourseRecommendations = () => {
         return;
       }
 
+      // ---- GAP YEAR FLOW ----
+      if (planMode === "gapYear" && !selectedGapYear) {
+        // Open modal instead of generating
+        setGapYearModalOpen(true);
+        return;
+      }
+
+      if (planMode === "gapSem" && !selectedGapSem) {
+        setGapSemModalOpen(true);
+        return;
+      }
+
+      if (planMode === "outbound" && !selectedOutboundSem) {
+        setOutboundModalOpen(true);
+        return;
+      }
+
       const hasMapping =
         semesterMapping && Object.keys(semesterMapping).length > 0;
 
-      // CASE 1: Student is still following default → just show remaining default semesters
+      // Generate base plan using REGULAR logic first
+      // (ignore gapYear in preferences; we apply it afterwards)
+      const basePreferences =
+        planMode === "lighter"
+          ? mapPlanModeToPreferences()
+          : { creditProfile: "regular" };
+
+      // CASE 1: following default → build remaining default
       if (hasMapping && followsDefault) {
-        const remainingDefault = buildRemainingDefaultPlan(
+        let remainingDefault = buildRemainingDefaultPlan(
           semesterMapping,
           completedEntries
         );
+
+        // Apply gap year if selected
+        if (planMode === "gapYear" && selectedGapYear) {
+          remainingDefault = applyGapYearToPlanMap(
+            remainingDefault,
+            selectedGapYear
+          );
+        }
+
+        if (planMode === "gapSem" && selectedGapSem) {
+          remainingDefault = applyOneSemesterBreakToPlanMap(
+            remainingDefault,
+            selectedGapSem,
+            "GAP SEMESTER"
+          );
+        }
+
+        if (planMode === "outbound" && selectedOutboundSem) {
+          remainingDefault = applyOneSemesterBreakToPlanMap(
+            remainingDefault,
+            selectedOutboundSem,
+            "OUTBOUND"
+          );
+        }
+
         const years = buildDisplayPlan(remainingDefault);
 
         setGeneratedPlan({
@@ -789,13 +1007,11 @@ const CourseRecommendations = () => {
         return;
       }
 
-      // CASE 2: Student has diverged → use dense custom plan (with rules 1–4)
-      const preferences = mapPlanModeToPreferences();
-
+      // CASE 2: diverged → generate custom plan (regular or lighter)
       const result = await generateCustomPlan(
         userId,
         token,
-        preferences,
+        basePreferences,
         semesterMapping
       );
 
@@ -805,7 +1021,29 @@ const CourseRecommendations = () => {
         return;
       }
 
-      const years = buildDisplayPlan(result.plan);
+      let planMap = result.plan;
+
+      if (planMode === "gapYear" && selectedGapYear) {
+        planMap = applyGapYearToPlanMap(planMap, selectedGapYear);
+      }
+
+      if (planMode === "gapSem" && selectedGapSem) {
+        planMap = applyOneSemesterBreakToPlanMap(
+          planMap,
+          selectedGapSem,
+          "GAP SEMESTER"
+        );
+      }
+
+      if (planMode === "outbound" && selectedOutboundSem) {
+        planMap = applyOneSemesterBreakToPlanMap(
+          planMap,
+          selectedOutboundSem,
+          "OUTBOUND"
+        );
+      }
+
+      const years = buildDisplayPlan(planMap);
 
       setGeneratedPlan({
         source: "custom",
@@ -826,32 +1064,44 @@ const CourseRecommendations = () => {
       year: y.year || yIndex + 1,
       isGapYear: false,
       semesters: (y.semesters || []).map((s, sIndex) => {
-        const isGap =
-          s.courses?.some((c) => c.course_code === "GAP_YEAR") ||
-          s.courses?.some((c) => c.course_code === "GAP_SEMESTER");
+        const hasGapYear = s.courses?.some((c) => c.course_code === "GAP_YEAR");
+        const hasGapSem = s.courses?.some(
+          (c) => c.course_code === "GAP_SEMESTER"
+        );
+        const hasOutbound = s.courses?.some(
+          (c) => c.course_code === "OUTBOUND"
+        );
+
+        const isSpecial = hasGapYear || hasGapSem || hasOutbound;
+
+        const displayName = hasOutbound
+          ? "Outbound Programme"
+          : hasGapYear
+          ? "Gap Year (no courses)"
+          : hasGapSem
+          ? "Gap Semester (no courses)"
+          : s.name; // "Semester 1", "Semester 2"
 
         return {
           id: sIndex + 1,
-          name: s.name, // "Semester 1", "Semester 2"
+          name: displayName,
           completed: false,
-          isGap: !!isGap,
+          isGap: !!isSpecial, // << key fix
           courses: (s.courses || [])
             .filter((c) => {
-              // don’t send placeholders as real courses
               const code = String(c.course_code || "");
               return (
                 code &&
                 code !== "GAP_YEAR" &&
                 code !== "GAP_SEMESTER" &&
                 code !== "OUTBOUND" &&
-                !code.startsWith(SPECIALIZATION_PREFIX) // elective slot placeholder
+                !code.startsWith(SPECIALIZATION_PREFIX)
               );
             })
             .map((c) => ({
               course_code: c.course_code,
               credit_at_time: c.credit_hours || 0,
               title_at_time: c.course_name || "",
-              // course: omitted; backend will hydrate via course_code
             })),
         };
       }),
@@ -903,77 +1153,77 @@ const CourseRecommendations = () => {
                     </button>
                   </div>
 
-                  <div
-                    className={`grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4 transition-all duration-300 ${
-                      isExpanded
-                        ? "opacity-100 max-h-[1000px]"
-                        : "opacity-0 max-h-0 overflow-hidden"
-                    }`}
-                  >
-                    {yearObj.semesters.map((semester, semIdx) => (
-                      <div key={semIdx}>
-                        <div className="flex justify-between items-center mb-2">
-                          <h5 className="text-md font-medium text-gray-600">
-                            {semester.name}
-                          </h5>
-                          <span className="text-sm text-green-600 font-medium">
-                            {semester.totalCredits} credits
-                          </span>
-                        </div>
+                  {isExpanded && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
+                      {yearObj.semesters.map((semester, semIdx) => (
+                        <div key={semIdx}>
+                          <div className="flex justify-between items-center mb-2">
+                            <h5 className="text-md font-medium text-gray-600">
+                              {semester.name}
+                            </h5>
+                            <span className="text-sm text-green-600 font-medium">
+                              {semester.totalCredits} credits
+                            </span>
+                          </div>
 
-                        <div className="space-y-3">
-                          {semester.courses.map((course, idx) => {
-                            // 🔍 Always rehydrate from courseMap if possible
-                            const fullCourse =
-                              courseMap.get(course.course_code) || course;
+                          <div className="space-y-3">
+                            {semester.courses.map((course, idx) => {
+                              // 🔍 Always rehydrate from courseMap if possible
+                              const fullCourse =
+                                courseMap.get(course.course_code) || course;
 
-                            const orLabel = kiarSheLabel(
-                              fullCourse.course_code,
-                              passedSet
-                            );
+                              const orLabel = kiarSheLabel(
+                                fullCourse.course_code,
+                                passedSet
+                              );
 
-                            return (
-                              <div
-                                key={idx}
-                                className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100"
-                              >
-                                <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-1">
-                                  <Check className="w-3 h-3 text-blue-600" />
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-[#1E3A8A]">
-                                    <CourseTitleText course={fullCourse} />
-                                  </h4>
+                              return (
+                                <div
+                                  key={idx}
+                                  className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100"
+                                >
+                                  <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-1">
+                                    <Check className="w-3 h-3 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-[#1E3A8A]">
+                                      <CourseTitleText course={fullCourse} />
+                                    </h4>
 
-                                  <ProgrammeElectiveChooser
-                                    course={fullCourse}
-                                  />
-                                  <FacultyElectiveChooser course={fullCourse} />
+                                    <ProgrammeElectiveChooser
+                                      course={fullCourse}
+                                    />
+                                    <FacultyElectiveChooser
+                                      course={fullCourse}
+                                    />
 
-                                  {!orLabel && (
-                                    <>
-                                      <div className="text-sm text-gray-600">
-                                        {fullCourse.credit_hours} credits
+                                    {!orLabel && (
+                                      <>
+                                        <div className="text-sm text-gray-600">
+                                          {fullCourse.credit_hours} credits
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1 capitalize">
+                                          {getReadableTypeForStudent(
+                                            fullCourse
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
+
+                                    {orLabel && (
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        Choose either one (counts once).
                                       </div>
-                                      <div className="text-xs text-gray-500 mt-1 capitalize">
-                                        {getReadableTypeForStudent(fullCourse)}
-                                      </div>
-                                    </>
-                                  )}
-
-                                  {orLabel && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      Choose either one (counts once).
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1350,6 +1600,257 @@ const CourseRecommendations = () => {
                   className="bg-[#1E3A8A] text-white"
                 >
                   Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {gapYearModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="text-xl font-bold text-[#1E3A8A]">Gap Year</h3>
+                <button
+                  onClick={() => setGapYearModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="text-sm text-gray-700 bg-yellow-50 border border-yellow-100 rounded-md p-3">
+                Taking a gap year will delay your graduation. Your plan will be
+                shifted by 1 year after the selected gap year.
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Choose which year to take a gap year (future years only):
+                </p>
+
+                <div className="space-y-2">
+                  {getGapYearOptions(completedEntries, semesterMapping).map(
+                    (y) => (
+                      <label
+                        key={y}
+                        className="flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="radio"
+                          name="gapYearChoice"
+                          checked={selectedGapYear === y}
+                          onChange={() => setSelectedGapYear(y)}
+                        />
+                        Year {y}
+                      </label>
+                    )
+                  )}
+                </div>
+
+                {!getGapYearOptions(completedEntries, semesterMapping)
+                  .length && (
+                  <p className="text-xs text-gray-500">
+                    No available future years to gap.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setGapYearModalOpen(false);
+                    setSelectedGapYear(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-[#1E3A8A] text-white"
+                  disabled={!selectedGapYear}
+                  onClick={() => {
+                    setGapYearModalOpen(false);
+                    // now generate using the selected year
+                    handleGeneratePlan();
+                  }}
+                >
+                  Confirm & Generate
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {gapSemModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="text-xl font-bold text-[#1E3A8A]">
+                  Gap Semester
+                </h3>
+                <button
+                  onClick={() => setGapSemModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="text-sm text-gray-700 bg-yellow-50 border border-yellow-100 rounded-md p-3">
+                Taking a gap semester may delay your graduation. Courses in and
+                after the selected semester will be shifted forward by 1
+                semester.
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Choose which semester to take a gap (future semesters only):
+                </p>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {getFutureSemesterOptions(
+                    completedEntries,
+                    semesterMapping
+                  ).map((opt) => {
+                    const key = `Y${opt.year}S${opt.sem}`;
+                    const checked =
+                      selectedGapSem?.year === opt.year &&
+                      selectedGapSem?.sem === opt.sem;
+
+                    return (
+                      <label
+                        key={key}
+                        className="flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="radio"
+                          name="gapSemChoice"
+                          checked={checked}
+                          onChange={() => setSelectedGapSem(opt)}
+                        />
+                        Year {opt.year} Semester {opt.sem}
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {!getFutureSemesterOptions(completedEntries, semesterMapping)
+                  .length && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    No available future semesters to gap.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setGapSemModalOpen(false);
+                    setSelectedGapSem(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-[#1E3A8A] text-white"
+                  disabled={!selectedGapSem}
+                  onClick={() => {
+                    setGapSemModalOpen(false);
+                    handleGeneratePlan();
+                  }}
+                >
+                  Confirm & Generate
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {outboundModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="text-xl font-bold text-[#1E3A8A]">
+                  Outbound Programme
+                </h3>
+                <button
+                  onClick={() => setOutboundModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="text-sm text-gray-700 bg-yellow-50 border border-yellow-100 rounded-md p-3">
+                Doing an outbound programme will reserve one semester. Courses
+                in and after the selected semester will be shifted forward by 1
+                semester.
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Choose which semester to go outbound (future semesters only):
+                </p>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {getFutureSemesterOptions(
+                    completedEntries,
+                    semesterMapping
+                  ).map((opt) => {
+                    const key = `Y${opt.year}S${opt.sem}`;
+                    const checked =
+                      selectedOutboundSem?.year === opt.year &&
+                      selectedOutboundSem?.sem === opt.sem;
+
+                    return (
+                      <label
+                        key={key}
+                        className="flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="radio"
+                          name="outboundChoice"
+                          checked={checked}
+                          onChange={() => setSelectedOutboundSem(opt)}
+                        />
+                        Year {opt.year} Semester {opt.sem}
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {!getFutureSemesterOptions(completedEntries, semesterMapping)
+                  .length && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    No available future semesters to choose.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setOutboundModalOpen(false);
+                    setSelectedOutboundSem(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-[#1E3A8A] text-white"
+                  disabled={!selectedOutboundSem}
+                  onClick={() => {
+                    setOutboundModalOpen(false);
+                    handleGeneratePlan();
+                  }}
+                >
+                  Confirm & Generate
                 </Button>
               </div>
             </div>

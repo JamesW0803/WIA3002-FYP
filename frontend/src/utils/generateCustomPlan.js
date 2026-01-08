@@ -1,7 +1,8 @@
 import axiosClient from "../api/axiosClient";
 
-const HARD_CREDIT_LIMIT = 22; // Absolute max
-const SOFT_CREDIT_LIMIT = 18; // Balanced max
+const ABSOLUTE_HARD_LIMIT = 22; // never exceed this
+const DEFAULT_SOFT_LIMIT = 18;
+const DEFAULT_HARD_LIMIT = 22;
 const SPECIALIZATION_PREFIX = "SPECIALIZATION_";
 
 const WIA3001_CODE = "WIA3001"; // Industrial Training
@@ -243,6 +244,22 @@ export default async function generateCustomPlan(
     const isOutboundSemester = (y, s) =>
       outboundSemesters.some((g) => g.year === y && g.sem === s);
 
+    const creditProfile = preferences?.creditProfile || "regular";
+
+    const softLimitBase =
+      typeof preferences?.softCreditLimit === "number"
+        ? preferences.softCreditLimit
+        : creditProfile === "lighter"
+        ? 15
+        : DEFAULT_SOFT_LIMIT;
+
+    const hardLimitBase =
+      typeof preferences?.hardCreditLimit === "number"
+        ? preferences.hardCreditLimit
+        : creditProfile === "lighter"
+        ? 18
+        : DEFAULT_HARD_LIMIT;
+
     while (remainingCodes.size > 0 && safetyLoop < 20) {
       safetyLoop++;
       const yKey = `Year ${currentYear}`;
@@ -282,11 +299,11 @@ export default async function generateCustomPlan(
       const semesterCourses = [];
 
       const facultyTarget = semesterCreditTargets.get(currentSemIndex) || 0;
-      let dynamicSoftLimit = Math.max(facultyTarget, SOFT_CREDIT_LIMIT);
+      let dynamicSoftLimit = Math.max(facultyTarget, softLimitBase);
 
       // Endgame: If nearing graduation, push to hard limit
       if (currentYear >= 4) {
-        dynamicSoftLimit = HARD_CREDIT_LIMIT;
+        dynamicSoftLimit = hardLimitBase;
       }
 
       // *** "CLEAR THE DECK" LOGIC ***
@@ -302,10 +319,10 @@ export default async function generateCustomPlan(
       const isEndGameClearDeck =
         remainingCodes.has(WIA3001_CODE) &&
         remainingNonInternshipCredits > 0 &&
-        remainingNonInternshipCredits <= HARD_CREDIT_LIMIT;
+        remainingNonInternshipCredits <= hardLimitBase;
 
       if (isEndGameClearDeck) {
-        dynamicSoftLimit = HARD_CREDIT_LIMIT;
+        dynamicSoftLimit = hardLimitBase;
       }
 
       const overdue = [];
@@ -373,18 +390,20 @@ export default async function generateCustomPlan(
         if (semesterCourses.includes(WIA3001_CODE)) return false;
 
         let limit = dynamicSoftLimit;
-        if (limitType === "HARD") limit = HARD_CREDIT_LIMIT;
+        if (limitType === "HARD") limit = hardLimitBase;
 
-        // ** Optimization: Allow small courses to squeeze in even if near limit **
-        // If adding a 2-credit course keeps us under HARD limit, allow it even if over Soft Limit
+        const nextCredits = currentCredits + cr;
+
+        // allow small courses to squeeze in up to hardLimitBase (not 22)…
         const isSmallCourse = cr < 3;
-        if (isSmallCourse && currentCredits + cr <= HARD_CREDIT_LIMIT) {
-          // Allow insertion
+        if (isSmallCourse && nextCredits <= hardLimitBase) {
+          // allow
         } else {
-          if (currentCredits + cr > limit) return false;
+          if (nextCredits > limit) return false;
         }
 
-        if (currentCredits + cr > HARD_CREDIT_LIMIT) return false;
+        // …but still never exceed absolute max
+        if (nextCredits > ABSOLUTE_HARD_LIMIT) return false;
 
         semesterCourses.push(code);
         currentCredits += cr;
@@ -403,14 +422,14 @@ export default async function generateCustomPlan(
 
       // 3. Overdue
       for (const code of overdue) {
-        if (currentCredits >= HARD_CREDIT_LIMIT) break;
+        if (currentCredits >= hardLimitBase) break;
         if (!remainingCodes.has(code)) continue;
         if (tryAddCourse(code, "HARD")) madeProgress = true;
       }
 
       // 4. Current (Including Floaters like COC2222)
       for (const code of current) {
-        if (currentCredits >= HARD_CREDIT_LIMIT) break;
+        if (currentCredits >= hardLimitBase) break;
         if (!remainingCodes.has(code)) continue;
         if (tryAddCourse(code, "SOFT")) madeProgress = true;
       }
