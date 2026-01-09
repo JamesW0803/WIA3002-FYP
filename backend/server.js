@@ -23,6 +23,6 @@ initSocket(server);
 // Connect to MongoDB
 database.connectToMongoDB();
 
-server.listen(port || 5000, () => {
+server.listen(port, "0.0.0.0", () => {
   console.log(`Server is listening on port ${port || 5000}`);
 });
