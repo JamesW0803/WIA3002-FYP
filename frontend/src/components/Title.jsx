@@ -29,7 +29,7 @@ const CurrentAcademicSession = () => {
   if (!currentSession) return null;
 
   return (
-    <div className="mt-2 md:mt-0 flex items-center">
+    <div className="mt-2 md:mt-0 flex items-center pr-20">
       <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full shadow-sm text-sm font-medium">
         Current Session: {currentSession.year} - {currentSession.semester}
       </span>

@@ -83,7 +83,10 @@ const ManageProgrammeEnrollment = () => {
     */
     useEffect(() => {
         const latestItem = programmeEnrollments.map((programmeEnrollment) => {
-            const isEditable = compareAcademicSessions(programmeEnrollment.academic_session, currentAcademicSession).isAfter || false
+            let isEditable = true;
+            if(programmeEnrollment.academic_session && currentAcademicSession){
+                isEditable = compareAcademicSessions(programmeEnrollment.academic_session, currentAcademicSession).isAfter || false
+            }
 
             return  (
                 Object.entries(programmeEnrollment).map(([key, value]) => {
