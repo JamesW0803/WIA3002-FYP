@@ -4,10 +4,9 @@ const SemesterPlan = require("../models/SemesterPlan");
 const Programme = require("../models/Programme");
 const Course = require("../models/Course");
 const AcademicSession = require("../models/AcademicSession");
-const { TYPE_PRIORITY } = require("../constants/courseType")
+const { TYPE_PRIORITY , FACULTY_COURSE_TYPES } = require("../constants/courseType")
 const { createNextAcademicSession } = require("./academicSessionController")
 const { generateProgrammeIntakeCode } = require("../utils/formatter/programmeIntakeFormatter")
-
 const { SEMESTER_1, SEMESTER_2, SEMESTER_1_AND_2, } = require("../constants/semesters")
 
 const getProgrammePlans = async (req, res) => {
@@ -122,13 +121,22 @@ const generateDraftProgrammePlan = async( req, res) => {
     const allocatedCourseCodes = semesterPlans.flatMap(semesterPlan => 
       semesterPlan.courses.map(course => course.course_code))
     const remainingCourses = graduation_requirements.filter((course) => !allocatedCourseCodes.includes(course.course_code))
-    
-    const sortedCourses = sortByLevelThenType(remainingCourses, TYPE_PRIORITY)
-    const topoSortedCourses = await topologicalSortCourses(sortedCourses, programme)
-    const generatedDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
-    
 
-    res.status(200).json(generatedDraft);
+    // Extract out the non-faculty courses 
+    const facultyCourses = remainingCourses.filter((course) => isFacultyCourse(course));
+    const nonFacultyCourses = remainingCourses.filter((course) => !isFacultyCourse(course));
+    
+    const sortedCourses = sortByLevelThenType(facultyCourses, TYPE_PRIORITY)
+    const topoSortedCourses = await topologicalSortCourses(sortedCourses, programme)
+
+    // const generatedDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
+    const firstDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
+    const finalDraft = distributeNonFacultyCoursesIntoSemesters(nonFacultyCourses, firstDraft)
+
+
+    // res.status(200).json(generatedDraft);
+    res.status(200).json(finalDraft);
+
 
   }catch(error){
     console.log("Error: ", error)
@@ -274,6 +282,19 @@ const distributeCoursesIntoSemesters = (sortedCourses, semesterPlans) => {
   return semesterPlans;
 };
 
+const distributeNonFacultyCoursesIntoSemesters = ( nonFacultyCourses, semesterPlans ) => {
+  if (!nonFacultyCourses.length) return semesterPlans;
+
+  const totalSemesters = semesterPlans.length;
+
+  nonFacultyCourses.forEach((course, index) => {
+    const semesterIndex = index % totalSemesters;
+    semesterPlans[semesterIndex].courses.push(course);
+  });
+
+  return semesterPlans;
+};
+
 const findValidSemester = (course) => {
   const validSemesters = []
   for(const sem of course?.offered_semester){
@@ -288,6 +309,9 @@ const findValidSemester = (course) => {
 
   return validSemesters
 };
+
+const isFacultyCourse = (course) =>
+  FACULTY_COURSE_TYPES.includes(course.type);
 
 
 module.exports = {
