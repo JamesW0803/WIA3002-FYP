@@ -13,12 +13,14 @@ import Notification from "../../../components/Students/AcademicProfile/Notificat
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 import { compareAcademicSessions } from "../../../utils/compareAcademicSession";
 import { Lock } from "lucide-react";
-
+import { useAuth } from "../../../context/AuthContext";
 
 const ProgrammeEnrollmentDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { programme_intake_code } = useParams();
+
+  const { user } = useAuth();
 
   const addProgrammeIntake = location.state?.addProgrammeIntake || false;
   const [originalFormData, setOriginalFormData] = useState({});
@@ -319,6 +321,8 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
     return comparison.isAfter;
   })();
 
+  const isDeletable = user.role === "admin" ? user.access_level === "super" : false
+
   const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
   const mid = Math.floor(entries.length / 2);
@@ -385,7 +389,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                     )
                     }
 
-                    {!addProgrammeIntake && (
+                    {!addProgrammeIntake && isDeletable && (
                       <button
                         onClick={handleDelete}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
