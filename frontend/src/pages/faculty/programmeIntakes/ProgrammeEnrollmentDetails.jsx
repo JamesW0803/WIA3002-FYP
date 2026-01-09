@@ -11,11 +11,16 @@ import FormDialog from "../../../components/dialog/FormDialog"
 import { generateProgrammeIntakeCode } from "../../../utils/programmeIntakeCodeGenerator";
 import Notification from "../../../components/Students/AcademicProfile/Notification";
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
+import { compareAcademicSessions } from "../../../utils/compareAcademicSession";
+import { Lock } from "lucide-react";
+import { useAuth } from "../../../context/AuthContext";
 
 const ProgrammeEnrollmentDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { programme_intake_code } = useParams();
+
+  const { user } = useAuth();
 
   const addProgrammeIntake = location.state?.addProgrammeIntake || false;
   const [originalFormData, setOriginalFormData] = useState({});
@@ -27,6 +32,7 @@ const ProgrammeEnrollmentDetails = () => {
   const [ openDialog, setOpenDialog] = useState(false);
   const [ intakeFields, setIntakeFields] = useState(programmeIntakeFormFields);
   const [ academicSessions, setAcademicSessions] = useState([]);
+  const [ currentAcademicSession, setCurrentAcademicSession] = useState(null);
   const [ programmes, setProgrammes] = useState([]);
   const [ generated, setGenerated ] = useState(false)
   const { 
@@ -81,7 +87,19 @@ const ProgrammeEnrollmentDetails = () => {
         const res = await axiosClient.get(`/academic-sessions`);
         setAcademicSessions(res.data);
 
-        const academicSessionOptions = res.data.map(academicSession => ({
+        // ✅ Find current academic session
+        const currentSession = res.data.find(
+          (session) => session.isCurrent === true
+        );
+
+        setCurrentAcademicSession(currentSession);
+
+        const filteredSessions = res.data.filter(session => {
+          const comparison = compareAcademicSessions(session, currentSession);
+          return comparison.isAfter; 
+        })
+
+        const academicSessionOptions = filteredSessions.map(academicSession => ({
           label: `${academicSession.year} ${academicSession.semester}`,
           value: academicSession._id
         }));
@@ -291,6 +309,20 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
   }));
 };
 
+  const isProgrammeEnrollmentEditable = (() => {
+    if (!formData?.academic_session || !currentAcademicSession) return false;
+
+    const comparison = compareAcademicSessions(
+      formData.academic_session,
+      currentAcademicSession
+    );
+
+    // editable ONLY if programme enrollment is AFTER current session
+    return comparison.isAfter;
+  })();
+
+  const isDeletable = user.role === "admin" ? user.access_level === "super" : false
+
   const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
   const mid = Math.floor(entries.length / 2);
@@ -342,13 +374,22 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                   </>
                 ) : (
                   <>
-                    <button
-                      onClick={handleEdit}
-                      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
-                    >
-                      <Edit2 size={16} /> Edit
-                    </button>
-                    {!addProgrammeIntake && (
+                    {isProgrammeEnrollmentEditable ? (
+                      <button
+                        onClick={handleEdit}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg"
+                      >
+                        <Edit2 size={16} /> Edit
+                      </button>
+                    ) : (
+                      <span className="flex items-center gap-2 px-4 py-2 bg-gray-600/30 text-white rounded-lg cursor-not-allowed">
+                        <Lock size={16} />
+                        Locked Session
+                      </span>
+                    )
+                    }
+
+                    {!addProgrammeIntake && isDeletable && (
                       <button
                         onClick={handleDelete}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
@@ -554,6 +595,5 @@ const SkeletonSection = () => (
     </div>
   </div>
 );
-
 
 export default ProgrammeEnrollmentDetails;

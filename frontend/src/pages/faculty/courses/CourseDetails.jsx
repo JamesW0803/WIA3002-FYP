@@ -11,10 +11,13 @@ import FormDialog from "../../../components/dialog/FormDialog";
 import Notification from "../../../components/Students/AcademicProfile/Notification";
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 import ProgrammeTypesSession from "../../../components/Faculty/Courses/ProgrammeTypesSession";
+import { useAuth } from "../../../context/AuthContext";
 
 const CourseDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { user } = useAuth();
 
   const course_code = location.state.course_code;
   const addCourse = location.state?.addCourse || false;
@@ -215,6 +218,8 @@ const CourseDetails = () => {
     (session) => session.title !== "Prerequisites"
   );
 
+  const isDeletable = user.role === "admin" ? user.access_level === "super" : false
+
   const renderField = (field) => {
     const {
       key,
@@ -295,7 +300,7 @@ const CourseDetails = () => {
                       >
                         <Edit2 size={16} /> Edit
                       </button>
-                      {!addCourse && (
+                      {!addCourse && isDeletable && (
                         <button
                           onClick={handleDelete}
                           className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"

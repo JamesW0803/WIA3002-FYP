@@ -8,10 +8,14 @@ import FormDialog from "../../../components/dialog/FormDialog"
 import { useNavigate, useLocation } from "react-router-dom";
 import Notification from "../../../components/Students/AcademicProfile/Notification";
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
+import { compareAcademicSessions } from "../../../utils/compareAcademicSession";
+import { useAuth } from "../../../context/AuthContext";
 
 const ManageProgrammeEnrollment = () => {
     const navigate = useNavigate();
     const location = useLocation();
+
+    const { user } = useAuth();
 
     const [programmeEnrollments, setProgrammeEnrollments] = useState([]);
     const [items, setItems] = useState([]);
@@ -25,6 +29,8 @@ const ManageProgrammeEnrollment = () => {
 
     const header = ["Programme Enrollment Code", "Programme Name", "Enrollment Year", "Enrollment Semester"]
     const order = ["programme_intake_code", "programme_name", "year", "semester"]
+
+    const [currentAcademicSession, setCurrentAcademicSession] = useState(null);
 
     const { 
         showNotification , 
@@ -59,6 +65,20 @@ const ManageProgrammeEnrollment = () => {
         fetchProgrammeEnrollments();
     },[])
 
+    useEffect(() => {
+        const fetchCurrentAcademicSession = async () => {
+            try {
+                const response = await axiosClient.get("/academic-sessions/current");
+                setCurrentAcademicSession(response.data)
+            } catch (error) {
+                console.error("Error fetching current academic session: ", error);
+            }finally{
+                setLoading(false);
+            }
+        };
+        fetchCurrentAcademicSession();
+    },[])
+
 
     /**
      * courses = [course1, course2, course3]
@@ -66,13 +86,20 @@ const ManageProgrammeEnrollment = () => {
     */
     useEffect(() => {
         const latestItem = programmeEnrollments.map((programmeEnrollment) => {
+            let isEditable = true;
+            if(programmeEnrollment.academic_session && currentAcademicSession){
+                isEditable = compareAcademicSessions(programmeEnrollment.academic_session, currentAcademicSession).isAfter || false
+            }
+
             return  (
                 Object.entries(programmeEnrollment).map(([key, value]) => {
                     return {
                         key,
                         value,
                         type: clickableItems.includes(key) ? "clickable_text_display" : "text_display",
-                        onClick : clickableItems.includes(key) ? () => handleProgrammeEnrollmentOnClick(programmeEnrollment.programme_intake_code)  : null
+                        onClick : clickableItems.includes(key) ? () => handleProgrammeEnrollmentOnClick(programmeEnrollment.programme_intake_code)  : null,
+                        isEditable,
+                        isDeletable : user.role === "admin" ? user.access_level === "super" : false
                     }
                 })
             )

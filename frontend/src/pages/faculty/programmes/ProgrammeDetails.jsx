@@ -7,10 +7,13 @@ import { Edit2, Save, X, Trash } from "lucide-react";
 import FormDialog from "../../../components/dialog/FormDialog"
 import Notification from "../../../components/Students/AcademicProfile/Notification";
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
+import { useAuth } from "../../../context/AuthContext";
 
 const ProgrammeDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { user } = useAuth();
 
   const programme_code = location.state?.programme_code;
   const addProgramme = location.state?.addProgramme || false;
@@ -119,6 +122,8 @@ const ProgrammeDetails = () => {
     setFormData((prev) => ({ ...prev, [key]: e.target.value }));
   };
 
+  const isDeletable = user.role === "admin" ? user.access_level === "super" : false
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-12">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -169,7 +174,7 @@ const ProgrammeDetails = () => {
                       >
                         <Edit2 size={16} /> Edit
                       </button>
-                      {!addProgramme && (
+                      {!addProgramme && isDeletable && (
                         <button
                           onClick={handleDelete}
                           className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"

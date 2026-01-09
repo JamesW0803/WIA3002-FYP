@@ -132,7 +132,7 @@ const generateDraftProgrammePlan = async( req, res) => {
 
   }catch(error){
     console.log("Error: ", error)
-    res.status(500).json({ message: "Server error generating draft programme plan" })
+    res.status(500).json({ message: "Server error generating draft programme plan" , error: error.message});
   }
 
 }
