@@ -5,7 +5,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import MessageIcon from "@mui/icons-material/Message"; // import a message icon
 
 
-const TableActionBar = ({ viewButton, editButton, deleteButton, messageButton, identifier}) => {
+const TableActionBar = ({ viewButton, editButton, deleteButton, messageButton, identifier, item}) => {
+  const isEditable = item?.find(d => d.isEditable !== undefined)?.isEditable ?? true;
+
   return (
     <td className="px-6 py-4">
       <div className="flex flex-row justify-center items-center gap-1">
@@ -41,7 +43,7 @@ const TableActionBar = ({ viewButton, editButton, deleteButton, messageButton, i
             <MessageIcon fontSize="small" />
           </IconButton>
         )}
-        {editButton && (
+        {editButton && isEditable &&  (
           <IconButton
             onClick={() => {editButton.onClick(identifier)}}
             size="small"

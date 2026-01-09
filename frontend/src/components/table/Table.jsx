@@ -29,6 +29,7 @@ const Row = ({
                     editButton={tableActionBarButton.editButton}
                     deleteButton={tableActionBarButton.deleteButton}
                     messageButton={tableActionBarButton.messageButton}
+                    item={item}
                 />
             )}
         </tr>
