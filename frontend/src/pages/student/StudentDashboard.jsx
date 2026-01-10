@@ -9,7 +9,6 @@ import {
   User,
   ArrowRight,
   AlertCircle,
-  CheckCircle,
   ChevronRight,
   Target,
   Clock,
@@ -254,8 +253,6 @@ const StudentDashboard = () => {
     totalCreditsRequired: 120,
     currentYear: 1,
     currentSemester: 1,
-    status: "Active",
-    isProbation: false,
     studentName: "",
     isProfileIncomplete: false,
     programmeName: "",
@@ -353,7 +350,6 @@ const StudentDashboard = () => {
         }
 
         const cgpa = profile.cgpa || 0.0;
-        const isProbation = cgpa > 0 && cgpa < 2.0;
 
         setData({
           cgpa,
@@ -361,8 +357,6 @@ const StudentDashboard = () => {
           totalCreditsRequired: totalReq,
           currentYear: studentProgress.year,
           currentSemester: studentProgress.semester,
-          status: profile.student?.status || "Active",
-          isProbation,
           studentName: profile.student?.fullName || user.username || "Student",
           isProfileIncomplete,
           programmeName,
@@ -424,7 +418,7 @@ const StudentDashboard = () => {
       {/* 2. Main Content - Negative Margin for "Overlap" effect */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 pb-12 relative z-20">
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <MetricCard
             title="Current CGPA"
             value={data.cgpa > 0 ? data.cgpa.toFixed(2) : "—"}
@@ -438,15 +432,6 @@ const StudentDashboard = () => {
                 ? "positive"
                 : "default"
             }
-          />
-
-          <MetricCard
-            title="Academic Status"
-            value={data.status}
-            subtitle={data.isProbation ? "Action Required" : "Good Standing"}
-            icon={CheckCircle}
-            loading={loading}
-            status={data.isProbation ? "warning" : "positive"}
           />
 
           <MetricCard
@@ -528,15 +513,6 @@ const StudentDashboard = () => {
           {/* Right Column: Alerts & Advisor (Span 1) */}
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-slate-800">Notifications</h2>
-
-            {data.isProbation && (
-              <AlertCard
-                type="warning"
-                title="Academic Alert"
-                message="Your CGPA is below 2.0. Please contact your advisor immediately."
-                action={{ to: "/chat-with-advisor", text: "Contact Advisor" }}
-              />
-            )}
 
             {data.isProfileIncomplete && (
               <AlertCard

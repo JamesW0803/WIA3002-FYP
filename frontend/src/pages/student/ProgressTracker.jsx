@@ -35,6 +35,7 @@ const categoryMap = {
 };
 
 const ProgressBar = ({ percentage, color = "blue" }) => {
+  const safePercentage = Number.isFinite(percentage) ? percentage : 0;
   const colors = {
     blue: "bg-blue-600",
     emerald: "bg-emerald-500",
@@ -46,7 +47,7 @@ const ProgressBar = ({ percentage, color = "blue" }) => {
     <div className="w-full bg-gray-200 rounded-full h-2 sm:h-2.5">
       <div
         className={`h-2 sm:h-2.5 rounded-full ${colors[color]} transition-all duration-500`}
-        style={{ width: `${percentage}%` }}
+        style={{ width: `${safePercentage}%` }}
       />
     </div>
   );
@@ -270,6 +271,9 @@ const ProgressTracker = () => {
       const cat = categoryMap[effectiveType];
       const cr = coursesMap[code] || 0;
 
+      if (!cat) return; // skip unknown types
+      if (!Number.isFinite(cr) || cr <= 0) return;
+
       counts[cat] += cr;
     });
 
@@ -279,7 +283,7 @@ const ProgressTracker = () => {
     entries,
     coursesMap,
     coursesByCode,
-    studentProgrammeId, // Re-run when programme ID is loaded
+    studentProgramme,
     creditRequirements,
   ]);
 
@@ -291,10 +295,13 @@ const ProgressTracker = () => {
     (s, v) => s + v,
     0
   );
-  const totalPercentage = Math.round(
-    (creditsEarned / totalCreditsRequired) * 100
-  );
-  const remainingCredits = totalCreditsRequired - creditsEarned;
+  const totalPercentage =
+    totalCreditsRequired > 0
+      ? Math.round((creditsEarned / totalCreditsRequired) * 100)
+      : 0;
+
+  const remainingCredits =
+    totalCreditsRequired > 0 ? totalCreditsRequired - creditsEarned : 0;
 
   const categoryIcons = {
     "Faculty Core": <BookOpenCheck className="w-5 h-5 sm:w-6 sm:h-6" />,
@@ -316,7 +323,7 @@ const ProgressTracker = () => {
 
       const code = e.course.course_code;
       const courseFull = coursesByCode[code] || e.course;
-      const effectiveType = getEffectiveType(courseFull, studentProgrammeId);
+      const effectiveType = getEffectiveType(courseFull, studentProgramme);
 
       return categoryMap[effectiveType] === selectedCat;
     });
@@ -336,7 +343,7 @@ const ProgressTracker = () => {
       });
     }
     return out;
-  }, [entries, coursesMap, coursesByCode, selectedCat, studentProgrammeId]);
+  }, [entries, coursesMap, coursesByCode, selectedCat, studentProgramme]);
 
   const open = !!selectedCat;
 
