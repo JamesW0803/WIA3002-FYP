@@ -8,6 +8,7 @@ frontend/node_modules
 
 # testing
 backend/tests/
+frontend/src/tests/
 
 # production
 /build

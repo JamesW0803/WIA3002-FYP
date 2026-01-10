@@ -16,7 +16,7 @@ const attachmentSchema = new Schema(
     height: Number,
 
     type: { type: String, default: null },
-    planId: { type: Schema.Types.ObjectId, ref: "AcademicPlan" },
+    planId: { type: Schema.Types.ObjectId, ref: "StudentAcademicPlan" },
     planName: { type: String, default: "" },
   },
   { _id: false }

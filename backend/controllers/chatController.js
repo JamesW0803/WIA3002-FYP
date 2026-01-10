@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 const Student = require("../models/Student");
+const StudentAcademicPlan = require("../models/StudentAcademicPlan");
 
 const { getIO } = require("../socket");
 
@@ -394,5 +395,112 @@ exports.deleteConversation = async (req, res) => {
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "Failed to delete conversation" });
+  }
+};
+
+// GET /chat/conversations/:id
+exports.getConversationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const role = req.user.role;
+    const me = req.user.user_id;
+
+    const convo = await Conversation.findById(id)
+      .populate({
+        path: "student",
+        select: "username role profilePicture profileColor email",
+      })
+      .populate("coursePlanToBeReviewed")
+      .lean();
+
+    if (!convo)
+      return res.status(404).json({ message: "Conversation not found" });
+
+    // auth: student only sees own; admin sees all
+    if (
+      role !== "admin" &&
+      String(convo.student?._id || convo.student) !== String(me)
+    ) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // soft delete visibility
+    if (
+      (role === "admin" && convo.deletedForAdmin) ||
+      (role !== "admin" && convo.deletedForStudent)
+    ) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    return res.json(convo);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "Failed to fetch conversation" });
+  }
+};
+
+exports.createReviewRequestConversation = async (req, res) => {
+  try {
+    const me = req.user.user_id;
+    const role = req.user.role;
+
+    const {
+      studentId,
+      planId,
+      subject = "Course Plan Review Request",
+    } = req.body;
+
+    // students can only request for themselves
+    const targetStudentId = role === "admin" ? studentId : me;
+
+    if (!targetStudentId || !planId) {
+      return res.status(400).json({ message: "studentId and planId required" });
+    }
+
+    // Validate plan exists and belongs to student (important!)
+    const plan = await StudentAcademicPlan.findOne({
+      _id: planId,
+      student: targetStudentId,
+    }).lean();
+
+    if (!plan) {
+      return res.status(404).json({ message: "Academic plan not found" });
+    }
+
+    // Find or create open conversation
+    let convo = await Conversation.findOne({
+      student: targetStudentId,
+      status: "open",
+      deletedForAdmin: { $ne: true },
+      deletedForStudent: { $ne: true },
+    });
+
+    if (!convo) {
+      convo = await Conversation.create({
+        student: targetStudentId,
+        subject,
+      });
+    }
+
+    // Attach plan
+    convo.coursePlanToBeReviewed = planId;
+    await convo.save();
+
+    // Populate like your other list endpoints do
+    const populated = await Conversation.findById(convo._id)
+      .populate({
+        path: "student",
+        select: "username role profilePicture profileColor email",
+      })
+      .populate("coursePlanToBeReviewed")
+      .populate({
+        path: "lastMessage",
+        populate: { path: "sender", select: "username role profilePicture" },
+      });
+
+    return res.status(201).json(populated);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "Failed to create review request" });
   }
 };

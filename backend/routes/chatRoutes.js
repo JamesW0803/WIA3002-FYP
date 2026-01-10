@@ -29,6 +29,12 @@ router.get("/messages", authenticate, chatController.getMessages);
 // Unread counts
 router.get("/unread-counts", authenticate, chatController.getUnreadCounts);
 
+router.get(
+  "/conversations/:id",
+  authenticate,
+  chatController.getConversationById
+);
+
 // Upload URL (Azure)
 router.post("/upload-url", authenticate, chatController.getUploadUrl);
 
@@ -37,6 +43,12 @@ router.post(
   "/conversations/advise-on-course-plan",
   authenticate,
   chatController.adviseOnCoursePlan
+);
+
+router.post(
+  "/conversations/review-request",
+  authenticate,
+  chatController.createReviewRequestConversation
 );
 
 module.exports = router;
