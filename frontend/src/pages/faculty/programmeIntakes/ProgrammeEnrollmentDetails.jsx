@@ -190,7 +190,7 @@ const ProgrammeEnrollmentDetails = () => {
 
       // run validation for duplicate
       const validator = intakeFields.find(f => f.key === "programme_intake_code")?.validator;
-      const error = validator(code, intakes);
+      const error = validator(code, intakes, addProgrammeIntake);
       setErrors(prev => ({ ...prev, programme_intake_code: error }));
     }
   }
@@ -279,7 +279,7 @@ const ProgrammeEnrollmentDetails = () => {
     // Run validator if defined
     const field = intakeFields.find((f) => f.key === key);
     if (field?.validator) {
-      const error = field.validator(value, intakes);
+      const error = field.validator(value, intakes, addProgrammeIntake);
       setErrors((prev) => ({ ...prev, [key]: error }));
     }
   };
@@ -288,7 +288,7 @@ const ProgrammeEnrollmentDetails = () => {
     const newErrors = {};
     intakeFields.forEach((field) => {
       if (field.validator) {
-        const error = field.validator(formData[field.key], intakes);
+        const error = field.validator(formData[field.key], intakes, addProgrammeIntake);
         if (error) newErrors[field.key] = error;
       }
     });

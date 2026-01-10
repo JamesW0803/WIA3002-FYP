@@ -232,7 +232,7 @@ const CourseDetails = () => {
 
     const validator = fieldValidators[key];
     if (validator) {
-      const error = validator(value, courses);
+      const error = validator(value, courses, addCourse);
       setErrors((prev) => ({
         ...prev,
         [key]: error,
@@ -245,7 +245,7 @@ const CourseDetails = () => {
     const newErrors = {};
 
     Object.entries(fieldValidators).forEach(([key, validator]) => {
-      const error = validator(formData[key], courses);
+      const error = validator(formData[key], courses, addCourse);
       if (error) {
         newErrors[key] = error;
       }

@@ -14,15 +14,15 @@ const programmeSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: true,
+      // required: true,
     },
     faculty: {
       type: String,
-      required: true,
+      // required: true,
     },
     department: {
       type: String,
-      required: true,
+      // required: true,
     },
   },
   {

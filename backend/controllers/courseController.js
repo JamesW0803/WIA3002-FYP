@@ -6,6 +6,7 @@ const {
 } = require("../utils/formatter/courseFormatter");
 const AcademicProfile = require("../models/StudentAcademicProfile");
 const { COURSE_TYPES } = require("../constants/courseType");
+const course = require("../models/Course");
 
 const getAllCourses = async (req, res) => {
   try {
@@ -122,6 +123,11 @@ const addCourse = async (req, res) => {
       offered_semester,
       study_level,
     } = req.body;
+
+    if (!course_code) return res.status(400).json({ message: "Course code is required" });
+    if (!course_name) return res.status(400).json({ message: "Course name is required" });
+    if (!type) return res.status(400).json({ message: "Course type is required" });
+    if (!credit_hours) return res.status(400).json({ message: "Credit hours are required" });
 
     // ----- 1. Global prerequisites (codes -> ObjectIds) -----
     const cleanedPrerequisiteCodes = (prerequisites || []).filter(Boolean);
@@ -308,8 +314,16 @@ const editCourse = async (req, res) => {
     prerequisites = [],
     prerequisitesByProgramme = [],
     typesByProgramme = [],
+    course_name,
+    type,
+    credit_hours,
     ...rest
   } = req.body;
+
+  if (!course_code) return res.status(400).json({ message: "Course code is required" });
+  if (!course_name) return res.status(400).json({ message: "Course name is required" });
+  if (!type) return res.status(400).json({ message: "Course type is required" });
+  if (!credit_hours) return res.status(400).json({ message: "Credit hours are required" });
 
   try {
     // ----- 1. Global prerequisites (codes -> ObjectIds) -----

@@ -49,6 +49,9 @@ const addProgrammeIntake = async (req, res) => {
       programme_plan,
     } = req.body;
 
+    if (!programme_name) return res.status(400).json({ message: "Programme is required" });
+    if (!academic_session_id) return res.status(400).json({ message: "Academic session is required" });
+
     const courseList = Object.values(graduation_requirements).flat();
     const semesterPlans = programme_plan?.semester_plans;
     const semesterPlanIds = [];
@@ -442,6 +445,10 @@ const getProgrammePlanMappingByCode = async (req, res) => {
 const editProgrammeIntake = async (req, res) => {
   const { programme_intake_id } = req.params;
   const updatedData = req.body;
+  const { programme_name, academic_session_id } = req.body;
+
+  if (!programme_name) return res.status(400).json({ message: "Programme is required" });
+  if (!academic_session_id) return res.status(400).json({ message: "Academic session is required" });
 
   try {
     const academicSession = await AcademicSession.findById(

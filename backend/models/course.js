@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const { ALL_SEMESTERS } = require("../constants/semesters");
-const { COURSE_TYPES } = require("../constants/courseType");
+const { COURSE_TYPES, UNKNOWN } = require("../constants/courseType");
 
 const courseSchema = new mongoose.Schema(
   {
