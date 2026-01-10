@@ -19,6 +19,7 @@ const ProgrammeDetails = () => {
   const addProgramme = location.state?.addProgramme || false;
   const [originalFormData, setOriginalFormData] = useState({})
   const [editMode, setEditMode] = useState(location.state?.editMode || false);
+  const [programmes, setProgrammes] = useState([]);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -28,6 +29,9 @@ const ProgrammeDetails = () => {
         notification,
     } = useAcademicProfile()
 
+  const [errors, setErrors] = useState({});
+  const hasErrors = Object.values(errors).some(Boolean);
+
   // Load programme details
   useEffect(() => {
     const fetchProgramme = async () => {
@@ -35,6 +39,15 @@ const ProgrammeDetails = () => {
         const res = await axiosClient.get(`/programmes/${programme_code}`);
         setFormData(res.data);
         setOriginalFormData(res.data)
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const fetchProgrammes = async () => {
+      try {
+        const res = await axiosClient.get(`/programmes`);
+        setProgrammes(res.data);
       } catch (err) {
         console.error(err);
       }
@@ -54,7 +67,7 @@ const ProgrammeDetails = () => {
             department : ""
           })
         }
-
+        await fetchProgrammes();
       } finally {
         setLoading(false);
       }
@@ -77,6 +90,8 @@ const ProgrammeDetails = () => {
   const handleEdit = () => setEditMode(true);
 
   const handleSave = async () => {
+    if (!validateForm()) return;
+
     let branch = ""
     try {
       if(!addProgramme){
@@ -119,7 +134,32 @@ const ProgrammeDetails = () => {
   };
 
   const handleInputChange = (key) => (e) => {
-    setFormData((prev) => ({ ...prev, [key]: e.target.value }));
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, [key]: value }));
+
+    // Run validator if defined
+    const field = programmeFormFields.find((f) => f.key === key);
+    if (field?.validator) {
+      const error = field.validator(value, programmes);
+      setErrors((prev) => ({ ...prev, [key]: error }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    programmeFormFields.forEach((field) => {
+      if (field.validator) {
+        const error = field.validator(formData[field.key], programmes);
+        if (error) newErrors[field.key] = error;
+      }
+    });
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      showNotification("Please fix validation errors", "error");
+      return false;
+    }
+    return true;
   };
 
   const isDeletable = user.role === "admin" ? user.access_level === "super" : false
@@ -161,7 +201,10 @@ const ProgrammeDetails = () => {
                       </button>
                       <button
                         onClick={handleSave}
-                        className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                        disabled={hasErrors}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition
+                          ${hasErrors ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-white text-blue-700 hover:bg-gray-100"}
+                        `}
                       >
                         <Save size={16} /> Save
                       </button>
@@ -215,6 +258,7 @@ const ProgrammeDetails = () => {
                       onChange={handleInputChange(field.key)}
                       readonly={field.readonly ?? false}
                       addProgramme={addProgramme}
+                      error={errors[field.key]}
                     />
                   ))}
                 </div>
@@ -238,7 +282,20 @@ const ProgrammeDetails = () => {
 };
 
 // Dynamic Field Component
-const ProgrammeField = ({ icon: Icon, label, value, type, options, editMode, multiline, placeholder, onChange , readonly=false, addProgramme}) => {
+const ProgrammeField = ({ 
+  icon: Icon, 
+  label, 
+  value, 
+  type, 
+  options, 
+  editMode, 
+  multiline, 
+  placeholder, 
+  onChange, 
+  readonly=false, 
+  addProgramme, 
+  error
+}) => {
   if (readonly && editMode) {
     return (
       <div className="flex items-start mb-3">
@@ -281,6 +338,8 @@ const ProgrammeField = ({ icon: Icon, label, value, type, options, editMode, mul
         ) : (
           <p className="font-semibold text-sm text-gray-900 whitespace-pre-line">{value || "-"}</p>
         )}
+        {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+
       </div>
     </div>
   );

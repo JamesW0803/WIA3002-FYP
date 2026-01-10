@@ -31,6 +31,19 @@ const CourseDetails = () => {
   const [loading, setLoading] = useState(true);
   const { showNotification, closeNotification, notification } = useAcademicProfile();
 
+  const [errors, setErrors] = useState({});
+  const hasErrors = Object.values(errors).some(Boolean);
+
+  const fieldValidators = formSessions
+  .flatMap((session) => session.fields)
+  .reduce((acc, field) => {
+    if (field.validator) {
+      acc[field.key] = field.validator;
+    }
+    return acc;
+  }, {});
+
+
   useEffect(() => {
     const fetchCourse = async () => {
       try {
@@ -128,6 +141,8 @@ const CourseDetails = () => {
   };
 
   const handleSave = async () => {
+    if (!validateForm()) return;
+
     let branch = "";
     try {
       // normalize offered_semester just like AddCourse
@@ -208,10 +223,42 @@ const CourseDetails = () => {
   };
 
   const handleInputChange = (key) => (e) => {
+    const value = e.target.value;
+
     setFormData((prev) => ({
       ...prev,
-      [key]: e.target.value,
+      [key]: value,
     }));
+
+    const validator = fieldValidators[key];
+    if (validator) {
+      const error = validator(value, courses);
+      setErrors((prev) => ({
+        ...prev,
+        [key]: error,
+      }));
+    }
+  };
+
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    Object.entries(fieldValidators).forEach(([key, validator]) => {
+      const error = validator(formData[key], courses);
+      if (error) {
+        newErrors[key] = error;
+      }
+    });
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      showNotification("Please fix validation errors", "error");
+      return false;
+    }
+
+    return true;
   };
 
   const processedSessions = formSessions.filter(
@@ -245,6 +292,7 @@ const CourseDetails = () => {
         onChange={handleInputChange(key)}
         readonly={field.readonly ?? false}
         addCourse={addCourse}
+        error={errors[key]}
       />
     );
   };
@@ -287,7 +335,14 @@ const CourseDetails = () => {
                       </button>
                       <button
                         onClick={handleSave}
-                        className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                        disabled={hasErrors}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition
+                          ${
+                            hasErrors
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-white text-blue-700 hover:bg-gray-100"
+                          }
+                        `}
                       >
                         <Save size={16} /> Save
                       </button>
@@ -391,6 +446,7 @@ const CourseInfoField = ({
   onChange,
   addCourse,
   readonly,
+  error,
 }) => {
   let displayValue = value ?? "-";
   if (fieldKey == "type") {
@@ -422,28 +478,38 @@ const CourseInfoField = ({
         <p className="text-sm text-gray-500 mb-1">{label}</p>
 
         {editMode || addCourse ? (
-          type === "select" ? (
-            <select
-              className="border border-gray-300 rounded-lg p-2 w-full text-sm"
-              value={value}
-              onChange={onChange}
-            >
-              <option value="">-- Select --</option>
-              {options?.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <textarea
-              rows={multiline ? 3 : 1}
-              placeholder={placeholder}
-              className="border border-gray-300 rounded-lg p-2 w-full text-sm resize-none"
-              value={value}
-              onChange={onChange}
-            />
-          )
+          <>
+            {type === "select" ? (
+              <select
+                className={`border rounded-lg p-2 w-full text-sm ${
+                  error ? "border-red-500" : "border-gray-300"
+                }`}
+                value={value}
+                onChange={onChange}
+              >
+                <option value="">-- Select --</option>
+                {options?.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <textarea
+                rows={multiline ? 3 : 1}
+                placeholder={placeholder}
+                className={`border rounded-lg p-2 w-full text-sm resize-none ${
+                  error ? "border-red-500" : "border-gray-300"
+                }`}
+                value={value}
+                onChange={onChange}
+              />
+            )}
+
+            {error && (
+              <p className="text-xs text-red-600 mt-1">{error}</p>
+            )}
+          </>
         ) : (
           <p className="font-semibold text-sm text-gray-900 whitespace-pre-line">
             {displayValue ?? "-"}
