@@ -1,5 +1,6 @@
 import { DEPARTMENTS } from "./department";
 import { Book, FileText, Building, Users, Tag } from "lucide-react";
+import { validateProgrammeCode, validateProgrammeName } from "../utils/validators"; // your custom validators
 
 const faculties = ["Faculty of Computer Science and Information Technology"];
 
@@ -11,6 +12,7 @@ export const programmeFormFields = [
     icon: Tag,
     placeholder: "e.g., BCS101",
     readonly: true,
+    validator: validateProgrammeCode,
   },
   {
     type: "text",
@@ -18,6 +20,7 @@ export const programmeFormFields = [
     label: "Programme Name",
     icon: Book,
     placeholder: "e.g., Bachelor of Computer Science",
+    validator: validateProgrammeName,
   },
   {
     type: "text",

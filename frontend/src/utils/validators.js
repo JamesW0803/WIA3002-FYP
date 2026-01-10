@@ -1,11 +1,3 @@
-/**
- * Validate course code
- * @param {string} code
- * @param {Object} options
- * @param {boolean} options.addCourse
- * @param {Array} options.courses
- * @returns {string} error message or empty string
- */
 export const validateCourseCode = (
   code,
   courses = [],
@@ -46,6 +38,28 @@ export const validateCourseName = (
     )
   ) {
     return "Course name already exists";
+  }
+
+  return "";
+};
+
+export const validateProgrammeCode = (code, programmes = []) => {
+  if (!code) return "Programme code is required";
+
+  // Unique check
+  if (programmes.some((p) => p.programme_code === code)) {
+    return "Programme code already exists";
+  }
+
+  return "";
+};
+
+export const validateProgrammeName = (name, programmes = []) => {
+  if (!name) return "Programme name is required";
+
+  // Unique check
+  if (programmes.some((p) => p.programme_name === name)) {
+    return "Programme name already exists";
   }
 
   return "";
