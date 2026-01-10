@@ -1,5 +1,9 @@
 import { DEPARTMENTS } from "./department";
 import { COURSE_TYPES, READABLE_COURSE_TYPES } from "./courseType";
+import { 
+  validateCourseCode, 
+  validateCourseName
+} from "../utils/validators";
 
 import {
   Book,
@@ -38,6 +42,8 @@ export const formSessions = [
         icon: Tag,
         placeholder: "e.g., WIA1001",
         readonly: true,
+        validator: validateCourseCode, 
+
       },
       {
         type: "text",
@@ -45,6 +51,7 @@ export const formSessions = [
         label: "Course Name",
         icon: Book,
         placeholder: "e.g., Data Structures",
+        validator: validateCourseName,
       },
       {
         type: "select",
