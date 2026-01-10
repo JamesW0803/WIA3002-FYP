@@ -64,3 +64,26 @@ export const validateProgrammeName = (name, programmes = []) => {
 
   return "";
 };
+
+export const validateIntakeProgramme = (name, intakes) => {
+  if (!name) return "Programme  is required";
+
+  return "";
+};
+
+export const validateIntakeSession = (session, intakes = []) => {
+  if (!session) return "Session is required";
+
+  return "";
+};
+
+
+export const validateIntakeCode = (code, intakes = []) => {
+  console.log("Validating intake code:", code, intakes);
+  // Unique check
+  if (intakes.some((intake) => intake.programme_intake_code === code)) {
+    return "A programme intake for this programme and session already exists";
+  }
+
+  return "";
+};
