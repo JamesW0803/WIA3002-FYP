@@ -140,7 +140,7 @@ const ProgrammeDetails = () => {
     // Run validator if defined
     const field = programmeFormFields.find((f) => f.key === key);
     if (field?.validator) {
-      const error = field.validator(value, programmes);
+      const error = field.validator(value, programmes,addProgramme);
       setErrors((prev) => ({ ...prev, [key]: error }));
     }
   };
@@ -149,7 +149,7 @@ const ProgrammeDetails = () => {
     const newErrors = {};
     programmeFormFields.forEach((field) => {
       if (field.validator) {
-        const error = field.validator(formData[field.key], programmes);
+        const error = field.validator(formData[field.key], programmes, addProgramme);
         if (error) newErrors[field.key] = error;
       }
     });
