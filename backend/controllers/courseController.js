@@ -300,7 +300,7 @@ const deleteCourseByCode = async (req, res) => {
     }
 
     const formattedCourse = formatCourse(deletedCourse);
-    res.status(200).json();
+    res.status(200).json(formattedCourse);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
