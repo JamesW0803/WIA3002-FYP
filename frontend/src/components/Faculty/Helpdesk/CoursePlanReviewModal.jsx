@@ -64,7 +64,7 @@ export default function CoursePlanReviewModal({
             if (!exists) {
               map[y].semesters[idx].courses.push({
                 source: "planned",
-                course: c.course,
+                course: c,
               });
             }
           });
@@ -218,9 +218,9 @@ function SemesterColumn({ semester }) {
                   <TD className="font-medium">
                     {course.course_code || "—"}
                   </TD>
-                  <TD>{course.course_name || "—"}</TD>
+                  <TD>{course.title_at_time || "—"}</TD>
                   <TD className="text-right">
-                    {course.credit_hours ?? "—"}
+                    {course.credit_at_time ?? "—"}
                   </TD>
                 </tr>
               );

@@ -95,7 +95,7 @@ export function HelpDesk() {
   useEffect(() => {
     const fetchConversation = async () =>{
       try {
-          const response = await axiosClient.get(`/chat/conversation/id/${conversationId}`);
+          const response = await axiosClient.get(`/chat/conversations/${conversationId}`);
           const conversation = response.data;
           const plan = conversation?.coursePlanToBeReviewed
           setCoursePlanToBeReviewed(plan);
