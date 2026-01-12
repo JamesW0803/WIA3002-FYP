@@ -129,7 +129,7 @@ const generateDraftProgrammePlan = async( req, res) => {
     const topoSortedCourses = await topologicalSortCourses(sortedCourses, programme)
 
     // const generatedDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
-    const firstDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
+    const firstDraft = await distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans, programme)
     const finalDraft = distributeNonFacultyCoursesIntoSemesters(nonFacultyCourses, firstDraft)
 
 
@@ -244,30 +244,41 @@ const topologicalSortCourses = async (courses, programme) => {
   return result;
 };
 
-const distributeCoursesIntoSemesters = (sortedCourses, semesterPlans) => {
+const distributeCoursesIntoSemesters = async (sortedCourses, semesterPlans, programme) => {
   if (!sortedCourses.length) return semesterPlans;
 
   const totalSemesters = semesterPlans.length;
-
+  const courseSemesterMap = {}; // courseId -> semesterIndex
   let remainingCourses = [...sortedCourses];
 
   for(let i=0 ; i< totalSemesters;i++){
     const remainingSemesters = totalSemesters - i ;
     const coursesLeft = remainingCourses.length;
     const currentSem = i % 2 === 0 ? 1 : 2
+
     let currentCourseIndex = 0
     let currentCount = semesterPlans[i].courses.length
-
     const target = Math.ceil(coursesLeft / remainingSemesters);
 
     while(currentCount < target && currentCourseIndex < remainingCourses.length){
       const course = remainingCourses[currentCourseIndex];
       const validSemesters = findValidSemester(course);
 
-      
+      const prereqIds = await getPrerequisiteCourseIds(course, programme);
+
+      const latestPrereqSemester = Math.max(
+        -1,
+        ...prereqIds
+          .map(id => courseSemesterMap[id])
+          .filter(s => s !== undefined)
+      );
+      const violatesPrereqRule = i <= latestPrereqSemester;
+
       // Check if course can go in this semester
-      if (validSemesters.includes(currentSem)) {
+      if (validSemesters.includes(currentSem) && !violatesPrereqRule) {
         semesterPlans[i].courses.push(course);
+        courseSemesterMap[course._id.toString()] = i;
+
         remainingCourses.splice(currentCourseIndex, 1); // remove from remaining
         currentCount++;
         // j stays the same because we removed the element
@@ -311,6 +322,25 @@ const findValidSemester = (course) => {
 
 const isFacultyCourse = (course) =>
   FACULTY_COURSE_TYPES.includes(course.type);
+
+const getPrerequisiteCourseIds = async (course, programme) => {
+  let prereqs = course.prerequisites || [];
+
+  const effectivePrereqObj = course.prerequisitesByProgramme?.find(
+    p => p.programme_code === programme.programme_code
+  );
+
+  if (effectivePrereqObj?.prerequisite_codes?.length) {
+    prereqs = effectivePrereqObj.prerequisite_codes;
+  }
+
+  const prereqCourses = await Course.find({
+    course_code: { $in: prereqs }
+  }).select("_id");
+
+  return prereqCourses.map(c => c._id.toString());
+};
+
 
 
 module.exports = {

@@ -206,8 +206,8 @@ function SemesterColumn({ semester }) {
           <thead>
             <tr>
               <TH>Code</TH>
-              <TH>Course</TH>
-              <TH className="w-20 text-right">Credit</TH>
+              <TH>Course Name</TH>
+              <TH className="w-20 text-right">Credit Hours</TH>
             </tr>
           </thead>
           <tbody>
@@ -218,9 +218,9 @@ function SemesterColumn({ semester }) {
                   <TD className="font-medium">
                     {course.course_code || "—"}
                   </TD>
-                  <TD>{course.title_at_time || "—"}</TD>
+                  <TD>{(course.title_at_time ?? course.course_name) || "—"}</TD>
                   <TD className="text-right">
-                    {course.credit_at_time ?? "—"}
+                    {(course.credit_at_time ?? course.credit_hours) || "—"}
                   </TD>
                 </tr>
               );
