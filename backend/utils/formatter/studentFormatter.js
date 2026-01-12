@@ -73,7 +73,7 @@ const formatStudent = async (
     intakeSession: academicSessionEnrolled
       ? `${academicSessionEnrolled.year} ${academicSessionEnrolled.semester}`
       : "-",
-    currentSemester:
+    currentSemester: student.isGraduated ? "Graduated" : 
       getStudentCurrentSemester(
         academicSessionEnrolled,
         currentAcademicSession,
@@ -108,7 +108,7 @@ const getStudentCurrentSemester = (
 
   while (hold._id.toString() !== currentAcademicSession._id.toString()) {
     semesters += 1;
-    hold = sessionMap ? sessionMap[hold.next.toString()] : null;
+    hold = sessionMap ? sessionMap[hold.next?.toString()] : null;
     if (hold == null) {
       break;
     }
@@ -164,6 +164,11 @@ const computeStudentStatus = (
   const status_notes = [];
   const remaining_On_Track_Semesters = min_semester - semesters_passed;
   const remaining_Delayed_Semesters = max_semester - semesters_passed;
+
+  if(remaining_credit_hours <= 0){
+    status = PROGRESS_STATUS.GRADUATED;
+    return { status, status_notes };
+  }
 
   if (remaining_On_Track_Semesters * 21 >= remaining_credit_hours) {
     // student graduate as planned in the proramme intake

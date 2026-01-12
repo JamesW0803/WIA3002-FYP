@@ -106,7 +106,7 @@ const addProgrammeIntake = async (req, res) => {
     );
 
     const total_required_credits = courseList.reduce(
-      (sum, course) => sum + (course.credits || 0),
+      (sum, course) => sum + (course.credit_hours || 0),
       0
     );
 
@@ -445,7 +445,11 @@ const getProgrammePlanMappingByCode = async (req, res) => {
 const editProgrammeIntake = async (req, res) => {
   const { programme_intake_id } = req.params;
   const updatedData = req.body;
-  const { programme_name, academic_session_id } = req.body;
+  const { 
+    programme_name, 
+    academic_session_id,
+    graduation_requirements 
+  }= req.body;
 
   if (!programme_name) return res.status(400).json({ message: "Programme is required" });
   if (!academic_session_id) return res.status(400).json({ message: "Academic session is required" });
@@ -472,6 +476,13 @@ const editProgrammeIntake = async (req, res) => {
       academicSession
     );
 
+    const courseList = Object.values(graduation_requirements).flat();
+    const total_credit_hours = courseList.reduce(
+      (sum, course) => sum + (course.credit_hours || 0),
+      0
+    );
+
+    updatedData.total_credit_hours = total_credit_hours;
     updatedData.programme_id = programme._id;
 
     const updatedProgrammeIntake = await ProgrammeIntake.findByIdAndUpdate(

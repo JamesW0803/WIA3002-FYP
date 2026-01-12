@@ -1,4 +1,4 @@
-import { CheckCircle, AlertTriangle, Clock, HelpCircle } from "lucide-react";
+import { CheckCircle, AlertTriangle, Clock, HelpCircle, GraduationCap } from "lucide-react";
 
 export const STATUS_STYLES = {
   on_track: {
@@ -21,6 +21,13 @@ export const STATUS_STYLES = {
     bg: "bg-red-100",
     text: "text-red-800",
     border: "border-red-300",
+  },
+  graduated: {
+    label: "Graduated",
+    icon: GraduationCap,
+    bg: "bg-blue-100",
+    text: "text-blue-800",
+    border: "border-blue-300",
   },
   unknown: {
     label: "Unknown",
