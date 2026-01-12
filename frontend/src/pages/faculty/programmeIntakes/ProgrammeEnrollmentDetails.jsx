@@ -56,8 +56,8 @@ const ProgrammeEnrollmentDetails = () => {
         };
         setFormData(data);
         setOriginalFormData(data)
+        console.log("Fetched Programme Intake Data:", data);
         setGraduationRequirements(data.graduation_requirements || []);
-        console.log("programme Enrollment data: ", data)
       } catch (err) {
         console.error(err);
       }finally{

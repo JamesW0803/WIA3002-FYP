@@ -112,12 +112,11 @@ const generateDraftProgrammePlan = async( req, res) => {
   try{
     const { 
       graduation_requirements, 
-      programme_plan,
+      semesterPlans,
       programme_name
     } = req.body
 
     const programme = await Programme.findOne({programme_name})
-    const semesterPlans = programme_plan?.semester_plans
     const allocatedCourseCodes = semesterPlans.flatMap(semesterPlan => 
       semesterPlan.courses.map(course => course.course_code))
     const remainingCourses = graduation_requirements.filter((course) => !allocatedCourseCodes.includes(course.course_code))
