@@ -128,6 +128,12 @@ const generateDraftProgrammePlan = async( req, res) => {
     const sortedCourses = sortByLevelThenType(facultyCourses, TYPE_PRIORITY)
     const topoSortedCourses = await topologicalSortCourses(sortedCourses, programme)
 
+    // Print topological sorted courses
+    // console.log("=== Topologically Sorted Courses ===");
+    // topoSortedCourses.forEach((course, index) => {
+    //   console.log(`${index + 1}. ${course.course_code} - ${course.course_name}`);
+    // });
+
     // const generatedDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
     const firstDraft = await distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans, programme)
     const finalDraft = distributeNonFacultyCoursesIntoSemesters(nonFacultyCourses, firstDraft)
@@ -182,15 +188,15 @@ const topologicalSortCourses = async (courses, programme) => {
     let prereqs = course.prerequisites || [];
 
     const effectivePrereqObj = course.prerequisitesByProgramme?.find(prerequisiteObj => 
-      prerequisiteObj.programme_code === programme.programme_code
+      prerequisiteObj.programme === programme._id.toString()
     )
 
-    if(effectivePrereqObj && effectivePrereqObj.prerequisite_codes?.length !== 0){
-      prereqs = effectivePrereqObj.prerequisite_codes
+    if(effectivePrereqObj && effectivePrereqObj.prerequisites?.length !== 0){
+      prereqs = effectivePrereqObj.prerequisites
     }
 
     const prereqCourses = await Course.find({
-      course_code: { $in: prereqs }
+      _id: { $in: prereqs }
     });
 
 
@@ -252,7 +258,7 @@ const distributeCoursesIntoSemesters = async (sortedCourses, semesterPlans, prog
   let remainingCourses = [...sortedCourses];
 
   for(let i=0 ; i< totalSemesters;i++){
-    const remainingSemesters = totalSemesters - i ;
+    const remainingSemesters = totalSemesters - i -1 ;
     const coursesLeft = remainingCourses.length;
     const currentSem = i % 2 === 0 ? 1 : 2
 
@@ -265,21 +271,44 @@ const distributeCoursesIntoSemesters = async (sortedCourses, semesterPlans, prog
       const validSemesters = findValidSemester(course);
 
       const prereqIds = await getPrerequisiteCourseIds(course, programme);
+      const currentSemesterCourseIds = semesterPlans[i].courses.map(c => c._id.toString());
 
-      const latestPrereqSemester = Math.max(
-        -1,
-        ...prereqIds
-          .map(id => courseSemesterMap[id])
-          .filter(s => s !== undefined)
-      );
-
-      // 1. prerequisite rule
-      if (i <= latestPrereqSemester) {
+      // Check if any prerequisite is in the current semester
+      const hasPrereqInCurrentSemester = prereqIds.some(id => currentSemesterCourseIds.includes(id));
+      if (hasPrereqInCurrentSemester) {
+        // Skip this course for this semester
         currentCourseIndex++;
         continue;
       }
 
+      if (isIndustrialTraining(course)) {
+        // Remove IT from remainingCourses first
+        remainingCourses.splice(currentCourseIndex, 1);
+
+        // Remove all courses currently in this semester
+        const coursesToReturn = semesterPlans[i].courses;
+        // Put them back at the front to maintain topo order
+        for (let j = coursesToReturn.length - 1; j >= 0; j--) {
+          remainingCourses.unshift(coursesToReturn[j]);
+        }
+
+        // Reset current semester
+        semesterPlans[i].courses = [];
+
+        // Place IT in this semester
+        semesterPlans[i].courses.push(course);
+        courseSemesterMap[course._id.toString()] = i;
+
+        // Lock this semester: skip adding more courses
+        break;
+      }
+
+
       // 2. academic project rule
+      if(isAcademicProject2(course)){
+        currentCourseIndex++;
+        continue;
+      }
       const apResult = handleAcademicProjects({
         course,
         semesterIndex: i,
@@ -316,10 +345,17 @@ const distributeNonFacultyCoursesIntoSemesters = ( nonFacultyCourses, semesterPl
 
   const totalSemesters = semesterPlans.length;
 
-  nonFacultyCourses.forEach((course, index) => {
-    const semesterIndex = index % totalSemesters;
+  let i=0;
+  while(nonFacultyCourses.length > 0){
+    const semesterIndex = i % totalSemesters;
+    if(semesterPlans[semesterIndex].courses.some(isIndustrialTraining)){
+      i++;
+      continue;
+    }
+    const course = nonFacultyCourses.shift();
     semesterPlans[semesterIndex].courses.push(course);
-  });
+    i++;
+  }
 
   return semesterPlans;
 };
@@ -351,10 +387,15 @@ const getPrerequisiteCourseIds = async (course, programme) => {
 
   if (effectivePrereqObj?.prerequisite_codes?.length) {
     prereqs = effectivePrereqObj.prerequisite_codes;
+    const prereqCourses = await Course.find({
+      course_code : { $in: prereqs }
+    }).select("_id");
+
+  return prereqCourses.map(c => c._id.toString());
   }
 
   const prereqCourses = await Course.find({
-    course_code: { $in: prereqs }
+    _id : { $in: prereqs }
   }).select("_id");
 
   return prereqCourses.map(c => c._id.toString());
@@ -367,6 +408,10 @@ const isAcademicProject1 = (course) => {
 
 const isAcademicProject2 = (course) => {
   return course.course_code === "WIA3003";
+}
+
+const isIndustrialTraining = (course) => {
+  return course.course_code === "WIA3001";
 }
 
 const handleAcademicProjects = ({
@@ -422,7 +467,6 @@ const handleAcademicProjects = ({
     placed: true
   };
 };
-
 
 module.exports = {
   getProgrammePlans,
