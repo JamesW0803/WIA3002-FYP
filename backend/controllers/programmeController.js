@@ -25,6 +25,9 @@ const addProgramme = async (req, res) => {
     const { programme_name, programme_code, description, faculty, department } =
       req.body;
 
+    if (!programme_name) return res.status(400).json({ message: "Programme name is required" });
+    if (!programme_code) return res.status(400).json({ message: "Programme code is required" });
+
     // Validate department
     if (!validateDepartment(department)) {
       return res.status(400).json({ error: "Invalid department specified" });
@@ -145,6 +148,10 @@ const deleteProgrammeByCode = async (req, res) => {
 const editProgramme = async (req, res) => {
   const { programme_code } = req.params;
   const updatedData = req.body;
+  const { programme_name } = req.body;
+
+  if (!programme_name) return res.status(400).json({ message: "Programme name is required" });
+  if (!programme_code) return res.status(400).json({ message: "Programme code is required" });
 
   try {
     const updatedProgramme = await Programme.findOneAndUpdate(

@@ -9,10 +9,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Notification from "../../../components/Students/AcademicProfile/Notification";
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 import { compareAcademicSessions } from "../../../utils/compareAcademicSession";
+import { useAuth } from "../../../context/AuthContext";
 
 const ManageProgrammeEnrollment = () => {
     const navigate = useNavigate();
     const location = useLocation();
+
+    const { user } = useAuth();
 
     const [programmeEnrollments, setProgrammeEnrollments] = useState([]);
     const [items, setItems] = useState([]);
@@ -95,7 +98,8 @@ const ManageProgrammeEnrollment = () => {
                         value,
                         type: clickableItems.includes(key) ? "clickable_text_display" : "text_display",
                         onClick : clickableItems.includes(key) ? () => handleProgrammeEnrollmentOnClick(programmeEnrollment.programme_intake_code)  : null,
-                        isEditable
+                        isEditable,
+                        isDeletable : user.role === "admin" ? user.access_level === "super" : false
                     }
                 })
             )

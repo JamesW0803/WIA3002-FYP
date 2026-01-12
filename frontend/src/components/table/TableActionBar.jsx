@@ -7,6 +7,7 @@ import MessageIcon from "@mui/icons-material/Message"; // import a message icon
 
 const TableActionBar = ({ viewButton, editButton, deleteButton, messageButton, identifier, item}) => {
   const isEditable = item?.find(d => d.isEditable !== undefined)?.isEditable ?? true;
+  const isDeletable = item?.find(d => d.isDeletable !== undefined)?.isDeletable ?? false;
 
   return (
     <td className="px-6 py-4">
@@ -59,7 +60,7 @@ const TableActionBar = ({ viewButton, editButton, deleteButton, messageButton, i
             <EditIcon fontSize="small" />
           </IconButton>
         )}
-        {deleteButton && (
+        {deleteButton && isDeletable&& (
           <IconButton
             onClick={() => {deleteButton.onClick(identifier)}}
             size="small"

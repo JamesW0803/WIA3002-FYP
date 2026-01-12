@@ -13,12 +13,14 @@ import Notification from "../../../components/Students/AcademicProfile/Notificat
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
 import { compareAcademicSessions } from "../../../utils/compareAcademicSession";
 import { Lock } from "lucide-react";
-
+import { useAuth } from "../../../context/AuthContext";
 
 const ProgrammeEnrollmentDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { programme_intake_code } = useParams();
+
+  const { user } = useAuth();
 
   const addProgrammeIntake = location.state?.addProgrammeIntake || false;
   const [originalFormData, setOriginalFormData] = useState({});
@@ -29,6 +31,7 @@ const ProgrammeEnrollmentDetails = () => {
   const [ loading, setLoading] = useState(true);
   const [ openDialog, setOpenDialog] = useState(false);
   const [ intakeFields, setIntakeFields] = useState(programmeIntakeFormFields);
+  const [ intakes, setIntakes] = useState([]);
   const [ academicSessions, setAcademicSessions] = useState([]);
   const [ currentAcademicSession, setCurrentAcademicSession] = useState(null);
   const [ programmes, setProgrammes] = useState([]);
@@ -38,6 +41,9 @@ const ProgrammeEnrollmentDetails = () => {
       closeNotification,
       notification,
   } = useAcademicProfile()
+
+  const [errors, setErrors] = useState({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   useEffect(() => {
     const fetchProgrammeEnrollment = async () => {
@@ -52,6 +58,17 @@ const ProgrammeEnrollmentDetails = () => {
         setOriginalFormData(data)
         setGraduationRequirements(data.graduation_requirements || []);
         console.log("programme Enrollment data: ", data)
+      } catch (err) {
+        console.error(err);
+      }finally{
+        setLoading(false);
+      }
+    };
+
+    const fetchProgrammeEnrollments = async () => {
+      try {
+        const res = await axiosClient.get(`/programme-intakes`);
+        setIntakes(res.data);
       } catch (err) {
         console.error(err);
       }finally{
@@ -142,11 +159,11 @@ const ProgrammeEnrollmentDetails = () => {
             graduation_requirements: [],
             programme_plan: []
           });
-
         }
 
         await fetchProgrammes();
         await fetchAcademicSessions();
+        await fetchProgrammeEnrollments();
       }catch(err){
         console.error(err);
       }finally{
@@ -170,6 +187,11 @@ const ProgrammeEnrollmentDetails = () => {
     if (programme_name && year && semester) {
       const code = generateProgrammeIntakeCode(programme, year, semester);
       setFormData(prev => ({ ...prev, programme_intake_code: code }));
+
+      // run validation for duplicate
+      const validator = intakeFields.find(f => f.key === "programme_intake_code")?.validator;
+      const error = validator(code, intakes, addProgrammeIntake);
+      setErrors(prev => ({ ...prev, programme_intake_code: error }));
     }
   }
 }, [formData.programme_name, formData.year, formData.semester]);
@@ -198,6 +220,8 @@ const ProgrammeEnrollmentDetails = () => {
   const handleEdit = () => setEditMode(true);
 
   const handleSave = async () => {
+    if (!validateForm()) return;
+
     let branch = ""
     try {
       if(!addProgrammeIntake){
@@ -249,7 +273,32 @@ const ProgrammeEnrollmentDetails = () => {
   };
 
   const handleInputChange = (key) => (e) => {
-    setFormData((prev) => ({ ...prev, [key]: e.target.value }));
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, [key]: value }));
+
+    // Run validator if defined
+    const field = intakeFields.find((f) => f.key === key);
+    if (field?.validator) {
+      const error = field.validator(value, intakes, addProgrammeIntake);
+      setErrors((prev) => ({ ...prev, [key]: error }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    intakeFields.forEach((field) => {
+      if (field.validator) {
+        const error = field.validator(formData[field.key], intakes, addProgrammeIntake);
+        if (error) newErrors[field.key] = error;
+      }
+    });
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      showNotification("Please fix validation errors", "error");
+      return false;
+    }
+    return true;
   };
 
   const handleGraduationRequirementsOnChange = (updatedRequirements) => {
@@ -319,6 +368,8 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
     return comparison.isAfter;
   })();
 
+  const isDeletable = user.role === "admin" ? user.access_level === "super" : false
+
   const allowedKeys = intakeFields.map((f) => f.key);
   const entries = Object.entries(formData).filter(([key]) => allowedKeys.includes(key));
   const mid = Math.floor(entries.length / 2);
@@ -363,7 +414,10 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                     </button>
                     <button
                       onClick={handleSave}
-                      className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg"
+                      disabled={hasErrors}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition
+                        ${hasErrors ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-white text-blue-700 hover:bg-gray-100"}
+                      `}
                     >
                       <Save size={16} /> Save
                     </button>
@@ -385,7 +439,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                     )
                     }
 
-                    {!addProgrammeIntake && (
+                    {!addProgrammeIntake && isDeletable && (
                       <button
                         onClick={handleDelete}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
@@ -422,6 +476,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                       onChange={handleInputChange(key)}
                       academicSessions={academicSessions}
                       onCreate={addProgrammeIntake}
+                      error={errors[key]}
                     />
                   ))}
                 </div>
@@ -437,6 +492,7 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
                       onChange={handleInputChange(key)}
                       academicSessions={academicSessions}
                       onCreate={addProgrammeIntake}
+                      error={errors[key]}
                     />
                   ))}
                 </div>
@@ -503,7 +559,15 @@ const handleProgrammePlanChange = (updatedSemesterPlans) => {
   );
 };
 
-const FormField = ({ field, value, editMode, onChange, academicSessions, onCreate}) => {
+const FormField = ({ 
+  field, 
+  value, 
+  editMode, 
+  onChange, 
+  academicSessions, 
+  onCreate,
+  error
+}) => {
   if (!field) return null;
   if( onCreate && field.autoCreation) return null;
   const { label, icon: Icon, type, multiline, options, placeholder } = field;
@@ -521,6 +585,7 @@ const FormField = ({ field, value, editMode, onChange, academicSessions, onCreat
         <div className="w-full">
           <p className="text-sm text-gray-500 mb-1">{label}</p>
           <p className="text-sm font-semibold text-gray-900">{displayValue ?? "-"}</p>
+          {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
         </div>
       </div>
     );
@@ -557,6 +622,7 @@ const FormField = ({ field, value, editMode, onChange, academicSessions, onCreat
         ) : (
           <p className="text-sm font-semibold text-gray-900 whitespace-pre-line">{displayValue ?? "-"}</p>
         )}
+        {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       </div>
     </div>
   );

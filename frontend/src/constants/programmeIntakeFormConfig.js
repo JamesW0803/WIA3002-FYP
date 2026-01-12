@@ -8,6 +8,11 @@ import {
   Building,
   FileText,
 } from "lucide-react";
+import {
+  validateIntakeCode,
+  validateIntakeProgramme,
+  validateIntakeSession,
+} from "../utils/validators";
 
 export const programmeIntakeFormFields = [
   {
@@ -17,6 +22,7 @@ export const programmeIntakeFormFields = [
     icon: Hash,
     readonly: true, // auto-generated
     placeholder: "Auto-generated based on programme & session",
+    validator: validateIntakeCode,
   },
   {
     type: "select",
@@ -25,6 +31,7 @@ export const programmeIntakeFormFields = [
     icon: BookOpen,
     options: [], // fill dynamically
     placeholder: "Select programme",
+    validator: validateIntakeProgramme,
   },
   {
     type: "select",
@@ -33,6 +40,7 @@ export const programmeIntakeFormFields = [
     icon: Calendar,
     options: [], // fill dynamically
     placeholder: "Select intake session",
+    validator: validateIntakeSession,
   },
   {
     type: "text",

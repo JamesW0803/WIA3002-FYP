@@ -9,11 +9,13 @@ import { READABLE_COURSE_TYPES } from "../../../constants/courseType";
 import { useNavigate, useLocation } from "react-router-dom";
 import Notification from "../../../components/Students/AcademicProfile/Notification";
 import { useAcademicProfile } from "../../../hooks/useAcademicProfile";
+import { useAuth } from "../../../context/AuthContext";
 
 const ManageCourses = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const { user } = useAuth();
 
     const [courses, setCourses] = useState([]);
     const [items, setItems] = useState([]);
@@ -79,7 +81,8 @@ const ManageCourses = () => {
                         key,
                         value,
                         type: clickableItems.includes(key) ? "clickable_text_display" : "text_display",
-                        onClick : clickableItems.includes(key) ? () => handleCourseOnClick(course.course_code)  : null
+                        onClick : clickableItems.includes(key) ? () => handleCourseOnClick(course.course_code)  : null,
+                        isDeletable : user.role === "admin" ? user.access_level === "super" : false
                     }
                 })
             )

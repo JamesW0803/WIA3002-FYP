@@ -43,15 +43,40 @@ exports.saveAcademicProfile = async (req, res) => {
         .json({ message: "Current academic session not found" });
     }
 
-    // Check for future semesters
+    // ---- normalize current session to comparable numbers ----
+    // "2023/2024" -> 2023
+    const currentStartYear = Number(String(currentSession.year).split("/")[0]);
+
+    // "Semester 1" -> 1, "Semester 2" -> 2
+    const currentSemesterNum = (() => {
+      const match = String(currentSession.semester).match(/(\d+)/);
+      return match ? Number(match[1]) : null;
+    })();
+
+    if (
+      !Number.isFinite(currentStartYear) ||
+      !Number.isFinite(currentSemesterNum)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid current academic session format" });
+    }
+
+    // ---- Check for future semesters ----
     for (const entry of entries) {
+      const entryYear = Number(entry.year);
+      const entrySem = Number(entry.semester);
+
+      if (!Number.isFinite(entryYear) || !Number.isFinite(entrySem)) {
+        return res.status(400).json({ message: "Invalid entry year/semester" });
+      }
+
       if (
-        entry.year > currentSession.year ||
-        (entry.year === currentSession.year &&
-          entry.semester > currentSession.semester)
+        entryYear > currentStartYear ||
+        (entryYear === currentStartYear && entrySem > currentSemesterNum)
       ) {
         return res.status(400).json({
-          message: `Cannot add courses for future semesters (Year ${entry.year} Semester ${entry.semester})`,
+          message: `Cannot add courses for future semesters (Year ${entryYear} Semester ${entrySem})`,
         });
       }
     }
