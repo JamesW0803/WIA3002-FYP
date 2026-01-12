@@ -407,6 +407,9 @@ const editCourse = async (req, res) => {
     // ----- 4. Build update payload -----
     const updatedData = {
       ...rest,
+      course_name,
+      type,
+      credit_hours,
       prerequisites: prereqCourses,
       prerequisitesByProgramme: prereqsByProgrammeDocs,
       typesByProgramme: typesByProgrammeDocs,
