@@ -272,10 +272,29 @@ const distributeCoursesIntoSemesters = async (sortedCourses, semesterPlans, prog
           .map(id => courseSemesterMap[id])
           .filter(s => s !== undefined)
       );
-      const violatesPrereqRule = i <= latestPrereqSemester;
+
+      // 1. prerequisite rule
+      if (i <= latestPrereqSemester) {
+        currentCourseIndex++;
+        continue;
+      }
+
+      // 2. academic project rule
+      const apResult = handleAcademicProjects({
+        course,
+        semesterIndex: i,
+        semesterPlans,
+        remainingCourses,
+        courseSemesterMap
+      });
+      if (apResult?.placed) {
+        remainingCourses = apResult.updatedRemainingCourses;
+        currentCount++;
+        continue;
+      }
 
       // Check if course can go in this semester
-      if (validSemesters.includes(currentSem) && !violatesPrereqRule) {
+      if (validSemesters.includes(currentSem)) {
         semesterPlans[i].courses.push(course);
         courseSemesterMap[course._id.toString()] = i;
 
@@ -341,6 +360,68 @@ const getPrerequisiteCourseIds = async (course, programme) => {
   return prereqCourses.map(c => c._id.toString());
 };
 
+const isAcademicProject1 = (course) => {
+  return course.course_code === "WIA3002";
+
+}
+
+const isAcademicProject2 = (course) => {
+  return course.course_code === "WIA3003";
+}
+
+const handleAcademicProjects = ({
+  course,
+  semesterIndex,
+  semesterPlans,
+  remainingCourses,
+  courseSemesterMap
+}) => {
+  // Only handle AP1
+  if (!isAcademicProject1(course)) return null;
+
+  const nextSemesterIndex = semesterIndex + 1;
+
+  // Must have a next semester
+  if (!semesterPlans[nextSemesterIndex]) return null;
+
+  // Find AP2
+  const ap2Index = remainingCourses.findIndex(isAcademicProject2);
+  if (ap2Index === -1) {
+    throw new Error("AP2 not found but AP1 exists");
+  }
+
+  const ap2 = remainingCourses[ap2Index];
+
+  // Validate semester offering for AP2
+  const nextSemNumber = nextSemesterIndex % 2 === 0 ? 1 : 2;
+  const ap2ValidSemesters = findValidSemester(ap2);
+
+  if (!ap2ValidSemesters.includes(nextSemNumber)) {
+    return null;
+  }
+
+  /* -----------------------------
+     PLACE AP1 & AP2
+  ------------------------------*/
+  semesterPlans[semesterIndex].courses.push(course);
+  courseSemesterMap[course._id.toString()] = semesterIndex;
+
+  semesterPlans[nextSemesterIndex].courses.push(ap2);
+  courseSemesterMap[ap2._id.toString()] = nextSemesterIndex;
+
+  const updatedRemainingCourses = remainingCourses.filter(
+    c =>
+      ![
+        course._id.toString(),
+        ap2._id.toString()
+      ].includes(c._id.toString())
+  );
+
+  return {
+    updatedRemainingCourses,
+    placed: true
+  };
+};
 
 
 module.exports = {
