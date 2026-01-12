@@ -85,6 +85,7 @@ const ProgrammeDetails = () => {
     }
     setEditMode(false);
     setFormData(originalFormData)
+    setErrors({});
   }
 
   const handleEdit = () => setEditMode(true);
@@ -140,7 +141,7 @@ const ProgrammeDetails = () => {
     // Run validator if defined
     const field = programmeFormFields.find((f) => f.key === key);
     if (field?.validator) {
-      const error = field.validator(value, programmes,addProgramme);
+      const error = field.validator(value, programmes, addProgramme, originalFormData.programme_code);
       setErrors((prev) => ({ ...prev, [key]: error }));
     }
   };
@@ -149,7 +150,7 @@ const ProgrammeDetails = () => {
     const newErrors = {};
     programmeFormFields.forEach((field) => {
       if (field.validator) {
-        const error = field.validator(formData[field.key], programmes, addProgramme);
+        const error = field.validator(formData[field.key], programmes, addProgramme, originalFormData.programme_code);
         if (error) newErrors[field.key] = error;
       }
     });

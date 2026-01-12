@@ -1,9 +1,14 @@
 export const validateCourseCode = (
   code,
   courses = [],
-  addCourse = false
+  addCourse = false,
+  currentCode = null,
 ) => {
   if (!code) return "Course code is required";
+
+  if(!addCourse){
+    courses = courses.filter(c => c.course_code !== currentCode);
+  }
 
   // Detect lowercase letters
   if (/[a-z]/.test(code)) {
@@ -17,7 +22,6 @@ export const validateCourseCode = (
   }
 
   if ( 
-    addCourse &&
     courses.some(
       (c) => c.course_code === code
     )
@@ -31,12 +35,16 @@ export const validateCourseCode = (
 export const validateCourseName = (
   courseName,
   courses = [],
-  addCourse = false
+  addCourse = false,
+  currentCode
 ) => {
   if (!courseName) return "Course Name is required";
 
+  if(!addCourse){
+    courses = courses.filter(c => c.course_code !== currentCode);
+  }
+
   if (
-    addCourse &&
     courses.some(
       (c) => c.course_name === courseName
     )
@@ -67,22 +75,29 @@ export const validateCourseType = (
   return "";
 };
 
-export const validateProgrammeCode = (code, programmes = [], addProgramme = false) => {
+export const validateProgrammeCode = (code, programmes = [], addProgramme = false, currentProgrammeCode = null) => {
   if (!code) return "Programme code is required";
 
+  if(!addProgramme){
+    programmes = programmes.filter(p => p.programme_code !== currentProgrammeCode);
+  }
+
   // Unique check
-  if (addProgramme && programmes.some((p) => p.programme_code === code)) {
+  if (programmes.some((p) => p.programme_code === code)) {
     return "Programme code already exists";
   }
 
   return "";
 };
 
-export const validateProgrammeName = (name, programmes = [], addProgramme = false) => {
+export const validateProgrammeName = (name, programmes = [], addProgramme = false, currentProgrammeCode = null) => {
   if (!name) return "Programme name is required";
+  if(!addProgramme){
+    programmes = programmes.filter(p => p.programme_code !== currentProgrammeCode);
+  }
 
   // Unique check
-  if (addProgramme && programmes.some((p) => p.programme_name === name)) {
+  if (programmes.some((p) => p.programme_name === name)) {
     return "Programme name already exists";
   }
 
@@ -102,10 +117,14 @@ export const validateIntakeSession = (session, intakes = []) => {
 };
 
 
-export const validateIntakeCode = (code, intakes = [], addIntake = false) => {
-  console.log("Validating intake code:", code, intakes);
+export const validateIntakeCode = (code, intakes = [], addIntake = false, currentIntakeCode = null) => {
+
+  if(!addIntake){
+    intakes = intakes.filter(i => i.programme_intake_code !== currentIntakeCode);
+  }
+
   // Unique check
-  if (addIntake && intakes.some((intake) => intake.programme_intake_code === code)) {
+  if (intakes.some((intake) => intake.programme_intake_code === code)) {
     return "A programme intake for this programme and session already exists";
   }
 

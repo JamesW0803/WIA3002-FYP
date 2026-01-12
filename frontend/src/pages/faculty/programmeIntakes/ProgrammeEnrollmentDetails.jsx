@@ -212,6 +212,7 @@ const ProgrammeEnrollmentDetails = () => {
       setFormData(originalFormData); // restore original data
       setGraduationRequirements(originalFormData.graduation_requirements || []);
       setEditMode(false);
+      setErrors({});
     }else{
       navigate('/admin/programme-intakes')
     }
@@ -279,7 +280,7 @@ const ProgrammeEnrollmentDetails = () => {
     // Run validator if defined
     const field = intakeFields.find((f) => f.key === key);
     if (field?.validator) {
-      const error = field.validator(value, intakes, addProgrammeIntake);
+      const error = field.validator(value, intakes, addProgrammeIntake, originalFormData.programme_intake_code);
       setErrors((prev) => ({ ...prev, [key]: error }));
     }
   };
@@ -288,7 +289,7 @@ const ProgrammeEnrollmentDetails = () => {
     const newErrors = {};
     intakeFields.forEach((field) => {
       if (field.validator) {
-        const error = field.validator(formData[field.key], intakes, addProgrammeIntake);
+        const error = field.validator(formData[field.key], intakes, addProgrammeIntake, originalFormData.programme_intake_code);
         if (error) newErrors[field.key] = error;
       }
     });
