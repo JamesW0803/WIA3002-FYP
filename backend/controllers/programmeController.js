@@ -180,4 +180,5 @@ module.exports = {
   getProgrammeByCode,
   editProgramme,
   deleteProgrammeByCode,
+  validateDepartment
 };
