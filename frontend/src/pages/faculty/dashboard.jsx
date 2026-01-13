@@ -70,6 +70,7 @@ const Dashboard = () => {
                     const response = await axiosClient.get("/students");
                     const students = response.data;
                     setStudents(students);
+                    console.log(students)
                 }catch(error){
                     console.error("Error fetching students.")
                 }

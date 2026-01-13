@@ -112,12 +112,11 @@ const generateDraftProgrammePlan = async( req, res) => {
   try{
     const { 
       graduation_requirements, 
-      programme_plan,
+      semesterPlans,
       programme_name
     } = req.body
 
     const programme = await Programme.findOne({programme_name})
-    const semesterPlans = programme_plan?.semester_plans
     const allocatedCourseCodes = semesterPlans.flatMap(semesterPlan => 
       semesterPlan.courses.map(course => course.course_code))
     const remainingCourses = graduation_requirements.filter((course) => !allocatedCourseCodes.includes(course.course_code))
@@ -129,8 +128,14 @@ const generateDraftProgrammePlan = async( req, res) => {
     const sortedCourses = sortByLevelThenType(facultyCourses, TYPE_PRIORITY)
     const topoSortedCourses = await topologicalSortCourses(sortedCourses, programme)
 
+    // Print topological sorted courses
+    // console.log("=== Topologically Sorted Courses ===");
+    // topoSortedCourses.forEach((course, index) => {
+    //   console.log(`${index + 1}. ${course.course_code} - ${course.course_name}`);
+    // });
+
     // const generatedDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
-    const firstDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
+    const firstDraft = await distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans, programme)
     const finalDraft = distributeNonFacultyCoursesIntoSemesters(nonFacultyCourses, firstDraft)
 
 
@@ -183,15 +188,15 @@ const topologicalSortCourses = async (courses, programme) => {
     let prereqs = course.prerequisites || [];
 
     const effectivePrereqObj = course.prerequisitesByProgramme?.find(prerequisiteObj => 
-      prerequisiteObj.programme_code === programme.programme_code
+      prerequisiteObj.programme === programme._id.toString()
     )
 
-    if(effectivePrereqObj && effectivePrereqObj.prerequisite_codes?.length !== 0){
-      prereqs = effectivePrereqObj.prerequisite_codes
+    if(effectivePrereqObj && effectivePrereqObj.prerequisites?.length !== 0){
+      prereqs = effectivePrereqObj.prerequisites
     }
 
     const prereqCourses = await Course.find({
-      course_code: { $in: prereqs }
+      _id: { $in: prereqs }
     });
 
 
@@ -245,30 +250,83 @@ const topologicalSortCourses = async (courses, programme) => {
   return result;
 };
 
-const distributeCoursesIntoSemesters = (sortedCourses, semesterPlans) => {
+const distributeCoursesIntoSemesters = async (sortedCourses, semesterPlans, programme) => {
   if (!sortedCourses.length) return semesterPlans;
 
   const totalSemesters = semesterPlans.length;
-
+  const courseSemesterMap = {}; // courseId -> semesterIndex
   let remainingCourses = [...sortedCourses];
 
   for(let i=0 ; i< totalSemesters;i++){
-    const remainingSemesters = totalSemesters - i ;
+    const remainingSemesters = totalSemesters - i -1 ;
     const coursesLeft = remainingCourses.length;
     const currentSem = i % 2 === 0 ? 1 : 2
+
     let currentCourseIndex = 0
     let currentCount = semesterPlans[i].courses.length
-
     const target = Math.ceil(coursesLeft / remainingSemesters);
 
     while(currentCount < target && currentCourseIndex < remainingCourses.length){
       const course = remainingCourses[currentCourseIndex];
       const validSemesters = findValidSemester(course);
 
-      
+      const prereqIds = await getPrerequisiteCourseIds(course, programme);
+      const currentSemesterCourseIds = semesterPlans[i].courses.map(c => c._id.toString());
+
+      // Check if any prerequisite is in the current semester
+      const hasPrereqInCurrentSemester = prereqIds.some(id => currentSemesterCourseIds.includes(id));
+      if (hasPrereqInCurrentSemester) {
+        // Skip this course for this semester
+        currentCourseIndex++;
+        continue;
+      }
+
+      if (isIndustrialTraining(course)) {
+        // Remove IT from remainingCourses first
+        remainingCourses.splice(currentCourseIndex, 1);
+
+        // Remove all courses currently in this semester
+        const coursesToReturn = semesterPlans[i].courses;
+        // Put them back at the front to maintain topo order
+        for (let j = coursesToReturn.length - 1; j >= 0; j--) {
+          remainingCourses.unshift(coursesToReturn[j]);
+        }
+
+        // Reset current semester
+        semesterPlans[i].courses = [];
+
+        // Place IT in this semester
+        semesterPlans[i].courses.push(course);
+        courseSemesterMap[course._id.toString()] = i;
+
+        // Lock this semester: skip adding more courses
+        break;
+      }
+
+
+      // 2. academic project rule
+      if(isAcademicProject2(course)){
+        currentCourseIndex++;
+        continue;
+      }
+      const apResult = handleAcademicProjects({
+        course,
+        semesterIndex: i,
+        semesterPlans,
+        remainingCourses,
+        courseSemesterMap
+      });
+      if (apResult?.placed) {
+        remainingCourses = apResult.updatedRemainingCourses;
+        currentCount++;
+        continue;
+      }
+
       // Check if course can go in this semester
       if (validSemesters.includes(currentSem)) {
         semesterPlans[i].courses.push(course);
+        courseSemesterMap[course._id.toString()] = i;
+
         remainingCourses.splice(currentCourseIndex, 1); // remove from remaining
         currentCount++;
         // j stays the same because we removed the element
@@ -287,10 +345,17 @@ const distributeNonFacultyCoursesIntoSemesters = ( nonFacultyCourses, semesterPl
 
   const totalSemesters = semesterPlans.length;
 
-  nonFacultyCourses.forEach((course, index) => {
-    const semesterIndex = index % totalSemesters;
+  let i=0;
+  while(nonFacultyCourses.length > 0){
+    const semesterIndex = i % totalSemesters;
+    if(semesterPlans[semesterIndex].courses.some(isIndustrialTraining)){
+      i++;
+      continue;
+    }
+    const course = nonFacultyCourses.shift();
     semesterPlans[semesterIndex].courses.push(course);
-  });
+    i++;
+  }
 
   return semesterPlans;
 };
@@ -313,6 +378,95 @@ const findValidSemester = (course) => {
 const isFacultyCourse = (course) =>
   FACULTY_COURSE_TYPES.includes(course.type);
 
+const getPrerequisiteCourseIds = async (course, programme) => {
+  let prereqs = course.prerequisites || [];
+
+  const effectivePrereqObj = course.prerequisitesByProgramme?.find(
+    p => p.programme_code === programme.programme_code
+  );
+
+  if (effectivePrereqObj?.prerequisite_codes?.length) {
+    prereqs = effectivePrereqObj.prerequisite_codes;
+    const prereqCourses = await Course.find({
+      course_code : { $in: prereqs }
+    }).select("_id");
+
+  return prereqCourses.map(c => c._id.toString());
+  }
+
+  const prereqCourses = await Course.find({
+    _id : { $in: prereqs }
+  }).select("_id");
+
+  return prereqCourses.map(c => c._id.toString());
+};
+
+const isAcademicProject1 = (course) => {
+  return course.course_code === "WIA3002";
+
+}
+
+const isAcademicProject2 = (course) => {
+  return course.course_code === "WIA3003";
+}
+
+const isIndustrialTraining = (course) => {
+  return course.course_code === "WIA3001";
+}
+
+const handleAcademicProjects = ({
+  course,
+  semesterIndex,
+  semesterPlans,
+  remainingCourses,
+  courseSemesterMap
+}) => {
+  // Only handle AP1
+  if (!isAcademicProject1(course)) return null;
+
+  const nextSemesterIndex = semesterIndex + 1;
+
+  // Must have a next semester
+  if (!semesterPlans[nextSemesterIndex]) return null;
+
+  // Find AP2
+  const ap2Index = remainingCourses.findIndex(isAcademicProject2);
+  if (ap2Index === -1) {
+    throw new Error("AP2 not found but AP1 exists");
+  }
+
+  const ap2 = remainingCourses[ap2Index];
+
+  // Validate semester offering for AP2
+  const nextSemNumber = nextSemesterIndex % 2 === 0 ? 1 : 2;
+  const ap2ValidSemesters = findValidSemester(ap2);
+
+  if (!ap2ValidSemesters.includes(nextSemNumber)) {
+    return null;
+  }
+
+  /* -----------------------------
+     PLACE AP1 & AP2
+  ------------------------------*/
+  semesterPlans[semesterIndex].courses.push(course);
+  courseSemesterMap[course._id.toString()] = semesterIndex;
+
+  semesterPlans[nextSemesterIndex].courses.push(ap2);
+  courseSemesterMap[ap2._id.toString()] = nextSemesterIndex;
+
+  const updatedRemainingCourses = remainingCourses.filter(
+    c =>
+      ![
+        course._id.toString(),
+        ap2._id.toString()
+      ].includes(c._id.toString())
+  );
+
+  return {
+    updatedRemainingCourses,
+    placed: true
+  };
+};
 
 module.exports = {
   getProgrammePlans,

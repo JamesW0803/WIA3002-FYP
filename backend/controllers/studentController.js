@@ -71,6 +71,9 @@ const updateStudentProgressStatus = async (studentId, profile) => {
 
   if(student.status !== latestProgressStatus.status){
     student.status = latestProgressStatus.status
+    if(student.status === "graduated"){
+      student.isGraduated = true
+    }
     update = true
   }
 

@@ -74,6 +74,7 @@ const GraduationRequirement = ({ programmeEnrollment, editMode, onChange }) => {
       try {
         const response = await axiosClient.get("/courses");
         setCourses(response.data);
+        console.log("Fetched courses for GraduationRequirement:", response.data);
       } catch (err) {
         console.error(err);
       }

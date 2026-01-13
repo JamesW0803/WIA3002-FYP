@@ -192,7 +192,7 @@ const handleOnGenerate = async () => {
   try{
     const payload = {
       graduation_requirements : programmeEnrollment.graduation_requirements,
-      programme_plan : programmeEnrollment.programme_plan,
+      semesterPlans : semesterPlans,
       programme_name : programmeEnrollment.programme_name
     }
     const res = await axiosClient.post("/programme-plans/generate-draft", payload)

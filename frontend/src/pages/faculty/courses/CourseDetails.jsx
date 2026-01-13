@@ -118,6 +118,7 @@ const CourseDetails = () => {
     }
     setEditMode(false);
     setFormData(originalFormData);
+    setErrors({}); 
   };
 
   const handleEdit = () => setEditMode(true);
@@ -232,7 +233,7 @@ const CourseDetails = () => {
 
     const validator = fieldValidators[key];
     if (validator) {
-      const error = validator(value, courses, addCourse);
+      const error = validator(value, courses, addCourse, originalFormData.course_code);
       setErrors((prev) => ({
         ...prev,
         [key]: error,
@@ -245,7 +246,7 @@ const CourseDetails = () => {
     const newErrors = {};
 
     Object.entries(fieldValidators).forEach(([key, validator]) => {
-      const error = validator(formData[key], courses, addCourse);
+      const error = validator(formData[key], courses, addCourse, originalFormData.course_code);
       if (error) {
         newErrors[key] = error;
       }
