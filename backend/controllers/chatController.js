@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
-const Student = require("../models/Student");
+const Student = require("../models/student");
 const StudentAcademicPlan = require("../models/StudentAcademicPlan");
 
 const { getIO } = require("../socket");
@@ -163,7 +163,7 @@ exports.updateConversationStatus = async (req, res) => {
           updatedAt: convo.updatedAt,
           student: convo.student,
           status: convo.status,
-        }
+        },
       );
     }
 
@@ -385,7 +385,7 @@ exports.deleteConversation = async (req, res) => {
             "conversation:deleted",
             {
               conversationId: id,
-            }
+            },
           );
         }
       }

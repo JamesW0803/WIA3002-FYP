@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 require("./Programme");
 require("./AcademicSession");
 require("./ProgrammePlan");
-require("./Course");
+require("./course");
 
 const programmeIntake = new mongoose.Schema(
   {
@@ -58,12 +58,12 @@ const programmeIntake = new mongoose.Schema(
   {
     timestamps: true,
     collection: "programme_intakes",
-  }
+  },
 );
 
 programmeIntake.index(
   { programme_id: 1, academic_session_id: 1 },
-  { unique: true }
+  { unique: true },
 );
 
 module.exports = mongoose.model("ProgrammeIntake", programmeIntake);

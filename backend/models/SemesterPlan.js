@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 require("./ProgrammePlan"); // Import the Programme_Plan model
-require("./Course"); // Import the Programme_Plan model
+require("./course"); // Import the Programme_Plan model
 require("./AcademicSession"); // Import the Programme_Plan model
 
 const semesterPlanSchema = new mongoose.Schema(
@@ -23,7 +23,7 @@ const semesterPlanSchema = new mongoose.Schema(
   {
     timestamps: true,
     collection: "semester_plans",
-  }
+  },
 );
 
 module.exports = mongoose.model("SemesterPlan", semesterPlanSchema);

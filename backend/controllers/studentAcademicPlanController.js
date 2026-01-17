@@ -1,6 +1,6 @@
 const AcademicPlan = require("../models/StudentAcademicPlan");
 const mongoose = require("mongoose");
-const Course = require("../models/Course");
+const Course = require("../models/course");
 
 async function hydrateCourseRefs(years) {
   const result = [];
@@ -20,7 +20,7 @@ async function hydrateCourseRefs(years) {
         }
         const found = await Course.findOne(
           { course_code: code },
-          { _id: 1 }
+          { _id: 1 },
         ).lean();
         if (found?._id) {
           newCourses.push({ ...c, course: found._id });
@@ -251,7 +251,7 @@ exports.updatePlan = async (req, res) => {
         notes: notes || "",
         updatedAt: new Date(),
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).populate({
       path: "years.semesters.courses.course",
       select:
@@ -331,7 +331,7 @@ exports.updatePlanStatus = async (req, res) => {
     const updatedPlan = await AcademicPlan.findByIdAndUpdate(
       planId,
       updateFields,
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).populate({
       path: "years.semesters.courses.course",
       select: "course_code course_name credit_hours",
@@ -430,7 +430,7 @@ exports.setDefaultPlan = async (req, res) => {
       await AcademicPlan.updateMany(
         { student: studentId, _id: { $ne: planId } },
         { $set: { isDefault: false } },
-        { session }
+        { session },
       );
       plan.isDefault = true;
       await plan.save({ session });

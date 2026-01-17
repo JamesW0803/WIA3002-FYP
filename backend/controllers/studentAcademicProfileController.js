@@ -1,12 +1,12 @@
 const AcademicProfile = require("../models/StudentAcademicProfile");
 const AcademicSession = require("../models/AcademicSession");
-const Course = require("../models/Course");
+const Course = require("../models/course");
 const mongoose = require("mongoose");
 const {
   updateStudentProgressStatus,
 } = require("../controllers/studentController");
 
-const Student = require("../models/Student");
+const Student = require("../models/student");
 const ProgrammeIntake = require("../models/ProgrammeIntake");
 
 const gradeToPoint = (grade) => {
@@ -90,9 +90,9 @@ exports.saveAcademicProfile = async (req, res) => {
       gaps
         .filter(
           (g) =>
-            g && g.year && (g.semester === null || g.semester === undefined)
+            g && g.year && (g.semester === null || g.semester === undefined),
         )
-        .map((g) => Number(g.year))
+        .map((g) => Number(g.year)),
     );
     const normalizedGaps = [];
     const seenKey = new Set();
@@ -127,12 +127,12 @@ exports.saveAcademicProfile = async (req, res) => {
 
       // have we already seen a prior A/A+ for this course?
       const hasAorAplus = history.some(
-        (h) => h.status === "Passed" && (h.grade === "A" || h.grade === "A+")
+        (h) => h.status === "Passed" && (h.grade === "A" || h.grade === "A+"),
       );
       if (hasAorAplus) {
         // same message your catch block is looking for
         throw new Error(
-          `Cannot record ${entry.code} again after achieving A/A+.`
+          `Cannot record ${entry.code} again after achieving A/A+.`,
         );
       }
 
@@ -157,7 +157,7 @@ exports.saveAcademicProfile = async (req, res) => {
           course.offered_semester.length > 0
         ) {
           const norm = course.offered_semester.map((s) =>
-            String(s).toLowerCase()
+            String(s).toLowerCase(),
           );
           const ok =
             norm.includes(`semester ${entry.semester}`) ||
@@ -166,7 +166,7 @@ exports.saveAcademicProfile = async (req, res) => {
             norm.includes("any");
           if (!ok) {
             throw new Error(
-              `Course ${entry.code} is not offered in Semester ${entry.semester}`
+              `Course ${entry.code} is not offered in Semester ${entry.semester}`,
             );
           }
         }
@@ -179,7 +179,7 @@ exports.saveAcademicProfile = async (req, res) => {
           grade: entry.grade || "",
           isRetake: entry.isRetake, // use the annotated flag
         };
-      })
+      }),
     );
 
     // --- completed credits + CGPA (latest attempt per course, like TranscriptView) ---
@@ -203,7 +203,7 @@ exports.saveAcademicProfile = async (req, res) => {
         const cfg = (course.prerequisitesByProgramme || []).find(
           (p) =>
             p.programme &&
-            p.programme.toString() === student.programme._id.toString()
+            p.programme.toString() === student.programme._id.toString(),
         );
 
         if (cfg) {
@@ -225,7 +225,7 @@ exports.saveAcademicProfile = async (req, res) => {
           (e) =>
             e.year === entry.year &&
             e.semester === entry.semester &&
-            prereqCodes.includes(e.code)
+            prereqCodes.includes(e.code),
         );
 
         if (sameSemesterPrereqs) {
@@ -428,7 +428,7 @@ exports.getStudentIntakeInfo = async (req, res) => {
     // 1) Prefer programme_intake → its academic_session_id
     if (student.programme_intake) {
       const intake = await ProgrammeIntake.findById(
-        student.programme_intake._id || student.programme_intake
+        student.programme_intake._id || student.programme_intake,
       ).populate("academic_session_id");
 
       if (intake && intake.academic_session_id) {
@@ -437,14 +437,14 @@ exports.getStudentIntakeInfo = async (req, res) => {
       }
     } else {
       console.log(
-        "[getStudentIntakeInfo] Student has NO programme_intake; will fallback to academicSession."
+        "[getStudentIntakeInfo] Student has NO programme_intake; will fallback to academicSession.",
       );
     }
 
     // 2) Fallback to student's academicSession
     if (!intakeYear && student.academicSession) {
       const session = await AcademicSession.findById(
-        student.academicSession._id || student.academicSession
+        student.academicSession._id || student.academicSession,
       );
       if (session) {
         intakeYear = session.year;
@@ -452,7 +452,7 @@ exports.getStudentIntakeInfo = async (req, res) => {
       }
     } else if (!intakeYear) {
       console.log(
-        "[getStudentIntakeInfo] Student has NO academicSession on doc either."
+        "[getStudentIntakeInfo] Student has NO academicSession on doc either.",
       );
     }
 

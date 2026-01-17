@@ -11,6 +11,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
+app.get("/", (req, res) => {
+  res.status(200).send("Backend is running");
+});
+
 app.use("/api", routes);
 app.use("/api/chat", chatRoutes);
 

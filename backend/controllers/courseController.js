@@ -1,4 +1,4 @@
-const Course = require("../models/Course");
+const Course = require("../models/course");
 const Programme = require("../models/Programme");
 const {
   formatCourses,
@@ -6,7 +6,7 @@ const {
 } = require("../utils/formatter/courseFormatter");
 const AcademicProfile = require("../models/StudentAcademicProfile");
 const { COURSE_TYPES } = require("../constants/courseType");
-const course = require("../models/Course");
+const course = require("../models/course");
 
 const getAllCourses = async (req, res) => {
   try {
@@ -44,7 +44,7 @@ const getAllCourses = async (req, res) => {
 
       const mini = await Course.find(query)
         .select(
-          "course_code course_name credit_hours prerequisites offered_semester prerequisitesByProgramme"
+          "course_code course_name credit_hours prerequisites offered_semester prerequisitesByProgramme",
         )
         .populate({
           path: "prerequisites",
@@ -62,7 +62,7 @@ const getAllCourses = async (req, res) => {
           const cfg = (course.prerequisitesByProgramme || []).find((p) =>
             p.programme.equals
               ? p.programme.equals(studentProgrammeId)
-              : p.programme.toString() === studentProgrammeId.toString()
+              : p.programme.toString() === studentProgrammeId.toString(),
           );
 
           if (cfg && Array.isArray(cfg.prerequisites)) {
@@ -87,15 +87,15 @@ const getAllCourses = async (req, res) => {
     const courses = await Course.find(query)
       .populate(
         "prerequisites",
-        "course_code course_name credit_hours offered_semester"
+        "course_code course_name credit_hours offered_semester",
       )
       .populate(
         "prerequisitesByProgramme.programme",
-        "programme_name programme_code"
+        "programme_name programme_code",
       )
       .populate(
         "prerequisitesByProgramme.prerequisites",
-        "course_code course_name credit_hours"
+        "course_code course_name credit_hours",
       )
       .populate("typesByProgramme.programme", "programme_name programme_code");
 
@@ -124,10 +124,14 @@ const addCourse = async (req, res) => {
       study_level,
     } = req.body;
 
-    if (!course_code) return res.status(400).json({ message: "Course code is required" });
-    if (!course_name) return res.status(400).json({ message: "Course name is required" });
-    if (!type) return res.status(400).json({ message: "Course type is required" });
-    if (!credit_hours) return res.status(400).json({ message: "Credit hours are required" });
+    if (!course_code)
+      return res.status(400).json({ message: "Course code is required" });
+    if (!course_name)
+      return res.status(400).json({ message: "Course name is required" });
+    if (!type)
+      return res.status(400).json({ message: "Course type is required" });
+    if (!credit_hours)
+      return res.status(400).json({ message: "Credit hours are required" });
 
     // ----- 1. Global prerequisites (codes -> ObjectIds) -----
     const cleanedPrerequisiteCodes = (prerequisites || []).filter(Boolean);
@@ -136,8 +140,8 @@ const addCourse = async (req, res) => {
     if (cleanedPrerequisiteCodes.length > 0) {
       const prerequisiteCourses = await Promise.all(
         cleanedPrerequisiteCodes.map((code) =>
-          Course.findOne({ course_code: code })
-        )
+          Course.findOne({ course_code: code }),
+        ),
       );
 
       if (prerequisiteCourses.some((c) => !c)) {
@@ -170,7 +174,7 @@ const addCourse = async (req, res) => {
 
       // find all prerequisite courses by code
       const prereqCourseDocs = await Promise.all(
-        prereqCodes.map((code) => Course.findOne({ course_code: code }))
+        prereqCodes.map((code) => Course.findOne({ course_code: code })),
       );
 
       if (prereqCourseDocs.some((c) => !c)) {
@@ -240,15 +244,15 @@ const addCourse = async (req, res) => {
     const populated = await Course.findById(savedCourse._id)
       .populate(
         "prerequisites",
-        "course_code course_name credit_hours offered_semester"
+        "course_code course_name credit_hours offered_semester",
       )
       .populate(
         "prerequisitesByProgramme.programme",
-        "programme_name programme_code"
+        "programme_name programme_code",
       )
       .populate(
         "prerequisitesByProgramme.prerequisites",
-        "course_code course_name credit_hours"
+        "course_code course_name credit_hours",
       )
       .populate("typesByProgramme.programme", "programme_name programme_code");
 
@@ -270,11 +274,11 @@ const getCourseByCode = async (req, res) => {
       .populate("prerequisites")
       .populate(
         "prerequisitesByProgramme.programme",
-        "programme_name programme_code"
+        "programme_name programme_code",
       )
       .populate(
         "prerequisitesByProgramme.prerequisites",
-        "course_code course_name"
+        "course_code course_name",
       )
       .populate("typesByProgramme.programme", "programme_name programme_code");
 
@@ -320,10 +324,14 @@ const editCourse = async (req, res) => {
     ...rest
   } = req.body;
 
-  if (!course_code) return res.status(400).json({ message: "Course code is required" });
-  if (!course_name) return res.status(400).json({ message: "Course name is required" });
-  if (!type) return res.status(400).json({ message: "Course type is required" });
-  if (!credit_hours) return res.status(400).json({ message: "Credit hours are required" });
+  if (!course_code)
+    return res.status(400).json({ message: "Course code is required" });
+  if (!course_name)
+    return res.status(400).json({ message: "Course name is required" });
+  if (!type)
+    return res.status(400).json({ message: "Course type is required" });
+  if (!credit_hours)
+    return res.status(400).json({ message: "Credit hours are required" });
 
   try {
     // ----- 1. Global prerequisites (codes -> ObjectIds) -----
@@ -359,7 +367,7 @@ const editCourse = async (req, res) => {
       }
 
       const prereqCourseDocs = await Promise.all(
-        prereqCodes.map((code) => Course.findOne({ course_code: code }))
+        prereqCodes.map((code) => Course.findOne({ course_code: code })),
       );
 
       if (prereqCourseDocs.some((c) => !c)) {
@@ -415,7 +423,7 @@ const editCourse = async (req, res) => {
     const updatedCourse = await Course.findOneAndUpdate(
       { course_code },
       updatedData,
-      { new: true }
+      { new: true },
     );
 
     if (!updatedCourse) {
@@ -426,15 +434,15 @@ const editCourse = async (req, res) => {
     const populated = await Course.findById(updatedCourse._id)
       .populate(
         "prerequisites",
-        "course_code course_name credit_hours offered_semester"
+        "course_code course_name credit_hours offered_semester",
       )
       .populate(
         "prerequisitesByProgramme.programme",
-        "programme_name programme_code"
+        "programme_name programme_code",
       )
       .populate(
         "prerequisitesByProgramme.prerequisites",
-        "course_code course_name credit_hours"
+        "course_code course_name credit_hours",
       )
       .populate("typesByProgramme.programme", "programme_name programme_code");
 
@@ -462,7 +470,7 @@ const checkCoursePrerequisites = async (req, res) => {
       .populate("prerequisites", "course_code course_name")
       .populate(
         "prerequisitesByProgramme.prerequisites",
-        "course_code course_name"
+        "course_code course_name",
       );
 
     if (!course) {
@@ -491,7 +499,7 @@ const checkCoursePrerequisites = async (req, res) => {
 
     if (studentProgrammeId) {
       const programmeConfig = (course.prerequisitesByProgramme || []).find(
-        (p) => p.programme.toString() === studentProgrammeId.toString()
+        (p) => p.programme.toString() === studentProgrammeId.toString(),
       );
 
       if (programmeConfig) {

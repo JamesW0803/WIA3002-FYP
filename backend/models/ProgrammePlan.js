@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 require("./SemesterPlan");
 require("./ProgrammeIntake");
-require("./Student");
+require("./student");
 
 const programmePlanSchema = new mongoose.Schema(
   {
@@ -19,7 +19,7 @@ const programmePlanSchema = new mongoose.Schema(
   {
     timestamps: true,
     collection: "programme_plans",
-  }
+  },
 );
 
 module.exports = mongoose.model("ProgrammePlan", programmePlanSchema);

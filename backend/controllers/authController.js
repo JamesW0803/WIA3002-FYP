@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
-const Student = require("../models/Student");
-const Admin = require("../models/Admin");
+const Student = require("../models/student");
+const Admin = require("../models/admin");
 const ProgrammeIntake = require("../models/ProgrammeIntake");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
@@ -220,7 +220,7 @@ const requestPasswordReset = async (req, res) => {
     const token = jwt.sign(
       { id: user._id.toString(), purpose: "password_reset" },
       process.env.RESET_PASSWORD_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "15m" },
     );
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
@@ -380,10 +380,10 @@ const updateStudentProfile = async (req, res) => {
 
     if (req.file) {
       const blobServiceClient = BlobServiceClient.fromConnectionString(
-        process.env.AZURE_STORAGE_CONNECTION_STRING
+        process.env.AZURE_STORAGE_CONNECTION_STRING,
       );
       const containerClient = blobServiceClient.getContainerClient(
-        process.env.AZURE_STORAGE_CONTAINER_NAME
+        process.env.AZURE_STORAGE_CONTAINER_NAME,
       );
 
       // you could nest by userId for organization

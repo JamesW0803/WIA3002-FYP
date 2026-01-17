@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
-const Student = require("./Student");
+const Student = require("./student");
 
 // sub schema
 const semesterCourseSchema = new mongoose.Schema(
@@ -14,7 +14,7 @@ const semesterCourseSchema = new mongoose.Schema(
     course_code: { type: String },
     title_at_time: { type: String },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const semesterSchema = new mongoose.Schema({
@@ -62,11 +62,11 @@ const academicPlanSchema = new mongoose.Schema(
       unique: true,
       required: true,
     },
-    status : {
+    status: {
       type: Number,
       required: true,
       default: 1,
-      enum: [1,2,3,4]
+      enum: [1, 2, 3, 4],
     },
     name: {
       type: String,
@@ -97,7 +97,7 @@ const academicPlanSchema = new mongoose.Schema(
   {
     timestamps: true,
     collection: "academic_plans",
-  }
+  },
 );
 
 // Calculate total credits before saving
@@ -147,7 +147,7 @@ academicPlanSchema.pre("remove", async function (next) {
 // One default per student (enforced only when isDefault=true)
 academicPlanSchema.index(
   { student: 1, isDefault: 1 },
-  { unique: true, partialFilterExpression: { isDefault: true } }
+  { unique: true, partialFilterExpression: { isDefault: true } },
 );
 
 module.exports = mongoose.model("StudentAcademicPlan", academicPlanSchema);

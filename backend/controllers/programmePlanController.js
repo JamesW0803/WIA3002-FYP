@@ -1,14 +1,20 @@
-const Student = require("../models/Student");
+const Student = require("../models/student");
 const ProgrammePlan = require("../models/ProgrammePlan");
 const SemesterPlan = require("../models/SemesterPlan");
 const Programme = require("../models/Programme");
-const Course = require("../models/Course");
+const Course = require("../models/course");
 const AcademicSession = require("../models/AcademicSession");
-const { TYPE_PRIORITY } = require("../constants/courseType")
-const { createNextAcademicSession } = require("./academicSessionController")
-const { generateProgrammeIntakeCode } = require("../utils/formatter/programmeIntakeFormatter")
+const { TYPE_PRIORITY } = require("../constants/courseType");
+const { createNextAcademicSession } = require("./academicSessionController");
+const {
+  generateProgrammeIntakeCode,
+} = require("../utils/formatter/programmeIntakeFormatter");
 
-const { SEMESTER_1, SEMESTER_2, SEMESTER_1_AND_2, } = require("../constants/semesters")
+const {
+  SEMESTER_1,
+  SEMESTER_2,
+  SEMESTER_1_AND_2,
+} = require("../constants/semesters");
 
 const getProgrammePlans = async (req, res) => {
   try {
@@ -39,10 +45,7 @@ const getProgrammePlanById = async (req, res) => {
     const { id } = req.params;
     const programmePlan = await ProgrammePlan.findById(id).populate({
       path: "semester_plans",
-      populate: [
-        {path: "courses"},
-        {path: "academic_session_id"}
-      ]
+      populate: [{ path: "courses" }, { path: "academic_session_id" }],
     });
     res.status(200).json(programmePlan);
   } catch (error) {
@@ -51,91 +54,110 @@ const getProgrammePlanById = async (req, res) => {
   }
 };
 
-const editProgrammePlan = async (updatedProgrammePlan, programme, academicSession) => {
+const editProgrammePlan = async (
+  updatedProgrammePlan,
+  programme,
+  academicSession,
+) => {
   try {
     // Validate programme plan exists
     const plan = await ProgrammePlan.findById(updatedProgrammePlan._id);
     if (!plan) return "Programme not found";
-    const semesterPlans = updatedProgrammePlan.semester_plans
-    let update = false
+    const semesterPlans = updatedProgrammePlan.semester_plans;
+    let update = false;
 
     // update each semester plan
-    let currentAcademicSession = academicSession
+    let currentAcademicSession = academicSession;
     for (let i = 0; i < semesterPlans.length; i++) {
-      const semesterPlan = semesterPlans[i]
+      const semesterPlan = semesterPlans[i];
 
-      const semesterPlanId = semesterPlan._id
-      if(semesterPlanId){
+      const semesterPlanId = semesterPlan._id;
+      if (semesterPlanId) {
         // update existing semester plan which already linked to the programme plan
         await SemesterPlan.findByIdAndUpdate(semesterPlanId, {
-          courses: semesterPlan.courses?.map(course => course._id),
-          academic_session_id: currentAcademicSession._id, 
-        })
-      }else{
+          courses: semesterPlan.courses?.map((course) => course._id),
+          academic_session_id: currentAcademicSession._id,
+        });
+      } else {
         // create new semester plan and link to programme plan
         const newSemesterPlan = await SemesterPlan.create({
-          programme_plan_id : plan._id,
-          courses: semesterPlan.courses?.map(course => course._id),
-          academic_session_id: currentAcademicSession._id, 
+          programme_plan_id: plan._id,
+          courses: semesterPlan.courses?.map((course) => course._id),
+          academic_session_id: currentAcademicSession._id,
         });
 
         // store the newly created semester plan under programme plan
-        plan.semester_plans.push(newSemesterPlan._id)
-        update = true
+        plan.semester_plans.push(newSemesterPlan._id);
+        update = true;
       }
 
-      if(currentAcademicSession.next === null){
-        const nextAcademicSession = await createNextAcademicSession(currentAcademicSession);
-        currentAcademicSession = await AcademicSession.findById(nextAcademicSession._id)
-      }else{
-        currentAcademicSession = await AcademicSession.findById(currentAcademicSession.next)
+      if (currentAcademicSession.next === null) {
+        const nextAcademicSession = await createNextAcademicSession(
+          currentAcademicSession,
+        );
+        currentAcademicSession = await AcademicSession.findById(
+          nextAcademicSession._id,
+        );
+      } else {
+        currentAcademicSession = await AcademicSession.findById(
+          currentAcademicSession.next,
+        );
       }
     }
 
     // Update programme plan
-    const updatedTitle = generateProgrammeIntakeCode(programme, academicSession.year, academicSession.semester)
+    const updatedTitle = generateProgrammeIntakeCode(
+      programme,
+      academicSession.year,
+      academicSession.semester,
+    );
 
-    if(updatedTitle !== plan.title){
-      plan.title = updatedTitle
-      update = true
+    if (updatedTitle !== plan.title) {
+      plan.title = updatedTitle;
+      update = true;
     }
 
-    if(update){
-      await plan.save()
+    if (update) {
+      await plan.save();
     }
-
-  }catch(err){
-    console.log(err)
+  } catch (err) {
+    console.log(err);
   }
-}
+};
 
-const generateDraftProgrammePlan = async( req, res) => {
-  try{
-    const { 
-      graduation_requirements, 
-      programme_plan,
-      programme_name
-    } = req.body
+const generateDraftProgrammePlan = async (req, res) => {
+  try {
+    const { graduation_requirements, programme_plan, programme_name } =
+      req.body;
 
-    const programme = await Programme.findOne({programme_name})
-    const semesterPlans = programme_plan?.semester_plans
-    const allocatedCourseCodes = semesterPlans.flatMap(semesterPlan => 
-      semesterPlan.courses.map(course => course.course_code))
-    const remainingCourses = graduation_requirements.filter((course) => !allocatedCourseCodes.includes(course.course_code))
-    
-    const sortedCourses = sortByLevelThenType(remainingCourses, TYPE_PRIORITY)
-    const topoSortedCourses = await topologicalSortCourses(sortedCourses, programme)
-    const generatedDraft = distributeCoursesIntoSemesters(topoSortedCourses, semesterPlans)
-    
+    const programme = await Programme.findOne({ programme_name });
+    const semesterPlans = programme_plan?.semester_plans;
+    const allocatedCourseCodes = semesterPlans.flatMap((semesterPlan) =>
+      semesterPlan.courses.map((course) => course.course_code),
+    );
+    const remainingCourses = graduation_requirements.filter(
+      (course) => !allocatedCourseCodes.includes(course.course_code),
+    );
+
+    const sortedCourses = sortByLevelThenType(remainingCourses, TYPE_PRIORITY);
+    const topoSortedCourses = await topologicalSortCourses(
+      sortedCourses,
+      programme,
+    );
+    const generatedDraft = distributeCoursesIntoSemesters(
+      topoSortedCourses,
+      semesterPlans,
+    );
 
     res.status(200).json(generatedDraft);
-
-  }catch(error){
-    console.log("Error: ", error)
-    res.status(500).json({ message: "Server error generating draft programme plan" , error: error.message});
+  } catch (error) {
+    console.log("Error: ", error);
+    res.status(500).json({
+      message: "Server error generating draft programme plan",
+      error: error.message,
+    });
   }
-
-}
+};
 
 const sortByLevelThenType = (courses, typeOrder) => {
   return [...courses].sort((a, b) => {
@@ -155,7 +177,6 @@ const sortByLevelThenType = (courses, typeOrder) => {
   });
 };
 
-
 const topologicalSortCourses = async (courses, programme) => {
   const courseMap = {};
   const inDegree = {};
@@ -174,18 +195,21 @@ const topologicalSortCourses = async (courses, programme) => {
     const courseId = course._id.toString();
     let prereqs = course.prerequisites || [];
 
-    const effectivePrereqObj = course.prerequisitesByProgramme?.find(prerequisiteObj => 
-      prerequisiteObj.programme_code === programme.programme_code
-    )
+    const effectivePrereqObj = course.prerequisitesByProgramme?.find(
+      (prerequisiteObj) =>
+        prerequisiteObj.programme_code === programme.programme_code,
+    );
 
-    if(effectivePrereqObj && effectivePrereqObj.prerequisite_codes?.length !== 0){
-      prereqs = effectivePrereqObj.prerequisite_codes
+    if (
+      effectivePrereqObj &&
+      effectivePrereqObj.prerequisite_codes?.length !== 0
+    ) {
+      prereqs = effectivePrereqObj.prerequisite_codes;
     }
 
     const prereqCourses = await Course.find({
-      course_code: { $in: prereqs }
+      course_code: { $in: prereqs },
     });
-
 
     for (const prereq of prereqCourses) {
       const prereqId = prereq._id?.toString() || prereq.toString();
@@ -203,8 +227,9 @@ const topologicalSortCourses = async (courses, programme) => {
         //   );
         //   continue; // skip if not found
         // }
-        throw new Error(`Prerequisites needed for course ${course.course_code} - ${course.course_name}`);
-   
+        throw new Error(
+          `Prerequisites needed for course ${course.course_code} - ${course.course_name}`,
+        );
       }
 
       graph[prereqId].push(courseId);
@@ -244,20 +269,22 @@ const distributeCoursesIntoSemesters = (sortedCourses, semesterPlans) => {
 
   let remainingCourses = [...sortedCourses];
 
-  for(let i=0 ; i< totalSemesters;i++){
-    const remainingSemesters = totalSemesters - i ;
+  for (let i = 0; i < totalSemesters; i++) {
+    const remainingSemesters = totalSemesters - i;
     const coursesLeft = remainingCourses.length;
-    const currentSem = i % 2 === 0 ? 1 : 2
-    let currentCourseIndex = 0
-    let currentCount = semesterPlans[i].courses.length
+    const currentSem = i % 2 === 0 ? 1 : 2;
+    let currentCourseIndex = 0;
+    let currentCount = semesterPlans[i].courses.length;
 
     const target = Math.ceil(coursesLeft / remainingSemesters);
 
-    while(currentCount < target && currentCourseIndex < remainingCourses.length){
+    while (
+      currentCount < target &&
+      currentCourseIndex < remainingCourses.length
+    ) {
       const course = remainingCourses[currentCourseIndex];
       const validSemesters = findValidSemester(course);
 
-      
       // Check if course can go in this semester
       if (validSemesters.includes(currentSem)) {
         semesterPlans[i].courses.push(course);
@@ -268,31 +295,29 @@ const distributeCoursesIntoSemesters = (sortedCourses, semesterPlans) => {
         currentCourseIndex++; // move to next course
       }
     }
-
   }
 
   return semesterPlans;
 };
 
 const findValidSemester = (course) => {
-  const validSemesters = []
-  for(const sem of course?.offered_semester){
-    if(sem === SEMESTER_1){
-      validSemesters.push(1)
-    }else if(sem === SEMESTER_2){
-      validSemesters.push(2)
-    }else if(sem === SEMESTER_1_AND_2){
-      validSemesters.push(1,2)
+  const validSemesters = [];
+  for (const sem of course?.offered_semester) {
+    if (sem === SEMESTER_1) {
+      validSemesters.push(1);
+    } else if (sem === SEMESTER_2) {
+      validSemesters.push(2);
+    } else if (sem === SEMESTER_1_AND_2) {
+      validSemesters.push(1, 2);
     }
   }
 
-  return validSemesters
+  return validSemesters;
 };
-
 
 module.exports = {
   getProgrammePlans,
   getProgrammePlanById,
   editProgrammePlan,
-  generateDraftProgrammePlan
+  generateDraftProgrammePlan,
 };
